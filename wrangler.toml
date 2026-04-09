@@ -1,5 +1,9 @@
 name = "lumina-notes"
 pages_build_output_dir = "dist"
+compatibility_date = "2026-04-09"
+
+[assets]
+directory = "./dist"
 
 [vars]
 # Add any environment variables here
