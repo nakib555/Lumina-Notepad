@@ -144,6 +144,21 @@
   text-decoration: underline;
 }
 
+.prose p {
+  margin-top: 1.25em;
+  margin-bottom: 1.25em;
+}
+
+.prose h1, .prose h2, .prose h3, .prose h4 {
+  margin-top: 2em;
+  margin-bottom: 1em;
+  scroll-margin-top: 5rem;
+}
+
+.prose h1 { font-size: 2.25rem; }
+.prose h2 { font-size: 1.875rem; border-bottom: 1px solid oklch(0.922 0 0); padding-bottom: 0.3em; }
+.prose h3 { font-size: 1.5rem; }
+
 .prose sub {
   bottom: -0.25em;
   font-size: 75%;
@@ -164,18 +179,25 @@
 .prose ul.contains-task-list {
   padding-left: 0;
   list-style-type: none;
+  margin-top: 1.5em;
+  margin-bottom: 1.5em;
 }
 
 .prose .task-list-item {
   display: flex;
   align-items: flex-start;
   gap: 0.875rem;
-  margin-bottom: 0.625rem;
+  margin-bottom: 0.5rem;
   list-style-type: none;
-  padding: 0.25rem 0.5rem;
-  margin-left: -0.5rem;
-  border-radius: 0.5rem;
-  transition: background-color 0.2s ease;
+  padding: 0.4rem 0.6rem;
+  margin-left: -0.6rem;
+  border-radius: 0.6rem;
+  transition: all 0.2s ease;
+}
+
+.prose .task-list-item p {
+  margin: 0 !important;
+  display: inline;
 }
 
 .prose .task-list-item:hover {

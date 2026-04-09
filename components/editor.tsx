@@ -30,7 +30,12 @@ interface CodeBlockProps {
 const CodeBlock = ({ inline, className, children, ...props }: CodeBlockProps) => {
   const match = /language-(\w+)/.exec(className || '');
   const language = match ? match[1] : '';
-  const code = String(children).replace(/\n$/, '');
+  
+  // Ensure children is a string and handle potential undefined/null
+  const code = Array.isArray(children) 
+    ? children.map(child => String(child)).join('') 
+    : String(children || '').replace(/\n$/, '');
+    
   const [copied, setCopied] = useState(false);
 
   const handleCopy = () => {
@@ -79,7 +84,7 @@ const CodeBlock = ({ inline, className, children, ...props }: CodeBlockProps) =>
         <div className="relative overflow-x-auto text-[14px] leading-relaxed custom-scrollbar bg-[#f4f7f8]">
           <SyntaxHighlighter
             style={oneLight}
-            language={language}
+            language={language || 'text'}
             PreTag="div"
             customStyle={{
               margin: 0,
@@ -93,7 +98,6 @@ const CodeBlock = ({ inline, className, children, ...props }: CodeBlockProps) =>
                 backgroundColor: 'transparent',
               }
             }}
-            {...props}
           >
             {code}
           </SyntaxHighlighter>
@@ -372,20 +376,30 @@ export function Editor({ note, onUpdateNote, onToggleSidebar }: EditorProps) {
           />
           
           {isPreviewMode ? (
-            <div className="prose prose-slate max-w-none prose-headings:font-serif prose-headings:tracking-tight prose-p:leading-relaxed prose-a:text-indigo-600 prose-blockquote:border-l-4 prose-blockquote:border-indigo-200 prose-blockquote:bg-indigo-50/30 prose-blockquote:py-1 prose-blockquote:px-6 prose-blockquote:rounded-r-lg prose-blockquote:italic prose-img:rounded-2xl prose-img:shadow-lg prose-table:border prose-table:border-slate-200 prose-th:bg-slate-50 prose-th:px-4 prose-th:py-3 prose-td:px-4 prose-td:py-3 whitespace-pre-wrap">
+            <div className="prose prose-slate max-w-none prose-headings:font-serif prose-headings:tracking-tight prose-p:leading-relaxed prose-a:text-indigo-600 prose-blockquote:border-l-4 prose-blockquote:border-indigo-200 prose-blockquote:bg-indigo-50/30 prose-blockquote:py-1 prose-blockquote:px-6 prose-blockquote:rounded-r-lg prose-blockquote:italic prose-img:rounded-2xl prose-img:shadow-lg prose-table:border prose-table:border-slate-200 prose-th:bg-slate-50 prose-th:px-4 prose-th:py-3 prose-td:px-4 prose-td:py-3">
               <ReactMarkdown 
                 remarkPlugins={[remarkGfm, remarkBreaks, [remarkToc, { heading: 'toc|contents|table of contents', tight: true }]]} 
                 rehypePlugins={[rehypeRaw, rehypeSlug, [rehypeAutolinkHeadings, { behavior: 'wrap' }]]}
                 components={{
                   code: CodeBlock as React.FC<CodeBlockProps>,
-                  a: ({ ...props }) => (
-                    <a 
-                      {...props} 
-                      target="_blank" 
-                      rel="noopener noreferrer" 
-                      className="text-indigo-600 hover:text-indigo-800 underline decoration-indigo-200 underline-offset-4 transition-colors"
-                    />
-                  ),
+                  a: ({ ...props }) => {
+                    const isHeadingLink = props.className?.includes('rehype-autolink-headings') || 
+                                    (typeof props.children === 'string' && props.children.startsWith('#'));
+                    
+                    return (
+                      <a 
+                        {...props} 
+                        target={isHeadingLink ? undefined : "_blank"} 
+                        rel={isHeadingLink ? undefined : "noopener noreferrer"} 
+                        className={cn(
+                          "text-indigo-600 hover:text-indigo-800 transition-colors",
+                          isHeadingLink 
+                            ? "no-underline text-inherit hover:text-indigo-600" 
+                            : "underline decoration-indigo-200 underline-offset-4"
+                        )}
+                      />
+                    );
+                  },
                   blockquote: ({ ...props }) => (
                     <blockquote {...props} className="not-italic border-l-4 border-indigo-500 bg-indigo-50/50 py-2 px-6 rounded-r-xl my-6" />
                   ),
@@ -419,7 +433,7 @@ export function Editor({ note, onUpdateNote, onToggleSidebar }: EditorProps) {
               value={note.content}
               onChange={handleContentChange}
               placeholder="Start typing with markdown support... (# Heading, *italic*, **bold**, etc.)"
-              className="w-full min-h-[500px] text-lg text-slate-700 placeholder:text-slate-300 border-none outline-none bg-transparent resize-none focus-visible:ring-0 p-0 leading-relaxed font-sans"
+              className="w-full min-h-[500px] text-[1.125rem] text-slate-700 placeholder:text-slate-300 border-none outline-none bg-transparent resize-none focus-visible:ring-0 p-0 leading-relaxed font-sans"
             />
           )}
         </div>
