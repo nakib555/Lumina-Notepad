@@ -404,7 +404,7 @@ export function Editor({ note, onUpdateNote, onToggleSidebar }: EditorProps) {
           />
           
           {isPreviewMode ? (
-            <div className="prose prose-slate max-w-none prose-headings:font-serif prose-headings:tracking-tight prose-p:leading-relaxed prose-a:text-indigo-600 prose-blockquote:border-l-4 prose-blockquote:border-indigo-200 prose-blockquote:bg-indigo-50/30 prose-blockquote:py-1 prose-blockquote:px-6 prose-blockquote:rounded-r-lg prose-blockquote:italic prose-img:rounded-2xl prose-img:shadow-lg prose-table:border prose-table:border-slate-200 prose-th:bg-slate-50 prose-th:px-4 prose-th:py-3 prose-td:px-4 prose-td:py-3">
+            <div className="prose prose-slate max-w-none">
               <ReactMarkdown 
                 remarkPlugins={[remarkGfm, remarkBreaks, [remarkToc, { heading: 'toc|contents|table of contents', tight: true }]]} 
                 rehypePlugins={[rehypeRaw, rehypeSlug, [rehypeAutolinkHeadings, { behavior: 'wrap' }]]}
@@ -420,10 +420,10 @@ export function Editor({ note, onUpdateNote, onToggleSidebar }: EditorProps) {
                         target={isHeadingLink ? undefined : "_blank"} 
                         rel={isHeadingLink ? undefined : "noopener noreferrer"} 
                         className={cn(
-                          "text-indigo-600 hover:text-indigo-800 transition-colors",
+                          "transition-colors",
                           isHeadingLink 
                             ? "no-underline text-inherit hover:text-indigo-600" 
-                            : "underline decoration-indigo-200 underline-offset-4"
+                            : "text-indigo-600 hover:text-indigo-800 underline decoration-indigo-200 underline-offset-4"
                         )}
                       />
                     );
