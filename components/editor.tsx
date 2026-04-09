@@ -238,6 +238,34 @@ export function Editor({ note, onUpdateNote, onToggleSidebar }: EditorProps) {
     return () => clearTimeout(timeout);
   }, [note?.content, note?.title, note]);
 
+  const toolbarRef = useRef<HTMLDivElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [startX, setStartX] = useState(0);
+  const [scrollLeft, setScrollLeft] = useState(0);
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (!toolbarRef.current) return;
+    setIsDragging(true);
+    setStartX(e.pageX - toolbarRef.current.offsetLeft);
+    setScrollLeft(toolbarRef.current.scrollLeft);
+  };
+
+  const handleMouseLeave = () => {
+    setIsDragging(false);
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging || !toolbarRef.current) return;
+    e.preventDefault();
+    const x = e.pageX - toolbarRef.current.offsetLeft;
+    const walk = (x - startX) * 2; // Scroll speed
+    toolbarRef.current.scrollLeft = scrollLeft - walk;
+  };
+
   if (!note) {
     return (
       <div className="flex-1 flex flex-col h-screen overflow-hidden bg-white relative">
@@ -441,8 +469,18 @@ export function Editor({ note, onUpdateNote, onToggleSidebar }: EditorProps) {
 
       {/* Bottom Formatting Bar */}
       {!isPreviewMode && (
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20 w-full max-w-fit px-4">
-          <div className="flex items-center gap-1 bg-white/90 backdrop-blur-md border border-slate-200 shadow-xl rounded-2xl p-1.5 overflow-x-auto no-scrollbar max-w-[90vw] sm:max-w-none">
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20 w-full max-w-full px-4 flex justify-center pointer-events-none">
+          <div 
+            ref={toolbarRef}
+            onMouseDown={handleMouseDown}
+            onMouseLeave={handleMouseLeave}
+            onMouseUp={handleMouseUp}
+            onMouseMove={handleMouseMove}
+            className={cn(
+              "flex items-center gap-1 bg-white/90 backdrop-blur-md border border-slate-200 shadow-xl rounded-2xl p-1.5 overflow-x-auto no-scrollbar max-w-full sm:max-w-max flex-nowrap pointer-events-auto select-none touch-pan-x",
+              isDragging ? "cursor-grabbing" : "cursor-grab"
+            )}
+          >
             {/* Text Style Group */}
             <div className="flex items-center gap-0.5 pr-1 border-r border-slate-200">
               <Button
