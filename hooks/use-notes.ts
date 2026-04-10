@@ -5,6 +5,7 @@ export interface Note {
   id: string;
   title: string;
   content: string;
+  tags: string[];
   updatedAt: number;
 }
 
@@ -31,6 +32,7 @@ export function useNotes() {
         id: uuidv4(),
         title: 'Welcome to Lumina Notes',
         content: 'Start typing here...\n\nYour notes are automatically saved to your browser.',
+        tags: ['getting-started'],
         updatedAt: Date.now(),
       };
       setNotes([defaultNote]);
@@ -52,6 +54,7 @@ export function useNotes() {
       id: uuidv4(),
       title: 'Untitled Note',
       content: '',
+      tags: [],
       updatedAt: Date.now(),
     };
     setNotes(prev => [newNote, ...prev]);

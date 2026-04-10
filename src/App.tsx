@@ -16,6 +16,16 @@ export default function App() {
   } = useNotes();
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [theme, setTheme] = useState<string>(() => localStorage.getItem('lumina-theme') || 'light');
+
+  useEffect(() => {
+    localStorage.setItem('lumina-theme', theme);
+    const root = window.document.documentElement;
+    root.classList.remove('light', 'dark', 'fancy', 'rainbow');
+    if (theme !== 'light') {
+      root.classList.add(theme);
+    }
+  }, [theme]);
 
   // Handle initial screen size and resize events
   useEffect(() => {
@@ -62,11 +72,15 @@ export default function App() {
         onDeleteNote={deleteNote}
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
+        theme={theme}
+        onThemeChange={setTheme}
       />
       <Editor
         note={activeNote}
         onUpdateNote={updateNote}
         onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+        theme={theme}
+        onThemeChange={setTheme}
       />
     </div>
   );

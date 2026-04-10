@@ -6,7 +6,7 @@ import {
   Copy, Play, ExternalLink, Check,
   Heading1, Heading2, Heading3, List, ListOrdered, ListTodo,
   Quote, Code, Link, Image, Minus, Table,
-  Undo2, Redo2
+  Undo2, Redo2, Download, Tag, X, Hash, Printer, FileCode
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ReactMarkdown from 'react-markdown';
@@ -111,6 +111,8 @@ interface EditorProps {
   note: Note | null;
   onUpdateNote: (id: string, updates: Partial<Note>) => void;
   onToggleSidebar: () => void;
+  theme: string;
+  onThemeChange: (theme: string) => void;
 }
 
 interface HistoryItem {
@@ -118,10 +120,19 @@ interface HistoryItem {
   content: string;
 }
 
-export function Editor({ note, onUpdateNote, onToggleSidebar }: EditorProps) {
+export function Editor({ 
+  note, 
+  onUpdateNote, 
+  onToggleSidebar,
+  theme,
+  onThemeChange
+}: EditorProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const exportMenuRef = useRef<HTMLDivElement>(null);
   const [saveStatus, setSaveStatus] = useState<"saved" | "saving">("saved");
   const [isPreviewMode, setIsPreviewMode] = useState(false);
+  const [tagInput, setTagInput] = useState("");
+  const [showExportMenu, setShowExportMenu] = useState(false);
   
   // Undo/Redo State
   const [history, setHistory] = useState<HistoryItem[]>([]);
@@ -209,6 +220,13 @@ export function Editor({ note, onUpdateNote, onToggleSidebar }: EditorProps) {
 
   // Keyboard shortcuts for Undo/Redo
   useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (exportMenuRef.current && !exportMenuRef.current.contains(event.target as Node)) {
+        setShowExportMenu(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
         if (e.shiftKey) {
@@ -225,8 +243,48 @@ export function Editor({ note, onUpdateNote, onToggleSidebar }: EditorProps) {
     };
 
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
   }, [handleUndo, handleRedo]);
+
+  const addTag = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && tagInput.trim() && note) {
+      const newTag = tagInput.trim().toLowerCase();
+      if (!note.tags?.includes(newTag)) {
+        onUpdateNote(note.id, { tags: [...(note.tags || []), newTag] });
+      }
+      setTagInput("");
+    }
+  };
+
+  const removeTag = (tagToRemove: string) => {
+    if (!note) return;
+    onUpdateNote(note.id, { tags: note.tags?.filter(t => t !== tagToRemove) });
+  };
+
+  const exportNote = (format: 'txt' | 'md' | 'pdf') => {
+    if (!note) return;
+    setShowExportMenu(false);
+
+    if (format === 'pdf') {
+      window.print();
+      return;
+    }
+
+    const extension = format === 'md' ? 'md' : 'txt';
+    const content = format === 'md' ? note.content : `${note.title}\n\n${note.content}`;
+    const blob = new Blob([content], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${note.title || 'note'}.${extension}`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
 
   // Simulate saving status for UX (actual save happens instantly in use-notes hook)
   useEffect(() => {
@@ -269,17 +327,18 @@ export function Editor({ note, onUpdateNote, onToggleSidebar }: EditorProps) {
   if (!note) {
     return (
       <div className="flex-1 flex flex-col h-screen overflow-hidden bg-white relative">
-        <header className="h-14 border-b border-slate-100 flex items-center px-4 shrink-0 bg-white/80 backdrop-blur-md z-10">
-          <Button variant="ghost" size="icon" onClick={onToggleSidebar} className="text-slate-500 hover:text-slate-800">
+        <header className="h-16 border-b border-slate-200/60 flex items-center px-4 shrink-0 bg-white/80 backdrop-blur-md z-10">
+          <Button variant="ghost" size="icon" onClick={onToggleSidebar} className="text-slate-500 md:hidden">
             <Menu className="w-5 h-5" />
           </Button>
         </header>
-        <div className="flex-1 flex items-center justify-center bg-white text-slate-400">
-          <div className="flex flex-col items-center gap-4">
-            <div className="w-16 h-16 rounded-full bg-slate-50 flex items-center justify-center">
-              <FileText className="w-8 h-8 text-slate-300" />
-            </div>
-            <p>Select a note or create a new one</p>
+        <div className="flex-1 flex flex-col items-center justify-center text-slate-400 gap-4 p-8 text-center">
+          <div className="w-20 h-20 rounded-3xl bg-slate-50 flex items-center justify-center border border-slate-100">
+            <FileText className="w-10 h-10 text-slate-200" />
+          </div>
+          <div className="space-y-1">
+            <h3 className="text-slate-900 font-semibold">No Note Selected</h3>
+            <p className="text-sm max-w-[240px]">Select a note from the sidebar or create a new one to start writing.</p>
           </div>
         </div>
       </div>
@@ -323,6 +382,30 @@ export function Editor({ note, onUpdateNote, onToggleSidebar }: EditorProps) {
             <Menu className="w-5 h-5" />
           </Button>
           <div className="h-4 w-px bg-slate-200 mx-1 hidden sm:block" />
+          
+          {/* Mobile Theme Switcher */}
+          <div className="flex items-center gap-1 sm:hidden">
+            {[
+              { id: 'light', icon: '☀️' },
+              { id: 'dark', icon: '🌙' },
+              { id: 'fancy', icon: '✨' },
+              { id: 'rainbow', icon: '🌈' }
+            ].map(t => (
+              <Button
+                key={t.id}
+                variant="ghost"
+                size="icon"
+                onClick={() => onThemeChange(t.id)}
+                className={cn(
+                  "h-8 w-8 rounded-lg text-sm",
+                  theme === t.id ? "bg-slate-100" : ""
+                )}
+              >
+                {t.icon}
+              </Button>
+            ))}
+          </div>
+
           <Button 
             variant="outline" 
             size="sm" 
@@ -376,7 +459,42 @@ export function Editor({ note, onUpdateNote, onToggleSidebar }: EditorProps) {
           )}
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
+          <div className="relative" ref={exportMenuRef}>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => setShowExportMenu(!showExportMenu)}
+              className="h-9 px-3 gap-2 text-slate-600 hover:bg-slate-100 rounded-xl"
+            >
+              <Download className="w-4 h-4" />
+              <span className="hidden sm:inline">Export</span>
+            </Button>
+            
+            {showExportMenu && (
+              <div className="absolute right-0 mt-2 w-48 bg-white border border-slate-200 rounded-2xl shadow-2xl p-1.5 z-50 animate-in fade-in zoom-in-95 duration-200">
+                <button 
+                  onClick={() => exportNote('md')}
+                  className="w-full flex items-center gap-3 px-3 py-2 text-sm text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 rounded-xl transition-colors"
+                >
+                  <FileCode className="w-4 h-4" /> Markdown (.md)
+                </button>
+                <button 
+                  onClick={() => exportNote('txt')}
+                  className="w-full flex items-center gap-3 px-3 py-2 text-sm text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 rounded-xl transition-colors"
+                >
+                  <FileText className="w-4 h-4" /> Plain Text (.txt)
+                </button>
+                <button 
+                  onClick={() => exportNote('pdf')}
+                  className="w-full flex items-center gap-3 px-3 py-2 text-sm text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 rounded-xl transition-colors"
+                >
+                  <Printer className="w-4 h-4" /> Print / PDF
+                </button>
+              </div>
+            )}
+          </div>
+
           <span className="text-sm font-medium text-slate-400 hidden sm:inline-block">
             {note.content.length} characters
           </span>
@@ -393,15 +511,49 @@ export function Editor({ note, onUpdateNote, onToggleSidebar }: EditorProps) {
       </header>
 
       {/* Editor Area */}
-      <div className="flex-1 overflow-y-auto custom-scrollbar">
+      <div className="flex-1 overflow-y-auto custom-scrollbar print:overflow-visible">
         <div className="max-w-3xl mx-auto px-6 py-12 md:px-12 md:py-16 flex flex-col gap-6">
-          <input
-            type="text"
-            value={note.title}
-            onChange={handleTitleChange}
-            placeholder="Note Title"
-            className="w-full text-4xl md:text-5xl font-bold text-slate-900 placeholder:text-slate-300 border-none outline-none bg-transparent tracking-tight font-serif"
-          />
+          <div className="space-y-4">
+            <input
+              type="text"
+              value={note.title}
+              onChange={handleTitleChange}
+              placeholder="Note Title"
+              className="w-full text-4xl md:text-5xl font-bold text-slate-900 placeholder:text-slate-300 border-none outline-none bg-transparent tracking-tight font-serif"
+            />
+            
+            {/* Tag Management */}
+            <div className="flex flex-wrap items-center gap-2 print:hidden">
+              <div className="flex flex-wrap gap-1.5">
+                {note.tags?.map(tag => (
+                  <span 
+                    key={tag} 
+                    className="flex items-center gap-1 px-2.5 py-1 bg-indigo-50 text-indigo-600 text-[11px] font-bold rounded-full border border-indigo-100 group/tag"
+                  >
+                    <Hash className="w-3 h-3 opacity-60" />
+                    {tag}
+                    <button 
+                      onClick={() => removeTag(tag)}
+                      className="hover:text-indigo-800 transition-colors"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+              <div className="relative flex items-center">
+                <Tag className="absolute left-2.5 w-3.5 h-3.5 text-slate-400" />
+                <input 
+                  type="text"
+                  placeholder="Add tag..."
+                  value={tagInput}
+                  onChange={(e) => setTagInput(e.target.value)}
+                  onKeyDown={addTag}
+                  className="pl-8 pr-3 py-1 text-[11px] font-medium bg-slate-100 border-transparent focus:bg-white focus:border-slate-200 rounded-full outline-none transition-all w-24 focus:w-32"
+                />
+              </div>
+            </div>
+          </div>
           
           {isPreviewMode ? (
             <div className="prose prose-slate max-w-none">
