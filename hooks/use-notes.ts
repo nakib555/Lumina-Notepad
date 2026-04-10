@@ -6,6 +6,7 @@ export interface Note {
   title: string;
   content: string;
   tags: string[];
+  folderId?: string;
   updatedAt: number;
 }
 

@@ -6,7 +6,7 @@ import {
   Copy, Play, ExternalLink, Check,
   Heading1, Heading2, Heading3, List, ListOrdered, ListTodo,
   Quote, Code, Link, Image, Minus, Table,
-  Undo2, Redo2, Download, Tag, X, Hash, Printer, FileCode
+  Undo2, Redo2, Download, Tag, X, Hash, Printer, FileCode, Folder
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ReactMarkdown from 'react-markdown';
@@ -116,6 +116,8 @@ interface EditorProps {
   onToggleSidebar: () => void;
   theme: string;
   onThemeChange: (theme: string) => void;
+  fontFamily: string;
+  onFontFamilyChange: (font: string) => void;
 }
 
 interface HistoryItem {
@@ -128,14 +130,22 @@ export function Editor({
   onUpdateNote, 
   onToggleSidebar,
   theme,
-  onThemeChange
+  onThemeChange,
+  fontFamily,
+  onFontFamilyChange
 }: EditorProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const exportMenuRef = useRef<HTMLDivElement>(null);
   const [saveStatus, setSaveStatus] = useState<"saved" | "saving">("saved");
   const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [tagInput, setTagInput] = useState("");
+  const [folderInput, setFolderInput] = useState("");
   const [showExportMenu, setShowExportMenu] = useState(false);
+  const [isFocusMode, setIsFocusMode] = useState(false);
+  const [slashMenuOpen, setSlashMenuOpen] = useState(false);
+  const [slashMenuPosition, setSlashMenuPosition] = useState({ top: 0, left: 0 });
+  const [slashSearch, setSlashSearch] = useState("");
+  const [showToc, setShowToc] = useState(false);
   
   // Undo/Redo State
   const [history, setHistory] = useState<HistoryItem[]>([]);
@@ -203,6 +213,86 @@ export function Editor({
     const newContent = e.target.value;
     onUpdateNote(note!.id, { content: newContent });
     addToHistory(note!.title, newContent);
+
+    // Check for slash command
+    const cursorPosition = e.target.selectionStart;
+    const textBeforeCursor = newContent.substring(0, cursorPosition);
+    const lastLine = textBeforeCursor.split('\n').pop() || '';
+    
+    const slashMatch = lastLine.match(/(?:^|\s)\/([a-zA-Z]*)$/);
+    
+    if (slashMatch) {
+      setSlashSearch(slashMatch[1]);
+      
+      // Calculate position (rough estimation for textarea)
+      if (textareaRef.current) {
+        // This is a simplified positioning. For perfect positioning, a library like get-caret-coordinates is better.
+        // We'll just center it or put it near the bottom for now.
+        setSlashMenuOpen(true);
+      }
+    } else {
+      setSlashMenuOpen(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLTextAreaElement>) => {
+    e.preventDefault();
+    if (!note) return;
+
+    const files = Array.from(e.dataTransfer.files);
+    const imageFiles = files.filter(file => file.type.startsWith('image/'));
+
+    if (imageFiles.length > 0) {
+      const file = imageFiles[0];
+      const reader = new FileReader();
+      
+      reader.onload = (event) => {
+        const base64String = event.target?.result as string;
+        const imageMarkdown = `\n![${file.name}](${base64String})\n`;
+        
+        applyFormatting(imageMarkdown, "");
+        toast.success("Image added successfully");
+      };
+      
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLTextAreaElement>) => {
+    e.preventDefault();
+  };
+
+  const executeSlashCommand = (prefix: string, suffix: string = "") => {
+    if (!textareaRef.current || !note) return;
+    
+    const text = note.content;
+    const start = textareaRef.current.selectionStart;
+    
+    // Find where the slash command started
+    const textBeforeCursor = text.substring(0, start);
+    const lastSlashIndex = textBeforeCursor.lastIndexOf('/');
+    
+    if (lastSlashIndex !== -1) {
+      const newText = 
+        text.substring(0, lastSlashIndex) + 
+        prefix + suffix + 
+        text.substring(start);
+        
+      onUpdateNote(note.id, { content: newText });
+      addToHistory(note.title, newText, true);
+      
+      setTimeout(() => {
+        if (textareaRef.current) {
+          textareaRef.current.focus();
+          textareaRef.current.setSelectionRange(
+            lastSlashIndex + prefix.length,
+            lastSlashIndex + prefix.length
+          );
+        }
+      }, 0);
+    }
+    
+    setSlashMenuOpen(false);
   };
 
   const handleUndo = useCallback(() => {
@@ -221,7 +311,19 @@ export function Editor({
     }
   }, [history, historyIndex, note, onUpdateNote]);
 
-  // Keyboard shortcuts for Undo/Redo
+  const toggleFocusMode = () => {
+    setIsFocusMode(!isFocusMode);
+    if (!isFocusMode) {
+      // Entering focus mode, close sidebar if open
+      if (typeof window !== 'undefined' && window.innerWidth >= 768) {
+        // We can't directly check if sidebar is open from Editor, but we can trigger toggle
+        // Actually, it's better to pass a prop or just let the user close it.
+        // Let's just hide the editor's own UI for now.
+      }
+    }
+  };
+
+  // Keyboard shortcuts for Undo/Redo and Focus Mode
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (exportMenuRef.current && !exportMenuRef.current.contains(event.target as Node)) {
@@ -242,6 +344,9 @@ export function Editor({
       } else if ((e.ctrlKey || e.metaKey) && e.key === 'y') {
         e.preventDefault();
         handleRedo();
+      } else if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'f') {
+        e.preventDefault();
+        setIsFocusMode(prev => !prev);
       }
     };
 
@@ -265,6 +370,14 @@ export function Editor({
   const removeTag = (tagToRemove: string) => {
     if (!note) return;
     onUpdateNote(note.id, { tags: note.tags?.filter(t => t !== tagToRemove) });
+  };
+
+  const updateFolder = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && note) {
+      const newFolder = folderInput.trim();
+      onUpdateNote(note.id, { folderId: newFolder || undefined });
+      toast.success(newFolder ? `Moved to ${newFolder}` : "Removed from folder");
+    }
   };
 
   const exportNote = (format: 'txt' | 'md' | 'pdf') => {
@@ -376,9 +489,38 @@ export function Editor({
     }, 0);
   };
 
+  const getStats = () => {
+    if (!note) return { words: 0, chars: 0, readingTime: 0 };
+    const text = note.content;
+    const chars = text.length;
+    const words = text.trim() === '' ? 0 : text.trim().split(/\s+/).length;
+    const readingTime = Math.ceil(words / 200); // 200 words per minute
+    return { words, chars, readingTime };
+  };
+
+  const stats = getStats();
+
+  const extractHeadings = () => {
+    if (!note) return [];
+    const regex = /^(#{1,3})\s+(.+)$/gm;
+    const headings = [];
+    let match;
+    while ((match = regex.exec(note.content)) !== null) {
+      headings.push({
+        level: match[1].length,
+        text: match[2],
+        id: match[2].toLowerCase().replace(/[^\w]+/g, '-')
+      });
+    }
+    return headings;
+  };
+
+  const headings = extractHeadings();
+
   return (
     <div className="flex-1 flex flex-col h-screen overflow-hidden bg-background relative">
       {/* Toolbar */}
+      {!isFocusMode && (
       <header className="h-14 border-b border-border flex items-center justify-between px-2 sm:px-4 shrink-0 bg-background/80 backdrop-blur-md z-10">
         <div className="flex items-center gap-1 sm:gap-2 py-1 shrink-0">
           <Button variant="ghost" size="icon" onClick={onToggleSidebar} className="text-muted-foreground hover:text-foreground shrink-0">
@@ -476,7 +618,7 @@ export function Editor({
           </div>
 
           <span className="text-sm font-medium text-muted-foreground hidden sm:inline-block">
-            {note.content.length} characters
+            {stats.words} words • {stats.chars} chars • {stats.readingTime} min read
           </span>
           <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
             {saveStatus === "saving" ? (
@@ -486,13 +628,56 @@ export function Editor({
                 <CheckCircle2 className="w-3.5 h-3.5" /> Autosaved
               </span>
             )}
+            <div className="h-4 w-px bg-border mx-1 hidden sm:block" />
+            <select
+              value={fontFamily}
+              onChange={(e) => onFontFamilyChange(e.target.value)}
+              className="bg-transparent text-muted-foreground hover:text-foreground outline-none text-xs font-medium cursor-pointer"
+            >
+              <option value="sans">Sans</option>
+              <option value="serif">Serif</option>
+              <option value="mono">Mono</option>
+            </select>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setIsFocusMode(true)}
+              className="h-8 w-8 ml-2 text-muted-foreground hover:text-foreground"
+              title="Focus Mode (Cmd+Shift+F)"
+            >
+              <Eye className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setShowToc(!showToc)}
+              className={cn("h-8 w-8 text-muted-foreground hover:text-foreground", showToc && "text-primary bg-primary/10")}
+              title="Table of Contents"
+            >
+              <ListOrdered className="w-4 h-4" />
+            </Button>
           </div>
         </div>
       </header>
+      )}
+
+      {/* Focus Mode Exit Button */}
+      {isFocusMode && (
+        <div className="absolute top-4 right-4 z-50 opacity-0 hover:opacity-100 transition-opacity duration-300">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsFocusMode(false)}
+            className="bg-background/80 backdrop-blur-md shadow-sm"
+          >
+            Exit Focus Mode
+          </Button>
+        </div>
+      )}
 
       {/* Editor Area */}
-      <div className="flex-1 overflow-y-auto custom-scrollbar print:overflow-visible">
-        <div className="max-w-3xl mx-auto px-6 py-12 md:px-12 md:py-16 flex flex-col gap-6 min-h-full">
+      <div className="flex-1 overflow-y-auto custom-scrollbar print:overflow-visible flex">
+        <div className="flex-1 max-w-3xl mx-auto px-6 py-12 md:px-12 md:py-16 flex flex-col gap-6 min-h-full">
           <div className="space-y-4 shrink-0">
             <input
               type="text"
@@ -503,33 +688,49 @@ export function Editor({
             />
             
             {/* Tag Management */}
-            <div className="flex flex-wrap items-center gap-2 print:hidden">
-              <div className="flex flex-wrap gap-1.5">
-                {note.tags?.map(tag => (
-                  <span 
-                    key={tag} 
-                    className="flex items-center gap-1 px-2.5 py-1 bg-primary/10 text-primary text-[11px] font-bold rounded-full border border-primary/20 group/tag"
-                  >
-                    <Hash className="w-3 h-3 opacity-60" />
-                    {tag}
-                    <button 
-                      onClick={() => removeTag(tag)}
-                      className="hover:text-primary/80 transition-colors"
+            <div className="flex flex-wrap items-center gap-4 print:hidden">
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="flex flex-wrap gap-1.5">
+                  {note.tags?.map(tag => (
+                    <span 
+                      key={tag} 
+                      className="flex items-center gap-1 px-2.5 py-1 bg-primary/10 text-primary text-[11px] font-bold rounded-full border border-primary/20 group/tag"
                     >
-                      <X className="w-3 h-3" />
-                    </button>
-                  </span>
-                ))}
+                      <Hash className="w-3 h-3 opacity-60" />
+                      {tag}
+                      <button 
+                        onClick={() => removeTag(tag)}
+                        className="hover:text-primary/80 transition-colors"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+                <div className="relative flex items-center">
+                  <Tag className="absolute left-2.5 w-3.5 h-3.5 text-muted-foreground" />
+                  <input 
+                    type="text"
+                    placeholder="Add tag..."
+                    value={tagInput}
+                    onChange={(e) => setTagInput(e.target.value)}
+                    onKeyDown={addTag}
+                    className="pl-8 pr-3 py-1 text-[11px] font-medium bg-muted border-transparent focus:bg-background focus:border-border rounded-full outline-none transition-all w-24 focus:w-32 text-foreground"
+                  />
+                </div>
               </div>
+
+              <div className="h-4 w-px bg-border hidden sm:block" />
+
               <div className="relative flex items-center">
-                <Tag className="absolute left-2.5 w-3.5 h-3.5 text-muted-foreground" />
+                <Folder className="absolute left-2.5 w-3.5 h-3.5 text-muted-foreground" />
                 <input 
                   type="text"
-                  placeholder="Add tag..."
-                  value={tagInput}
-                  onChange={(e) => setTagInput(e.target.value)}
-                  onKeyDown={addTag}
-                  className="pl-8 pr-3 py-1 text-[11px] font-medium bg-muted border-transparent focus:bg-background focus:border-border rounded-full outline-none transition-all w-24 focus:w-32 text-foreground"
+                  placeholder={note.folderId || "Add to folder..."}
+                  value={folderInput}
+                  onChange={(e) => setFolderInput(e.target.value)}
+                  onKeyDown={updateFolder}
+                  className="pl-8 pr-3 py-1 text-[11px] font-medium bg-muted border-transparent focus:bg-background focus:border-border rounded-full outline-none transition-all w-32 focus:w-40 text-foreground"
                 />
               </div>
             </div>
@@ -549,19 +750,88 @@ export function Editor({
               </ReactMarkdown>
             </div>
           ) : (
-            <textarea
-              ref={textareaRef}
-              value={note.content}
-              onChange={handleContentChange}
-              placeholder="Start typing with markdown support... (# Heading, *italic*, **bold**, etc.)"
-              className="w-full flex-1 min-h-[500px] pb-32 text-[1.125rem] text-foreground placeholder:text-muted-foreground/50 border-none outline-none bg-transparent resize-none focus-visible:ring-0 p-0 leading-relaxed font-sans"
-            />
+            <div className="relative flex-1">
+              <textarea
+                ref={textareaRef}
+                value={note.content}
+                onChange={handleContentChange}
+                onDrop={handleDrop}
+                onDragOver={handleDragOver}
+                placeholder="Start typing with markdown support... (# Heading, *italic*, **bold**, etc.)\nType '/' for commands or drag & drop images."
+                className="w-full h-full min-h-[500px] pb-32 text-[1.125rem] text-foreground placeholder:text-muted-foreground/50 border-none outline-none bg-transparent resize-none focus-visible:ring-0 p-0 leading-relaxed font-sans"
+              />
+              
+              {/* Slash Command Menu */}
+              {slashMenuOpen && (
+                <div className="absolute z-50 w-64 bg-popover border border-border rounded-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200" style={{ bottom: '40px', left: '20px' }}>
+                  <div className="px-3 py-2 border-b border-border text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    Basic Blocks
+                  </div>
+                  <div className="max-h-[300px] overflow-y-auto p-1 custom-scrollbar">
+                    {[
+                      { icon: Heading1, label: 'Heading 1', desc: 'Big section heading', prefix: '# ' },
+                      { icon: Heading2, label: 'Heading 2', desc: 'Medium section heading', prefix: '## ' },
+                      { icon: Heading3, label: 'Heading 3', desc: 'Small section heading', prefix: '### ' },
+                      { icon: List, label: 'Bulleted List', desc: 'Create a simple list', prefix: '- ' },
+                      { icon: ListOrdered, label: 'Numbered List', desc: 'Create a list with numbering', prefix: '1. ' },
+                      { icon: ListTodo, label: 'To-do List', desc: 'Track tasks with checkboxes', prefix: '- [ ] ' },
+                      { icon: Quote, label: 'Quote', desc: 'Capture a quote', prefix: '> ' },
+                      { icon: Code, label: 'Code Block', desc: 'Capture a code snippet', prefix: '```\n', suffix: '\n```' },
+                      { icon: Minus, label: 'Divider', desc: 'Visually divide blocks', prefix: '\n---\n' },
+                      { icon: Table, label: 'Table', desc: 'Add a markdown table', prefix: '\n| Header | Header |\n| --- | --- |\n| Cell | Cell |\n' },
+                    ].filter(item => item.label.toLowerCase().includes(slashSearch.toLowerCase())).map((item, i) => (
+                      <button
+                        key={i}
+                        onClick={() => executeSlashCommand(item.prefix, item.suffix)}
+                        className="w-full flex items-center gap-3 px-2 py-2 text-left hover:bg-muted rounded-lg transition-colors group"
+                      >
+                        <div className="w-8 h-8 rounded-md bg-background border border-border flex items-center justify-center group-hover:bg-primary/10 group-hover:border-primary/20 group-hover:text-primary transition-colors">
+                          <item.icon className="w-4 h-4" />
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-sm font-medium text-foreground">{item.label}</span>
+                          <span className="text-xs text-muted-foreground">{item.desc}</span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           )}
         </div>
+
+        {/* Table of Contents Sidebar */}
+        {showToc && !isFocusMode && headings.length > 0 && (
+          <div className="w-64 shrink-0 border-l border-border bg-muted/20 p-6 hidden lg:block overflow-y-auto custom-scrollbar">
+            <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-4">Table of Contents</h4>
+            <div className="space-y-2">
+              {headings.map((heading, i) => (
+                <a
+                  key={i}
+                  href={`#${heading.id}`}
+                  className={cn(
+                    "block text-sm text-muted-foreground hover:text-foreground transition-colors truncate",
+                    heading.level === 1 ? "font-semibold" : heading.level === 2 ? "pl-3" : "pl-6 text-xs"
+                  )}
+                  onClick={(e) => {
+                    if (!isPreviewMode) {
+                      e.preventDefault();
+                      // In edit mode, we can't easily scroll to the exact line without complex logic,
+                      // but we can at least show the structure.
+                    }
+                  }}
+                >
+                  {heading.text}
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Bottom Formatting Bar */}
-      {!isPreviewMode && (
+      {!isPreviewMode && !isFocusMode && (
         <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20 w-full max-w-full px-4 flex justify-center pointer-events-none">
           <div 
             ref={toolbarRef}

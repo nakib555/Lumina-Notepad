@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Plus, Trash2, FileText, X, Download, Tag, Search, Hash, Sun, Moon, Sparkles, Palette } from "lucide-react";
+import { Plus, Trash2, FileText, X, Download, Tag, Search, Hash, Sun, Moon, Sparkles, Palette, Folder } from "lucide-react";
 import { Note } from "@/hooks/use-notes";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -16,6 +16,8 @@ interface SidebarProps {
   onClose: () => void;
   theme: string;
   onThemeChange: (theme: string) => void;
+  fontFamily: string;
+  onFontFamilyChange: (font: string) => void;
 }
 
 export function Sidebar({ 
@@ -27,7 +29,9 @@ export function Sidebar({
   isOpen, 
   onClose,
   theme,
-  onThemeChange
+  onThemeChange,
+  fontFamily,
+  onFontFamilyChange
 }: SidebarProps) {
   const { isInstallable, installApp } = usePWAInstall();
   const [searchQuery, setSearchQuery] = useState("");
@@ -49,6 +53,16 @@ export function Sidebar({
       return matchesSearch && matchesTags;
     });
   }, [notes, searchQuery, selectedTags]);
+
+  const groupedNotes = useMemo(() => {
+    const groups: Record<string, Note[]> = { 'All Notes': [] };
+    filteredNotes.forEach(note => {
+      const folder = note.folderId || 'All Notes';
+      if (!groups[folder]) groups[folder] = [];
+      groups[folder].push(note);
+    });
+    return groups;
+  }, [filteredNotes]);
 
   const toggleTag = (tag: string) => {
     setSelectedTags(prev => 
@@ -148,55 +162,67 @@ export function Sidebar({
       )}
 
       <div className="flex-1 px-3 overflow-y-auto custom-scrollbar">
-        <div className="space-y-1 pb-4">
-          {filteredNotes.map(note => (
-            <div
-              key={note.id}
-              className={cn(
-                "group flex items-start justify-between p-3 rounded-xl cursor-pointer transition-all duration-200 border",
-                activeNoteId === note.id 
-                  ? "bg-background border-border shadow-sm" 
-                  : "border-transparent hover:bg-muted/50 text-muted-foreground"
-              )}
-              onClick={() => onSelectNote(note.id)}
-            >
-              <div className="flex flex-col overflow-hidden gap-1.5 w-full pr-2">
-                <span className={cn(
-                  "font-medium truncate text-sm transition-colors",
-                  activeNoteId === note.id ? "text-foreground" : "text-foreground/80 group-hover:text-foreground"
-                )}>
-                  {note.title || "Untitled Note"}
-                </span>
-                <div className="flex items-center justify-between">
-                  <span className="text-[11px] text-muted-foreground font-medium tracking-wide uppercase">
-                    {format(note.updatedAt, "MMM d, yyyy")}
-                  </span>
-                  {note.tags && note.tags.length > 0 && (
-                    <div className="flex gap-1">
-                      {note.tags.slice(0, 2).map(tag => (
-                        <div key={tag} className="w-1.5 h-1.5 rounded-full bg-primary/60" />
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                className={cn(
-                  "opacity-0 group-hover:opacity-100 h-7 w-7 shrink-0 transition-all rounded-full",
-                  activeNoteId === note.id 
-                    ? "text-muted-foreground hover:text-destructive hover:bg-destructive/10" 
-                    : "text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+        <div className="space-y-4 pb-4">
+          {Object.entries(groupedNotes).map(([folder, folderNotes]) => (
+            folderNotes.length > 0 && (
+              <div key={folder} className="space-y-1">
+                {folder !== 'All Notes' && (
+                  <div className="flex items-center gap-2 px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    <Folder className="w-3.5 h-3.5" />
+                    {folder}
+                  </div>
                 )}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDeleteNote(note.id);
-                }}
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-              </Button>
-            </div>
+                {folderNotes.map(note => (
+                  <div
+                    key={note.id}
+                    className={cn(
+                      "group flex items-start justify-between p-3 rounded-xl cursor-pointer transition-all duration-200 border",
+                      activeNoteId === note.id 
+                        ? "bg-background border-border shadow-sm" 
+                        : "border-transparent hover:bg-muted/50 text-muted-foreground"
+                    )}
+                    onClick={() => onSelectNote(note.id)}
+                  >
+                    <div className="flex flex-col overflow-hidden gap-1.5 w-full pr-2">
+                      <span className={cn(
+                        "font-medium truncate text-sm transition-colors",
+                        activeNoteId === note.id ? "text-foreground" : "text-foreground/80 group-hover:text-foreground"
+                      )}>
+                        {note.title || "Untitled Note"}
+                      </span>
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] text-muted-foreground font-medium tracking-wide uppercase">
+                          {format(note.updatedAt, "MMM d, yyyy")}
+                        </span>
+                        {note.tags && note.tags.length > 0 && (
+                          <div className="flex gap-1">
+                            {note.tags.slice(0, 2).map(tag => (
+                              <div key={tag} className="w-1.5 h-1.5 rounded-full bg-primary/60" />
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className={cn(
+                        "opacity-0 group-hover:opacity-100 h-7 w-7 shrink-0 transition-all rounded-full",
+                        activeNoteId === note.id 
+                          ? "text-muted-foreground hover:text-destructive hover:bg-destructive/10" 
+                          : "text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                      )}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDeleteNote(note.id);
+                      }}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )
           ))}
           {filteredNotes.length === 0 && (
             <div className="flex flex-col items-center justify-center p-8 text-center gap-3 mt-10">
@@ -217,12 +243,14 @@ export function Sidebar({
           <Tag className="w-3.5 h-3.5 text-muted-foreground" />
           <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Theme</span>
         </div>
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-3 gap-2">
           {[
             { id: 'light', label: 'Light', color: 'bg-white border-slate-200 text-amber-500', icon: Sun },
             { id: 'dark', label: 'Dark', color: 'bg-slate-900 border-slate-800 text-slate-100', icon: Moon },
             { id: 'fancy', label: 'Fancy', color: 'bg-indigo-50 border-indigo-200 text-indigo-500', icon: Sparkles },
-            { id: 'rainbow', label: 'Rainbow', color: 'bg-pink-50 border-pink-200 text-pink-500', icon: Palette }
+            { id: 'rainbow', label: 'Rainbow', color: 'bg-pink-50 border-pink-200 text-pink-500', icon: Palette },
+            { id: 'dracula', label: 'Dracula', color: 'bg-[#282a36] border-[#44475a] text-[#ff79c6]', icon: Moon },
+            { id: 'nord', label: 'Nord', color: 'bg-[#2e3440] border-[#3b4252] text-[#88c0d0]', icon: Moon }
           ].map((t) => {
             const Icon = t.icon;
             return (
