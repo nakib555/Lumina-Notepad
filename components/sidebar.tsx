@@ -171,6 +171,14 @@ export function Sidebar({
             placeholder="Search notes..." 
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
+            onFocus={() => {
+              const meta = document.querySelector('meta[name=viewport]');
+              if (meta) meta.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0');
+            }}
+            onBlur={() => {
+              const meta = document.querySelector('meta[name=viewport]');
+              if (meta) meta.setAttribute('content', 'width=device-width, initial-scale=1.0, interactive-widget=resizes-content, maximum-scale=1.0, user-scalable=0');
+            }}
             className="w-full pl-9 pr-4 py-2 text-base sm:text-sm bg-muted/50 border-transparent focus:bg-background focus:border-border rounded-xl outline-none transition-all placeholder:text-muted-foreground text-foreground"
           />
         </div>

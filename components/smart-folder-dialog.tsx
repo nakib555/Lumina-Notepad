@@ -56,12 +56,15 @@ export function SmartFolderDialog({ isOpen, onClose, onSave, existingFolder }: S
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[500px]">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-[500px] overflow-hidden flex flex-col p-0 gap-0" showCloseButton={false}>
+        <div className="p-4 border-b shrink-0 flex items-center justify-between">
           <DialogTitle>{existingFolder ? 'Edit Smart Folder' : 'Create Smart Folder'}</DialogTitle>
-        </DialogHeader>
-        
-        <div className="space-y-4 py-4">
+          <button onClick={onClose} className="h-7 w-7 flex items-center justify-center rounded-md hover:bg-muted text-muted-foreground transition-colors">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div className="p-4 shrink-0">
           <div className="space-y-2">
             <label className="text-sm font-medium">Folder Name</label>
             <input
@@ -72,17 +75,18 @@ export function SmartFolderDialog({ isOpen, onClose, onSave, existingFolder }: S
               className="w-full px-3 py-2 border border-border rounded-md bg-background text-sm"
             />
           </div>
+        </div>
 
+        <div className="px-4 py-3 shrink-0 flex items-center justify-between bg-background">
+          <label className="text-sm font-medium">Rules</label>
+          <button type="button" onClick={handleAddRule} className="h-8 px-3 text-xs font-medium border border-border rounded-md hover:bg-muted flex items-center transition-colors">
+            <Plus className="w-4 h-4 mr-1" /> Add Rule
+          </button>
+        </div>
+        
+        <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <label className="text-sm font-medium">Rules</label>
-              <button type="button" onClick={handleAddRule} className="h-8 px-3 text-xs font-medium border border-border rounded-md hover:bg-muted flex items-center">
-                <Plus className="w-4 h-4 mr-1" /> Add Rule
-              </button>
-            </div>
-            
-            <div className="max-h-[40vh] overflow-y-auto pr-2 space-y-3 custom-scrollbar">
-              {rules.map((rule, index) => (
+            {rules.map((rule, index) => (
                 <div key={index} className="flex flex-col sm:flex-row items-start sm:items-center gap-2 bg-muted/50 p-2 sm:p-3 rounded-lg border border-border w-full">
                   <div className="flex items-center gap-2 w-full sm:w-1/2">
                     <select
@@ -135,7 +139,7 @@ export function SmartFolderDialog({ isOpen, onClose, onSave, existingFolder }: S
                     <button 
                       type="button" 
                       onClick={() => handleRemoveRule(index)} 
-                      className="h-8 w-8 text-muted-foreground hover:text-destructive shrink-0 flex items-center justify-center rounded-md hover:bg-muted"
+                      className="h-8 w-8 text-muted-foreground hover:text-destructive shrink-0 flex items-center justify-center rounded-md hover:bg-muted transition-colors"
                     >
                       <X className="w-4 h-4" />
                     </button>
@@ -148,14 +152,13 @@ export function SmartFolderDialog({ isOpen, onClose, onSave, existingFolder }: S
                   No rules defined. Notes will not be automatically added.
                 </div>
               )}
-            </div>
           </div>
         </div>
 
-        <DialogFooter className="flex-row justify-end">
-          <button type="button" className="px-4 py-2 border border-border rounded-md hover:bg-muted text-sm font-medium" onClick={onClose}>Cancel</button>
-          <button type="button" className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 text-sm font-medium disabled:opacity-50" onClick={handleSave} disabled={!name.trim() || rules.length === 0}>Save Folder</button>
-        </DialogFooter>
+        <div className="p-4 shrink-0 flex justify-end gap-2 rounded-b-xl">
+          <button type="button" className="px-4 py-2 border border-border rounded-md hover:bg-muted text-sm font-medium bg-background transition-colors" onClick={onClose}>Cancel</button>
+          <button type="button" className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 text-sm font-medium disabled:opacity-50 transition-colors" onClick={handleSave} disabled={!name.trim() || rules.length === 0}>Save Folder</button>
+        </div>
       </DialogContent>
     </Dialog>
   );
