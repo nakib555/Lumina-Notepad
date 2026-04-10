@@ -7,12 +7,16 @@ import { CommandPalette } from "@/components/command-palette";
 export default function App() {
   const {
     notes,
+    smartFolders,
     activeNoteId,
     activeNote,
     setActiveNoteId,
     createNote,
     updateNote,
     deleteNote,
+    createSmartFolder,
+    updateSmartFolder,
+    deleteSmartFolder,
     isLoaded
   } = useNotes();
 
@@ -94,10 +98,14 @@ export default function App() {
     <div className="flex h-full w-full bg-background overflow-hidden relative">
       <Sidebar
         notes={notes}
+        smartFolders={smartFolders}
         activeNoteId={activeNoteId}
         onSelectNote={handleSelectNote}
         onCreateNote={createNote}
         onDeleteNote={deleteNote}
+        onCreateSmartFolder={createSmartFolder}
+        onUpdateSmartFolder={updateSmartFolder}
+        onDeleteSmartFolder={deleteSmartFolder}
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
         theme={theme}

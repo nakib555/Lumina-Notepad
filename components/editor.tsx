@@ -407,9 +407,14 @@ export function Editor({
   }, [note?.content, note?.title, note]);
 
   const toolbarRef = useRef<HTMLDivElement>(null);
+  const symbolScrollRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [startX, setStartX] = useState(0);
   const [scrollLeft, setScrollLeft] = useState(0);
+
+  const [isSymbolDragging, setIsSymbolDragging] = useState(false);
+  const [symbolStartX, setSymbolStartX] = useState(0);
+  const [symbolScrollLeft, setSymbolScrollLeft] = useState(0);
 
   const handleMouseDown = (e: React.MouseEvent) => {
     if (!toolbarRef.current) return;
@@ -433,6 +438,37 @@ export function Editor({
     const walk = (x - startX) * 2; // Scroll speed
     toolbarRef.current.scrollLeft = scrollLeft - walk;
   };
+
+  const handleSymbolMouseDown = (e: React.MouseEvent) => {
+    if (!symbolScrollRef.current) return;
+    setIsSymbolDragging(true);
+    setSymbolStartX(e.pageX - symbolScrollRef.current.offsetLeft);
+    setSymbolScrollLeft(symbolScrollRef.current.scrollLeft);
+  };
+
+  const handleSymbolMouseLeave = () => {
+    setIsSymbolDragging(false);
+  };
+
+  const handleSymbolMouseUp = () => {
+    setIsSymbolDragging(false);
+  };
+
+  const handleSymbolMouseMove = (e: React.MouseEvent) => {
+    if (!isSymbolDragging || !symbolScrollRef.current) return;
+    e.preventDefault();
+    const x = e.pageX - symbolScrollRef.current.offsetLeft;
+    const walk = (x - symbolStartX) * 2;
+    symbolScrollRef.current.scrollLeft = symbolScrollLeft - walk;
+  };
+
+  // Auto-resize on initial load or note change
+  useEffect(() => {
+    if (textareaRef.current && !isPreviewMode) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+    }
+  }, [note?.content, isPreviewMode]);
 
   if (!note) {
     return (
@@ -491,14 +527,6 @@ export function Editor({
     const readingTime = Math.ceil(words / 200); // 200 words per minute
     return { words, chars, readingTime };
   };
-
-  // Auto-resize on initial load or note change
-  useEffect(() => {
-    if (textareaRef.current && !isPreviewMode) {
-      textareaRef.current.style.height = 'auto';
-      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
-    }
-  }, [note?.content, isPreviewMode]);
 
   const stats = getStats();
 
@@ -755,18 +783,45 @@ export function Editor({
 
       {/* Bottom Formatting Bar */}
       {!isPreviewMode && (
-        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-20 w-full max-w-full px-4 flex justify-center pointer-events-none">
-          <div 
-            ref={toolbarRef}
-            onMouseDown={handleMouseDown}
-            onMouseLeave={handleMouseLeave}
-            onMouseUp={handleMouseUp}
-            onMouseMove={handleMouseMove}
-            className={cn(
-              "flex items-center gap-1 bg-background/90 backdrop-blur-md border border-border shadow-xl rounded-2xl p-1.5 overflow-x-auto no-scrollbar max-w-full sm:max-w-max flex-nowrap pointer-events-auto select-none touch-pan-x",
-              isDragging ? "cursor-grabbing" : "cursor-grab"
+        <div className="absolute bottom-4 sm:bottom-8 left-0 right-0 z-20 px-2 sm:px-4 flex justify-center pointer-events-none">
+          <div className="relative pointer-events-auto max-w-full flex flex-col items-center" ref={symbolMenuRef}>
+            {showSymbolMenu && (
+              <div 
+                ref={symbolScrollRef}
+                onMouseDown={handleSymbolMouseDown}
+                onMouseLeave={handleSymbolMouseLeave}
+                onMouseUp={handleSymbolMouseUp}
+                onMouseMove={handleSymbolMouseMove}
+                className={cn(
+                  "absolute bottom-full mb-2 left-0 right-0 w-full bg-background/90 backdrop-blur-md border border-border rounded-2xl shadow-xl p-1.5 z-50 animate-in fade-in zoom-in-95 duration-200 flex items-center gap-1 overflow-x-auto no-scrollbar touch-pan-x select-none",
+                  isSymbolDragging ? "cursor-grabbing" : "cursor-grab"
+                )}
+              >
+                {['★', '✓', '→', '←', '↑', '↓', '•', '©', '®', '™', '°', '±', '≠', '∞', '≈', '×', '÷', '∑', 'π', 'Ω'].map(sym => (
+                  <button
+                    key={sym}
+                    onClick={() => {
+                      applyFormatting(sym, "");
+                      setShowSymbolMenu(false);
+                    }}
+                    className="flex-shrink-0 flex items-center justify-center h-8 w-8 rounded-lg hover:bg-muted text-foreground transition-colors"
+                  >
+                    {sym}
+                  </button>
+                ))}
+              </div>
             )}
-          >
+            <div 
+              ref={toolbarRef}
+              onMouseDown={handleMouseDown}
+              onMouseLeave={handleMouseLeave}
+              onMouseUp={handleMouseUp}
+              onMouseMove={handleMouseMove}
+              className={cn(
+                "flex items-center gap-1 bg-background/90 backdrop-blur-md border border-border shadow-xl rounded-2xl p-1.5 overflow-x-auto no-scrollbar max-w-full flex-nowrap select-none touch-pan-x",
+                isDragging ? "cursor-grabbing" : "cursor-grab"
+              )}
+            >
             {/* Text Style Group */}
             <div className="flex items-center gap-0.5 pr-1 border-r border-border">
               <Button
@@ -954,7 +1009,7 @@ export function Editor({
             </div>
 
             {/* Symbol Group */}
-            <div className="flex items-center gap-0.5 pl-1 border-l border-border relative" ref={symbolMenuRef}>
+            <div className="flex items-center gap-0.5 pl-1 border-l border-border relative">
               <Button
                 variant="ghost"
                 size="icon"
@@ -964,25 +1019,10 @@ export function Editor({
               >
                 <Sigma className="w-4 h-4" />
               </Button>
-              {showSymbolMenu && (
-                <div className="absolute bottom-full mb-2 right-0 w-64 bg-popover border border-border rounded-2xl shadow-2xl p-2 z-50 animate-in fade-in zoom-in-95 duration-200 grid grid-cols-5 gap-1">
-                  {['★', '✓', '→', '←', '↑', '↓', '•', '©', '®', '™', '°', '±', '≠', '∞', '≈', '×', '÷', '∑', 'π', 'Ω'].map(sym => (
-                    <button
-                      key={sym}
-                      onClick={() => {
-                        applyFormatting(sym, "");
-                        setShowSymbolMenu(false);
-                      }}
-                      className="flex items-center justify-center h-8 rounded hover:bg-muted text-foreground transition-colors"
-                    >
-                      {sym}
-                    </button>
-                  ))}
-                </div>
-              )}
             </div>
           </div>
         </div>
+      </div>
       )}
     </div>
   );

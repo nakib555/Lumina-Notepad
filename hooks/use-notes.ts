@@ -1,6 +1,18 @@
 import { useState, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 
+export interface SmartFolderRule {
+  type: 'tag' | 'keyword' | 'date';
+  operator: 'contains' | 'equals' | 'after' | 'before';
+  value: string;
+}
+
+export interface SmartFolder {
+  id: string;
+  name: string;
+  rules: SmartFolderRule[];
+}
+
 export interface Note {
   id: string;
   title: string;
@@ -12,14 +24,25 @@ export interface Note {
 
 export function useNotes() {
   const [notes, setNotes] = useState<Note[]>([]);
+  const [smartFolders, setSmartFolders] = useState<SmartFolder[]>([]);
   const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
-    const saved = localStorage.getItem('lumina-notes');
-    if (saved) {
+    const savedNotes = localStorage.getItem('lumina-notes');
+    const savedSmartFolders = localStorage.getItem('lumina-smart-folders');
+    
+    if (savedSmartFolders) {
       try {
-        const parsed = JSON.parse(saved);
+        setSmartFolders(JSON.parse(savedSmartFolders));
+      } catch (e) {
+        console.error('Failed to parse smart folders', e);
+      }
+    }
+
+    if (savedNotes) {
+      try {
+        const parsed = JSON.parse(savedNotes);
         // eslint-disable-next-line react-hooks/set-state-in-effect
         setNotes(parsed);
         if (parsed.length > 0) {
@@ -45,8 +68,9 @@ export function useNotes() {
   useEffect(() => {
     if (isLoaded) {
       localStorage.setItem('lumina-notes', JSON.stringify(notes));
+      localStorage.setItem('lumina-smart-folders', JSON.stringify(smartFolders));
     }
-  }, [notes, isLoaded]);
+  }, [notes, smartFolders, isLoaded]);
 
   const activeNote = notes.find(n => n.id === activeNoteId) || null;
 
@@ -78,14 +102,36 @@ export function useNotes() {
     });
   };
 
+  const createSmartFolder = (folder: Omit<SmartFolder, 'id'>) => {
+    const newFolder: SmartFolder = {
+      ...folder,
+      id: uuidv4(),
+    };
+    setSmartFolders(prev => [...prev, newFolder]);
+  };
+
+  const updateSmartFolder = (id: string, updates: Partial<SmartFolder>) => {
+    setSmartFolders(prev => prev.map(f => 
+      f.id === id ? { ...f, ...updates } : f
+    ));
+  };
+
+  const deleteSmartFolder = (id: string) => {
+    setSmartFolders(prev => prev.filter(f => f.id !== id));
+  };
+
   return {
     notes,
+    smartFolders,
     activeNoteId,
     activeNote,
     setActiveNoteId,
     createNote,
     updateNote,
     deleteNote,
+    createSmartFolder,
+    updateSmartFolder,
+    deleteSmartFolder,
     isLoaded
   };
 }

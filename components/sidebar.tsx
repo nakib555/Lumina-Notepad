@@ -1,17 +1,22 @@
 import { Button } from "@/components/ui/button";
-import { Plus, Trash2, FileText, X, Download, Tag, Search, Hash, Sun, Moon, Sparkles, Palette, Folder } from "lucide-react";
-import { Note } from "@/hooks/use-notes";
+import { Plus, Trash2, FileText, X, Download, Tag, Search, Hash, Sun, Moon, Sparkles, Palette, Folder, Settings2 } from "lucide-react";
+import { Note, SmartFolder } from "@/hooks/use-notes";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { usePWAInstall } from "@/hooks/use-pwa-install";
 import { useState, useMemo } from "react";
+import { SmartFolderDialog } from "./smart-folder-dialog";
 
 interface SidebarProps {
   notes: Note[];
+  smartFolders: SmartFolder[];
   activeNoteId: string | null;
   onSelectNote: (id: string) => void;
   onCreateNote: () => void;
   onDeleteNote: (id: string) => void;
+  onCreateSmartFolder: (folder: Omit<SmartFolder, 'id'>) => void;
+  onUpdateSmartFolder: (id: string, updates: Partial<SmartFolder>) => void;
+  onDeleteSmartFolder: (id: string) => void;
   isOpen: boolean;
   onClose: () => void;
   theme: string;
@@ -22,10 +27,14 @@ interface SidebarProps {
 
 export function Sidebar({ 
   notes, 
+  smartFolders,
   activeNoteId, 
   onSelectNote, 
   onCreateNote, 
   onDeleteNote, 
+  onCreateSmartFolder,
+  onUpdateSmartFolder,
+  onDeleteSmartFolder,
   isOpen, 
   onClose,
   theme,
@@ -36,6 +45,8 @@ export function Sidebar({
   const { isInstallable, installApp } = usePWAInstall();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [isSmartFolderDialogOpen, setIsSmartFolderDialogOpen] = useState(false);
+  const [editingSmartFolder, setEditingSmartFolder] = useState<SmartFolder | undefined>();
 
   const allTags = useMemo(() => {
     const tags = new Set<string>();
@@ -56,13 +67,42 @@ export function Sidebar({
 
   const groupedNotes = useMemo(() => {
     const groups: Record<string, Note[]> = { 'All Notes': [] };
+    
+    // Add smart folders
+    smartFolders.forEach(sf => {
+      groups[sf.name] = notes.filter(note => {
+        return sf.rules.every(rule => {
+          if (rule.type === 'tag') {
+            if (rule.operator === 'contains') return note.tags?.some(t => t.includes(rule.value));
+            if (rule.operator === 'equals') return note.tags?.includes(rule.value);
+          }
+          if (rule.type === 'keyword') {
+            const content = (note.title + ' ' + note.content).toLowerCase();
+            const val = rule.value.toLowerCase();
+            if (rule.operator === 'contains') return content.includes(val);
+            if (rule.operator === 'equals') return content === val;
+          }
+          if (rule.type === 'date') {
+            const noteDate = new Date(note.updatedAt).getTime();
+            const ruleDate = new Date(rule.value).getTime();
+            if (rule.operator === 'after') return noteDate > ruleDate;
+            if (rule.operator === 'before') return noteDate < ruleDate;
+          }
+          return false;
+        });
+      });
+    });
+
     filteredNotes.forEach(note => {
       const folder = note.folderId || 'All Notes';
       if (!groups[folder]) groups[folder] = [];
-      groups[folder].push(note);
+      // Prevent duplicates if note is already in a smart folder
+      if (!smartFolders.some(sf => groups[sf.name]?.includes(note))) {
+        groups[folder].push(note);
+      }
     });
     return groups;
-  }, [filteredNotes]);
+  }, [filteredNotes, notes, smartFolders]);
 
   const toggleTag = (tag: string) => {
     setSelectedTags(prev => 
@@ -82,13 +122,25 @@ export function Sidebar({
       
       {/* Sidebar */}
       <div className={cn(
-        "fixed md:static inset-y-0 left-0 z-50 w-72 border-r border-border bg-sidebar flex flex-col h-screen shrink-0 transition-all duration-300 ease-in-out",
+        "fixed md:static inset-y-0 left-0 z-50 w-72 border-r border-border bg-sidebar flex flex-col h-full shrink-0 transition-all duration-300 ease-in-out",
         isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0 md:w-0 md:border-none md:overflow-hidden"
       )}>
         <div className="p-5 border-b border-border flex items-center justify-between bg-sidebar">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg overflow-hidden shadow-sm">
-              <img src="/logo.svg" alt="Lumina Logo" className="w-full h-full object-cover" />
+            <div className="w-8 h-8 rounded-lg overflow-hidden shadow-sm flex items-center justify-center">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none" className="w-full h-full">
+                <rect width="512" height="512" rx="128" fill="url(#paint0_linear)"/>
+                <path d="M160 140V372H352" stroke="white" strokeWidth="40" strokeLinecap="round" strokeLinejoin="round"/>
+                <circle cx="352" cy="140" r="40" fill="white">
+                  <animate attributeName="opacity" values="0.5;1;0.5" dur="3s" repeatCount="indefinite"/>
+                </circle>
+                <defs>
+                  <linearGradient id="paint0_linear" x1="0" y1="0" x2="512" y2="512" gradientUnits="userSpaceOnUse">
+                    <stop stopColor="#6366F1"/>
+                    <stop offset="1" stopColor="#A855F7"/>
+                  </linearGradient>
+                </defs>
+              </svg>
             </div>
             <h1 className="font-semibold text-sidebar-foreground tracking-tight">Lumina</h1>
           </div>
@@ -121,6 +173,26 @@ export function Sidebar({
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-9 pr-4 py-2 text-sm bg-muted/50 border-transparent focus:bg-background focus:border-border rounded-xl outline-none transition-all placeholder:text-muted-foreground text-foreground"
           />
+        </div>
+      </div>
+
+      <div className="px-3 mb-4">
+        <div className="flex items-center justify-between px-2 mb-2">
+          <div className="flex items-center gap-2">
+            <Folder className="w-3.5 h-3.5 text-muted-foreground" />
+            <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Smart Folders</span>
+          </div>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="h-5 w-5 text-muted-foreground hover:text-foreground"
+            onClick={() => {
+              setEditingSmartFolder(undefined);
+              setIsSmartFolderDialogOpen(true);
+            }}
+          >
+            <Plus className="w-3.5 h-3.5" />
+          </Button>
         </div>
       </div>
 
@@ -167,9 +239,37 @@ export function Sidebar({
             folderNotes.length > 0 && (
               <div key={folder} className="space-y-1">
                 {folder !== 'All Notes' && (
-                  <div className="flex items-center gap-2 px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                    <Folder className="w-3.5 h-3.5" />
-                    {folder}
+                  <div className="flex items-center justify-between px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider group">
+                    <div className="flex items-center gap-2">
+                      <Folder className="w-3.5 h-3.5" />
+                      {folder}
+                    </div>
+                    {smartFolders.some(sf => sf.name === folder) && (
+                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-5 w-5 hover:bg-muted"
+                          onClick={() => {
+                            setEditingSmartFolder(smartFolders.find(sf => sf.name === folder));
+                            setIsSmartFolderDialogOpen(true);
+                          }}
+                        >
+                          <Settings2 className="w-3 h-3" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-5 w-5 hover:bg-destructive/10 hover:text-destructive"
+                          onClick={() => {
+                            const sf = smartFolders.find(sf => sf.name === folder);
+                            if (sf) onDeleteSmartFolder(sf.id);
+                          }}
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 )}
                 {folderNotes.map(note => (
@@ -285,6 +385,19 @@ export function Sidebar({
         </div>
       )}
     </div>
+
+      <SmartFolderDialog 
+        isOpen={isSmartFolderDialogOpen}
+        onClose={() => setIsSmartFolderDialogOpen(false)}
+        existingFolder={editingSmartFolder}
+        onSave={(folder) => {
+          if (editingSmartFolder) {
+            onUpdateSmartFolder(editingSmartFolder.id, folder);
+          } else {
+            onCreateSmartFolder(folder);
+          }
+        }}
+      />
     </>
   );
 }
