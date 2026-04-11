@@ -1,7 +1,7 @@
 import { 
   Bold, Italic, Underline, Strikethrough, Subscript, Superscript, 
   Quote, Code, Link, Image, Minus, Table, List, ListOrdered, ListTodo,
-  Heading1, Heading2, Heading3
+  Heading1, Heading2, Heading3, Sigma
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -17,6 +17,7 @@ interface FloatingToolbarProps {
   onFontFamilyChange: (font: string) => void;
   applyFontSize: (size: string) => void;
   applyFormatting: (prefix: string, suffix?: string) => void;
+  onToggleSymbolMenu: () => void;
 }
 
 export const FloatingToolbar = ({
@@ -29,7 +30,8 @@ export const FloatingToolbar = ({
   fontFamily,
   onFontFamilyChange,
   applyFontSize,
-  applyFormatting
+  applyFormatting,
+  onToggleSymbolMenu
 }: FloatingToolbarProps) => {
   return (
     <div 
@@ -221,7 +223,7 @@ export const FloatingToolbar = ({
       </div>
 
       {/* Headings Group */}
-      <div className="flex items-center gap-0.5 pl-1">
+      <div className="flex items-center gap-0.5 pl-1 border-r border-border pr-1">
         <Button
           variant="ghost"
           size="icon"
@@ -248,6 +250,19 @@ export const FloatingToolbar = ({
           title="Heading 3"
         >
           <Heading3 className="w-4 h-4" />
+        </Button>
+      </div>
+
+      {/* Symbol Group */}
+      <div className="flex items-center gap-0.5 pl-1">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onToggleSymbolMenu}
+          className="h-8 w-8 text-yellow-500 hover:text-yellow-600 dark:text-yellow-400 hover:bg-yellow-500/10 rounded-lg shrink-0"
+          title="Symbols"
+        >
+          <Sigma className="w-4 h-4" />
         </Button>
       </div>
     </div>

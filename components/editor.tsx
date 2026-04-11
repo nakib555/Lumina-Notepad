@@ -1,27 +1,15 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Note } from "@/hooks/use-notes";
-import { 
-  FileText, CheckCircle2, Menu, Eye, Edit3, 
-  Bold, Italic, Underline, Strikethrough, Subscript, Superscript, 
-  Copy, Play, ExternalLink, Check,
-  Heading1, Heading2, Heading3, List, ListOrdered, ListTodo,
-  Quote, Code, Link, Image, Minus, Table,
-  Undo2, Redo2, Download, Tag, X, Hash, Printer, FileCode, Folder, Sigma
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import remarkBreaks from 'remark-breaks';
-import remarkToc from 'remark-toc';
-import rehypeRaw from 'rehype-raw';
-import rehypeSlug from 'rehype-slug';
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { CodeBlock } from "./editor/code-block";
 import { EditorHeader } from "./editor/editor-header";
-import { FloatingToolbar } from "./editor/floating-toolbar";
+import { BottomBar } from "./editor/bottom-bar";
 import { SlashMenu } from "./editor/slash-menu";
-import { processCustomMarkdown, HistoryItem } from "./editor/utils";
+import { MetadataBar } from "./editor/metadata-bar";
+import { EditorArea } from "./editor/editor-area";
+import { HistoryItem } from "./editor/utils";
+import { useEditorFormatting } from "./editor/use-editor-formatting";
+import getCaretCoordinates from 'textarea-caret';
 
 interface EditorProps {
   note: Note | null;
@@ -147,10 +135,20 @@ export function Editor({
     if (slashMatch) {
       setSlashSearch(slashMatch[1]);
       
-      // Calculate position (rough estimation for textarea)
+      // Calculate position
       if (textareaRef.current) {
-        // This is a simplified positioning. For perfect positioning, a library like get-caret-coordinates is better.
-        // We'll just center it or put it near the bottom for now.
+        const caret = getCaretCoordinates(textareaRef.current, cursorPosition);
+        const rect = textareaRef.current.getBoundingClientRect();
+        
+        // Find the root container to calculate relative position
+        const rootContainer = textareaRef.current.closest('.bg-background.relative');
+        const rootRect = rootContainer ? rootContainer.getBoundingClientRect() : { top: 0, left: 0 };
+        
+        // Account for textarea position relative to the root container
+        const top = caret.top + rect.top - rootRect.top + 24;
+        const left = caret.left + rect.left - rootRect.left;
+        
+        setSlashMenuPosition({ top, left });
         setSlashMenuOpen(true);
       }
     } else {
@@ -183,39 +181,6 @@ export function Editor({
 
   const handleDragOver = (e: React.DragEvent<HTMLTextAreaElement>) => {
     e.preventDefault();
-  };
-
-  const executeSlashCommand = (prefix: string, suffix: string = "") => {
-    if (!textareaRef.current || !note) return;
-    
-    const text = note.content;
-    const start = textareaRef.current.selectionStart;
-    
-    // Find where the slash command started
-    const textBeforeCursor = text.substring(0, start);
-    const lastSlashIndex = textBeforeCursor.lastIndexOf('/');
-    
-    if (lastSlashIndex !== -1) {
-      const newText = 
-        text.substring(0, lastSlashIndex) + 
-        prefix + suffix + 
-        text.substring(start);
-        
-      onUpdateNote(note.id, { content: newText });
-      addToHistory(note.title, newText, true);
-      
-      setTimeout(() => {
-        if (textareaRef.current) {
-          textareaRef.current.focus();
-          textareaRef.current.setSelectionRange(
-            lastSlashIndex + prefix.length,
-            lastSlashIndex + prefix.length
-          );
-        }
-      }, 0);
-    }
-    
-    setSlashMenuOpen(false);
   };
 
   const handleUndo = useCallback(() => {
@@ -448,87 +413,13 @@ export function Editor({
     );
   }
 
-  const applyFormatting = (prefix: string, suffix: string = prefix) => {
-    if (!textareaRef.current || !note) return;
-
-    const start = textareaRef.current.selectionStart;
-    const end = textareaRef.current.selectionEnd;
-    const text = note.content;
-    const selectedText = text.substring(start, end);
-    
-    const newText = 
-      text.substring(0, start) + 
-      prefix + selectedText + suffix + 
-      text.substring(end);
-
-    onUpdateNote(note.id, { content: newText });
-    addToHistory(note.title, newText, true); // Immediate commit for formatting
-
-    // Reset focus and selection after state update
-    setTimeout(() => {
-      if (textareaRef.current) {
-        textareaRef.current.focus({ preventScroll: true });
-        textareaRef.current.setSelectionRange(
-          start + prefix.length,
-          end + prefix.length
-        );
-      }
-    }, 0);
-  };
-
-  const applyFontSize = (size: string) => {
-    if (!textareaRef.current || !note) return;
-
-    let start = textareaRef.current.selectionStart;
-    let end = textareaRef.current.selectionEnd;
-    const text = note.content;
-
-    // 1. Check if selection is exactly the text inside [text]{size}
-    if (start > 0 && text.charAt(start - 1) === '[') {
-      const after = text.substring(end);
-      const match = after.match(/^\]\{\d+(?:px|pt)\}/);
-      if (match) {
-        start -= 1;
-        end += match[0].length;
-      }
-    } else if (start === end) {
-      // 2. Check if cursor is just resting inside a [text]{size} block
-      const before = text.substring(0, start);
-      const lastOpen = before.lastIndexOf('[');
-      const lastClose = before.lastIndexOf(']');
-      if (lastOpen !== -1 && lastOpen > lastClose) {
-        const after = text.substring(lastOpen);
-        const fullMatch = after.match(/^\[(.*?)\]\{\d+(?:px|pt)\}/);
-        if (fullMatch && lastOpen + fullMatch[0].length >= start) {
-          start = lastOpen;
-          end = lastOpen + fullMatch[0].length;
-        }
-      }
-    }
-
-    const selectedText = text.substring(start, end);
-    
-    // Strip any existing font size markdown within the selection to prevent overlaying
-    const strippedText = selectedText.replace(/\[(.*?)\]\{\d+(?:px|pt)\}/g, '$1');
-    
-    const textToWrap = strippedText || "text";
-    const replacement = `[${textToWrap}]{${size}pt}`;
-    
-    const newText = text.substring(0, start) + replacement + text.substring(end);
-
-    onUpdateNote(note.id, { content: newText });
-    addToHistory(note.title, newText, true);
-
-    setTimeout(() => {
-      if (textareaRef.current) {
-        textareaRef.current.focus({ preventScroll: true });
-        textareaRef.current.setSelectionRange(
-          start + 1,
-          start + 1 + textToWrap.length
-        );
-      }
-    }, 0);
-  };
+  const { applyFormatting, applyFontSize, executeSlashCommand } = useEditorFormatting(
+    note,
+    onUpdateNote,
+    textareaRef,
+    addToHistory,
+    setSlashMenuOpen
+  );
 
   const getStats = () => {
     if (!note) return { words: 0, chars: 0, readingTime: 0 };
@@ -577,172 +468,54 @@ export function Editor({
             />
             
             {/* Tag Management */}
-            <div className="flex flex-wrap items-center gap-4 print:hidden">
-              <div className="flex flex-wrap items-center gap-2">
-                <div className="flex flex-wrap gap-1.5">
-                  {note.tags?.map(tag => (
-                    <span 
-                      key={tag} 
-                      className="flex items-center gap-1 px-2.5 py-1 bg-primary/10 text-primary text-[11px] font-bold rounded-full border border-primary/20 group/tag"
-                    >
-                      <Hash className="w-3 h-3 opacity-60" />
-                      {tag}
-                      <button 
-                        onClick={() => removeTag(tag)}
-                        className="hover:text-primary/80 transition-colors"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </span>
-                  ))}
-                </div>
-                <div className="relative flex items-center">
-                  <Tag className="absolute left-2.5 w-3.5 h-3.5 text-muted-foreground" />
-                  <input 
-                    type="text"
-                    placeholder="Add tag..."
-                    value={tagInput}
-                    onChange={(e) => setTagInput(e.target.value)}
-                    onKeyDown={onTagKeyDown}
-                    onBlur={handleAddTag}
-                    className="pl-8 pr-3 py-1 text-[11px] font-medium bg-muted border-transparent focus:bg-background focus:border-border rounded-full outline-none transition-all w-24 focus:w-32 text-foreground"
-                  />
-                </div>
-              </div>
-
-              <div className="h-4 w-px bg-border hidden sm:block" />
-
-              <div className="relative flex items-center">
-                <Folder className="absolute left-2.5 w-3.5 h-3.5 text-muted-foreground" />
-                <input 
-                  type="text"
-                  placeholder={note.folderId || "Add to folder..."}
-                  value={folderInput}
-                  onChange={(e) => setFolderInput(e.target.value)}
-                  onKeyDown={updateFolder}
-                  className="pl-8 pr-3 py-1 text-[11px] font-medium bg-muted border-transparent focus:bg-background focus:border-border rounded-full outline-none transition-all w-32 focus:w-40 text-foreground"
-                />
-              </div>
-            </div>
+            <MetadataBar 
+              note={note}
+              tagInput={tagInput}
+              setTagInput={setTagInput}
+              onTagKeyDown={onTagKeyDown}
+              handleAddTag={handleAddTag}
+              removeTag={removeTag}
+              folderInput={folderInput}
+              setFolderInput={setFolderInput}
+              updateFolder={updateFolder}
+            />
           </div>
           
-          {isPreviewMode ? (
-            <div className="prose prose-slate dark:prose-invert max-w-none pb-32 font-sans text-[14pt] prose-p:leading-relaxed prose-headings:font-semibold prose-a:text-blue-600 dark:prose-a:text-blue-400 prose-a:no-underline prose-blockquote:border-l-4 prose-blockquote:border-primary/50 prose-blockquote:bg-muted/30 prose-blockquote:px-4 prose-blockquote:py-2 prose-blockquote:not-italic prose-blockquote:text-muted-foreground prose-code:text-primary prose-code:bg-muted/50 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md prose-code:before:content-none prose-code:after:content-none prose-pre:p-0 prose-pre:bg-transparent prose-img:rounded-xl">
-              <ReactMarkdown 
-                remarkPlugins={[remarkGfm, remarkBreaks, [remarkToc, { heading: 'toc|contents|table of contents', tight: true }]]} 
-                rehypePlugins={[rehypeRaw, rehypeSlug]}
-                components={{
-                  pre: ({ children }) => <>{children}</>,
-                  code: (props) => <CodeBlock {...props} theme={theme} />
-                }}
-              >
-                {processCustomMarkdown(note.content || "_No content yet..._")}
-              </ReactMarkdown>
-            </div>
-          ) : (
-            <div className="relative flex-1">
-              <textarea
-                ref={textareaRef}
-                value={note.content}
-                onChange={handleContentChange}
-                onDrop={handleDrop}
-                onDragOver={handleDragOver}
-                placeholder="Start typing with markdown support... (# Heading, *italic*, **bold**, etc.)\nType '/' for commands or drag & drop images."
-                className="w-full min-h-[500px] pb-32 text-[14pt] text-foreground placeholder:text-muted-foreground/50 border-none outline-none bg-transparent resize-none focus-visible:ring-0 p-0 leading-relaxed font-sans overflow-hidden"
-              />
-            </div>
-          )}
+          <EditorArea 
+            isPreviewMode={isPreviewMode}
+            content={note.content}
+            theme={theme}
+            textareaRef={textareaRef}
+            handleContentChange={handleContentChange}
+            handleDrop={handleDrop}
+            handleDragOver={handleDragOver}
+          />
         </div>
       </div>
 
       {/* Bottom Formatting Bar */}
-      {!isPreviewMode && (
-        <div className="absolute bottom-4 sm:bottom-8 left-0 right-0 z-20 px-2 sm:px-4 flex justify-center pointer-events-none">
-          <div 
-            className="relative pointer-events-auto max-w-full flex flex-col items-center" 
-            ref={symbolMenuRef}
-            onMouseDown={(e) => {
-              if ((e.target as HTMLElement).closest('button')) {
-                e.preventDefault();
-              }
-            }}
-            onTouchStart={() => {
-              // Reset drag state on new touch
-              if (symbolMenuRef.current) {
-                symbolMenuRef.current.dataset.touchDragging = 'false';
-              }
-            }}
-            onTouchMove={() => {
-              // Mark as dragging if touch moves
-              if (symbolMenuRef.current) {
-                symbolMenuRef.current.dataset.touchDragging = 'true';
-              }
-            }}
-            onTouchEnd={(e) => {
-              const button = (e.target as HTMLElement).closest('button');
-              const isDragging = symbolMenuRef.current?.dataset.touchDragging === 'true';
-              
-              if (button && !isDragging) {
-                // Prevent default to stop iOS from blurring the textarea and closing the keyboard
-                e.preventDefault();
-                // Manually trigger the click since we prevented the default touch behavior
-                button.click();
-              }
-            }}
-          >
-            {showSymbolMenu && (
-              <div 
-                ref={symbolScrollRef}
-                onMouseDown={handleSymbolMouseDown}
-                onMouseLeave={handleSymbolMouseLeave}
-                onMouseUp={handleSymbolMouseUp}
-                onMouseMove={handleSymbolMouseMove}
-                className={cn(
-                  "absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-background/90 backdrop-blur-md border border-border rounded-2xl shadow-xl p-1.5 z-50 animate-in fade-in slide-in-from-bottom-2 zoom-in-95 duration-200 flex items-center gap-1 overflow-x-auto no-scrollbar max-w-[90vw] sm:max-w-full flex-nowrap select-none touch-pan-x",
-                  isSymbolDragging ? "cursor-grabbing" : "cursor-grab"
-                )}
-              >
-                {['★', '✓', '→', '←', '↑', '↓', '•', '©', '®', '™', '°', '±', '≠', '∞', '≈', '×', '÷', '∑', 'π', 'Ω'].map(sym => (
-                  <button
-                    key={sym}
-                    onClick={() => {
-                      applyFormatting(sym, "");
-                      setShowSymbolMenu(false);
-                    }}
-                    className="flex-shrink-0 flex items-center justify-center h-8 w-8 rounded-lg hover:bg-muted text-foreground transition-colors"
-                  >
-                    {sym}
-                  </button>
-                ))}
-              </div>
-            )}
-            <FloatingToolbar 
-              toolbarRef={toolbarRef}
-              isDragging={isDragging}
-              handleMouseDown={handleMouseDown}
-              handleMouseLeave={handleMouseLeave}
-              handleMouseUp={handleMouseUp}
-              handleMouseMove={handleMouseMove}
-              fontFamily={fontFamily}
-              onFontFamilyChange={onFontFamilyChange}
-              applyFontSize={applyFontSize}
-              applyFormatting={applyFormatting}
-            />
-            {/* Symbol Group */}
-            <div className="flex items-center gap-0.5 pl-1 border-l border-border relative">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setShowSymbolMenu(!showSymbolMenu)}
-                className="h-8 w-8 text-yellow-500 hover:text-yellow-600 dark:text-yellow-400 hover:bg-yellow-500/10 rounded-lg shrink-0"
-                title="Symbols"
-              >
-                <Sigma className="w-4 h-4" />
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      <BottomBar 
+        isPreviewMode={isPreviewMode}
+        symbolMenuRef={symbolMenuRef}
+        showSymbolMenu={showSymbolMenu}
+        setShowSymbolMenu={setShowSymbolMenu}
+        symbolScrollRef={symbolScrollRef}
+        handleSymbolMouseDown={handleSymbolMouseDown}
+        handleSymbolMouseLeave={handleSymbolMouseLeave}
+        handleSymbolMouseUp={handleSymbolMouseUp}
+        handleSymbolMouseMove={handleSymbolMouseMove}
+        isSymbolDragging={isSymbolDragging}
+        applyFormatting={applyFormatting}
+        toolbarRef={toolbarRef}
+        isDragging={isDragging}
+        handleMouseDown={handleMouseDown}
+        handleMouseLeave={handleMouseLeave}
+        handleMouseUp={handleMouseUp}
+        handleMouseMove={handleMouseMove}
+        fontFamily={fontFamily}
+        onFontFamilyChange={onFontFamilyChange}
+        applyFontSize={applyFontSize}
+      />
 
       {/* Slash Command Menu */}
       <SlashMenu 
