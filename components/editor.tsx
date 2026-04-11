@@ -716,7 +716,7 @@ export function Editor({
           </div>
           
           {isPreviewMode ? (
-            <div className="prose prose-slate dark:prose-invert max-w-none pb-32 font-sans text-[1.125rem] prose-p:leading-relaxed prose-headings:font-semibold prose-a:text-primary prose-a:no-underline hover:prose-a:underline prose-blockquote:border-l-4 prose-blockquote:border-primary/50 prose-blockquote:bg-muted/30 prose-blockquote:px-4 prose-blockquote:py-2 prose-blockquote:not-italic prose-blockquote:text-muted-foreground prose-code:text-primary prose-code:bg-muted/50 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md prose-code:before:content-none prose-code:after:content-none prose-pre:p-0 prose-pre:bg-transparent prose-img:rounded-xl">
+            <div className="prose prose-slate dark:prose-invert max-w-none pb-32 font-sans text-[1.125rem] prose-p:leading-relaxed prose-headings:font-semibold prose-a:text-blue-600 dark:prose-a:text-blue-400 prose-a:no-underline prose-blockquote:border-l-4 prose-blockquote:border-primary/50 prose-blockquote:bg-muted/30 prose-blockquote:px-4 prose-blockquote:py-2 prose-blockquote:not-italic prose-blockquote:text-muted-foreground prose-code:text-primary prose-code:bg-muted/50 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md prose-code:before:content-none prose-code:after:content-none prose-pre:p-0 prose-pre:bg-transparent prose-img:rounded-xl">
               <ReactMarkdown 
                 remarkPlugins={[remarkGfm, remarkBreaks, [remarkToc, { heading: 'toc|contents|table of contents', tight: true }]]} 
                 rehypePlugins={[rehypeRaw, rehypeSlug]}
@@ -882,8 +882,33 @@ export function Editor({
                 isDragging ? "cursor-grabbing" : "cursor-grab"
               )}
             >
-            {/* Text Style Group */}
+            {/* Font Size Group */}
             <div className="flex items-center gap-0.5 pr-1 border-r border-border">
+              <select
+                onChange={(e) => {
+                  if (e.target.value) {
+                    applyFormatting(`<span class="${e.target.value}">`, '</span>');
+                    e.target.value = ""; // reset
+                  }
+                }}
+                defaultValue=""
+                className="h-8 px-1 sm:px-2 bg-transparent text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg outline-none text-xs font-medium cursor-pointer shrink-0"
+                title="Font Size"
+              >
+                <option value="" disabled>Size</option>
+                <option value="text-xs">12px</option>
+                <option value="text-sm">14px</option>
+                <option value="text-base">16px</option>
+                <option value="text-lg">18px</option>
+                <option value="text-xl">20px</option>
+                <option value="text-2xl">24px</option>
+                <option value="text-3xl">30px</option>
+                <option value="text-4xl">36px</option>
+              </select>
+            </div>
+
+            {/* Text Style Group */}
+            <div className="flex items-center gap-0.5 px-1 border-r border-border">
               <Button
                 variant="ghost"
                 size="icon"
