@@ -225,10 +225,17 @@ export function Editor({
     onUpdateNote(note!.id, { content: newContent });
     addToHistory(note!.title, newContent);
 
-    // Auto-resize textarea
+    // Auto-resize textarea while preserving scroll position
     if (textareaRef.current) {
+      const scrollContainer = textareaRef.current.closest('.overflow-y-auto');
+      const scrollTop = scrollContainer ? scrollContainer.scrollTop : 0;
+      
       textareaRef.current.style.height = 'auto';
       textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+      
+      if (scrollContainer) {
+        scrollContainer.scrollTop = scrollTop;
+      }
     }
 
     // Check for slash command
@@ -476,8 +483,15 @@ export function Editor({
   // Auto-resize on initial load or note change
   useEffect(() => {
     if (textareaRef.current && !isPreviewMode) {
+      const scrollContainer = textareaRef.current.closest('.overflow-y-auto');
+      const scrollTop = scrollContainer ? scrollContainer.scrollTop : 0;
+      
       textareaRef.current.style.height = 'auto';
       textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+      
+      if (scrollContainer) {
+        scrollContainer.scrollTop = scrollTop;
+      }
     }
   }, [note?.content, isPreviewMode]);
 
@@ -521,7 +535,7 @@ export function Editor({
     // Reset focus and selection after state update
     setTimeout(() => {
       if (textareaRef.current) {
-        textareaRef.current.focus();
+        textareaRef.current.focus({ preventScroll: true });
         textareaRef.current.setSelectionRange(
           start + prefix.length,
           end + prefix.length
@@ -575,7 +589,7 @@ export function Editor({
 
     setTimeout(() => {
       if (textareaRef.current) {
-        textareaRef.current.focus();
+        textareaRef.current.focus({ preventScroll: true });
         textareaRef.current.setSelectionRange(
           start + 1,
           start + 1 + textToWrap.length
@@ -781,7 +795,7 @@ export function Editor({
           </div>
           
           {isPreviewMode ? (
-            <div className="prose prose-slate dark:prose-invert max-w-none pb-32 font-sans text-[1.125rem] prose-p:leading-relaxed prose-headings:font-semibold prose-a:text-blue-600 dark:prose-a:text-blue-400 prose-a:no-underline prose-blockquote:border-l-4 prose-blockquote:border-primary/50 prose-blockquote:bg-muted/30 prose-blockquote:px-4 prose-blockquote:py-2 prose-blockquote:not-italic prose-blockquote:text-muted-foreground prose-code:text-primary prose-code:bg-muted/50 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md prose-code:before:content-none prose-code:after:content-none prose-pre:p-0 prose-pre:bg-transparent prose-img:rounded-xl">
+            <div className="prose prose-slate dark:prose-invert max-w-none pb-32 font-sans text-[14pt] prose-p:leading-relaxed prose-headings:font-semibold prose-a:text-blue-600 dark:prose-a:text-blue-400 prose-a:no-underline prose-blockquote:border-l-4 prose-blockquote:border-primary/50 prose-blockquote:bg-muted/30 prose-blockquote:px-4 prose-blockquote:py-2 prose-blockquote:not-italic prose-blockquote:text-muted-foreground prose-code:text-primary prose-code:bg-muted/50 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md prose-code:before:content-none prose-code:after:content-none prose-pre:p-0 prose-pre:bg-transparent prose-img:rounded-xl">
               <ReactMarkdown 
                 remarkPlugins={[remarkGfm, remarkBreaks, [remarkToc, { heading: 'toc|contents|table of contents', tight: true }]]} 
                 rehypePlugins={[rehypeRaw, rehypeSlug]}
@@ -802,7 +816,7 @@ export function Editor({
                 onDrop={handleDrop}
                 onDragOver={handleDragOver}
                 placeholder="Start typing with markdown support... (# Heading, *italic*, **bold**, etc.)\nType '/' for commands or drag & drop images."
-                className="w-full min-h-[500px] pb-32 text-[1.125rem] text-foreground placeholder:text-muted-foreground/50 border-none outline-none bg-transparent resize-none focus-visible:ring-0 p-0 leading-relaxed font-sans overflow-hidden"
+                className="w-full min-h-[500px] pb-32 text-[14pt] text-foreground placeholder:text-muted-foreground/50 border-none outline-none bg-transparent resize-none focus-visible:ring-0 p-0 leading-relaxed font-sans overflow-hidden"
               />
               
               {/* Slash Command Menu */}
