@@ -79,7 +79,7 @@ export default function App() {
 
   return (
     <div className="flex h-full w-full bg-background overflow-hidden relative">
-      <Sidebar
+      <Sidebar 
         notes={notes}
         smartFolders={smartFolders}
         activeNoteId={activeNoteId}
@@ -93,15 +93,12 @@ export default function App() {
         onClose={() => setIsSidebarOpen(false)}
         theme={theme}
         onThemeChange={setTheme}
-        fontFamily={fontFamily}
-        onFontFamilyChange={setFontFamily}
       />
       <Editor
         note={activeNote}
         onUpdateNote={updateNote}
         onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
         theme={theme}
-        onThemeChange={setTheme}
         fontFamily={fontFamily}
         onFontFamilyChange={setFontFamily}
       />
@@ -109,10 +106,7 @@ export default function App() {
         notes={notes}
         onSelectNote={handleSelectNote}
         onCreateNote={createNote}
-        theme={theme}
         onThemeChange={setTheme}
-        fontFamily={fontFamily}
-        onFontFamilyChange={setFontFamily}
       />
     </div>
   );

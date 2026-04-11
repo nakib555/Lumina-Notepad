@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 
 export interface SmartFolderRule {
@@ -23,54 +23,72 @@ export interface Note {
 }
 
 export function useNotes() {
-  const [notes, setNotes] = useState<Note[]>([]);
-  const [smartFolders, setSmartFolders] = useState<SmartFolder[]>([]);
-  const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
-  const [isLoaded, setIsLoaded] = useState(false);
+  const [notes, setNotes] = useState<Note[]>(() => {
+    if (typeof window !== 'undefined') {
+      const savedNotes = localStorage.getItem('lumina-notes');
+      if (savedNotes) {
+        try {
+          const parsed = JSON.parse(savedNotes);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            return parsed;
+          }
+        } catch (e) {
+          console.error('Failed to parse notes', e);
+        }
+      }
+    }
+    return [{
+      id: uuidv4(),
+      title: 'Welcome to Lumina Notes',
+      content: 'Start typing here...\n\nYour notes are automatically saved to your browser.',
+      tags: ['getting-started'],
+      updatedAt: Date.now(),
+    }];
+  });
+
+  const [smartFolders, setSmartFolders] = useState<SmartFolder[]>(() => {
+    if (typeof window !== 'undefined') {
+      const savedSmartFolders = localStorage.getItem('lumina-smart-folders');
+      if (savedSmartFolders) {
+        try {
+          return JSON.parse(savedSmartFolders);
+        } catch (e) {
+          console.error('Failed to parse smart folders', e);
+        }
+      }
+    }
+    return [];
+  });
+
+  const [activeNoteId, setActiveNoteId] = useState<string | null>(() => {
+    if (typeof window !== 'undefined') {
+      const savedNotes = localStorage.getItem('lumina-notes');
+      if (savedNotes) {
+        try {
+          const parsed = JSON.parse(savedNotes);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            return parsed[0].id;
+          }
+        } catch (e) {
+          console.error('Failed to parse notes', e);
+        }
+      }
+    }
+    return notes.length > 0 ? notes[0].id : null;
+  });
+
+  const isLoaded = useRef(false);
 
   useEffect(() => {
-    const savedNotes = localStorage.getItem('lumina-notes');
-    const savedSmartFolders = localStorage.getItem('lumina-smart-folders');
-    
-    if (savedSmartFolders) {
-      try {
-        setSmartFolders(JSON.parse(savedSmartFolders));
-      } catch (e) {
-        console.error('Failed to parse smart folders', e);
-      }
-    }
-
-    if (savedNotes) {
-      try {
-        const parsed = JSON.parse(savedNotes);
-        // eslint-disable-next-line react-hooks/set-state-in-effect
-        setNotes(parsed);
-        if (parsed.length > 0) {
-          setActiveNoteId(parsed[0].id);
-        }
-      } catch (e) {
-        console.error('Failed to parse notes', e);
-      }
-    } else {
-      const defaultNote = {
-        id: uuidv4(),
-        title: 'Welcome to Lumina Notes',
-        content: 'Start typing here...\n\nYour notes are automatically saved to your browser.',
-        tags: ['getting-started'],
-        updatedAt: Date.now(),
-      };
-      setNotes([defaultNote]);
-      setActiveNoteId(defaultNote.id);
-    }
-    setIsLoaded(true);
+    isLoaded.current = true;
   }, []);
 
   useEffect(() => {
-    if (isLoaded) {
+    if (isLoaded.current) {
       localStorage.setItem('lumina-notes', JSON.stringify(notes));
       localStorage.setItem('lumina-smart-folders', JSON.stringify(smartFolders));
     }
-  }, [notes, smartFolders, isLoaded]);
+  }, [notes, smartFolders]);
 
   const activeNote = notes.find(n => n.id === activeNoteId) || null;
 

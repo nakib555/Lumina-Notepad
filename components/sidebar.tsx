@@ -21,8 +21,6 @@ interface SidebarProps {
   onClose: () => void;
   theme: string;
   onThemeChange: (theme: string) => void;
-  fontFamily: string;
-  onFontFamilyChange: (font: string) => void;
 }
 
 export function Sidebar({ 
@@ -38,9 +36,7 @@ export function Sidebar({
   isOpen, 
   onClose,
   theme,
-  onThemeChange,
-  fontFamily,
-  onFontFamilyChange
+  onThemeChange
 }: SidebarProps) {
   const { isInstallable, installApp } = usePWAInstall();
   const [searchQuery, setSearchQuery] = useState("");

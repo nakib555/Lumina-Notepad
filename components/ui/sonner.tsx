@@ -3,13 +3,11 @@ import { Toaster as Sonner, type ToasterProps } from "sonner"
 import { CircleCheckIcon, InfoIcon, TriangleAlertIcon, OctagonXIcon, Loader2Icon } from "lucide-react"
 
 const Toaster = ({ ...props }: ToasterProps) => {
-  const [theme, setTheme] = useState<string>("system")
+  const [theme, setTheme] = useState<string>(() => {
+    return typeof window !== 'undefined' ? localStorage.getItem('lumina-theme') || 'light' : 'light';
+  });
 
   useEffect(() => {
-    // Sync with the theme set in App.tsx
-    const currentTheme = localStorage.getItem('lumina-theme') || 'light'
-    setTheme(currentTheme)
-
     // Optional: Listen for storage changes if theme changes in another tab
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === 'lumina-theme') {

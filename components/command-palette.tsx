@@ -2,19 +2,15 @@ import { useEffect, useState } from "react";
 import { Command } from "cmdk";
 import { Search, FileText, Plus, Moon, Sun, Sparkles, Palette } from "lucide-react";
 import { Note } from "@/hooks/use-notes";
-import { cn } from "@/lib/utils";
 
 interface CommandPaletteProps {
   notes: Note[];
   onSelectNote: (id: string) => void;
   onCreateNote: () => void;
-  theme: string;
   onThemeChange: (theme: string) => void;
-  fontFamily: string;
-  onFontFamilyChange: (font: string) => void;
 }
 
-export function CommandPalette({ notes, onSelectNote, onCreateNote, theme, onThemeChange, fontFamily, onFontFamilyChange }: CommandPaletteProps) {
+export function CommandPalette({ notes, onSelectNote, onCreateNote, onThemeChange }: CommandPaletteProps) {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {

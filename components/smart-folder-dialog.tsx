@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Plus, Trash2, X } from "lucide-react";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Plus, X } from "lucide-react";
 import { SmartFolder, SmartFolderRule } from "@/hooks/use-notes";
 
 interface SmartFolderDialogProps {
@@ -18,6 +17,7 @@ export function SmartFolderDialog({ isOpen, onClose, onSave, existingFolder }: S
   useEffect(() => {
     if (isOpen) {
       if (existingFolder) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setName(existingFolder.name);
         setRules(existingFolder.rules);
       } else {
