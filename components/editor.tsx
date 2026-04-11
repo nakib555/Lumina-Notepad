@@ -251,6 +251,7 @@ export function Editor({
         fontFamily={fontFamily}
         onFontFamilyChange={onFontFamilyChange}
         applyFontSize={applyFontSize}
+        textareaRef={textareaRef}
       />
 
       {/* Slash Command Menu */}

@@ -1,7 +1,8 @@
+import { useState } from "react";
 import { 
   Bold, Italic, Underline, Strikethrough, Subscript, Superscript, 
   Quote, Code, Link, Image, Minus, Table, List, ListOrdered, ListTodo,
-  Heading1, Heading2, Heading3, Sigma
+  Heading1, Heading2, Heading3, Sigma, MousePointer2, ArrowLeft, ArrowRight, ArrowUp, ArrowDown, Scissors, Copy, ClipboardPaste, X
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -18,6 +19,7 @@ interface FloatingToolbarProps {
   applyFontSize: (size: string) => void;
   applyFormatting: (prefix: string, suffix?: string) => void;
   onToggleSymbolMenu: () => void;
+  textareaRef: React.RefObject<HTMLTextAreaElement>;
 }
 
 export const FloatingToolbar = ({
@@ -31,22 +33,248 @@ export const FloatingToolbar = ({
   onFontFamilyChange,
   applyFontSize,
   applyFormatting,
-  onToggleSymbolMenu
+  onToggleSymbolMenu,
+  textareaRef
 }: FloatingToolbarProps) => {
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [isSelecting, setIsSelecting] = useState(false);
+
+  const moveCursor = (direction: 'left' | 'right' | 'up' | 'down') => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+    
+    textarea.focus();
+    const currentPos = textarea.selectionStart;
+    const currentEnd = textarea.selectionEnd;
+    
+    let newPos = currentPos;
+    
+    if (direction === 'left') {
+      newPos = Math.max(0, (isSelecting ? currentEnd : currentPos) - 1);
+    } else if (direction === 'right') {
+      newPos = Math.min(textarea.value.length, (isSelecting ? currentEnd : currentPos) + 1);
+    } else if (direction === 'up') {
+      const posToUse = isSelecting ? currentEnd : currentPos;
+      const lines = textarea.value.substring(0, posToUse).split('\n');
+      if (lines.length > 1) {
+        const currentLinePos = lines[lines.length - 1].length;
+        const prevLineLength = lines[lines.length - 2].length;
+        newPos = posToUse - currentLinePos - 1 - (prevLineLength - Math.min(currentLinePos, prevLineLength));
+      }
+    } else if (direction === 'down') {
+      const posToUse = isSelecting ? currentEnd : currentPos;
+      const textBeforeCursor = textarea.value.substring(0, posToUse);
+      const textAfterCursor = textarea.value.substring(posToUse);
+      const currentLinePos = textBeforeCursor.split('\n').pop()?.length || 0;
+      const nextLine = textAfterCursor.split('\n')[1];
+      
+      if (nextLine !== undefined) {
+        const remainingCurrentLine = textAfterCursor.split('\n')[0].length;
+        newPos = posToUse + remainingCurrentLine + 1 + Math.min(currentLinePos, nextLine.length);
+      }
+    }
+
+    if (isSelecting) {
+      // If selecting, we anchor at currentPos and move currentEnd
+      textarea.setSelectionRange(Math.min(currentPos, newPos), Math.max(currentPos, newPos));
+    } else {
+      textarea.setSelectionRange(newPos, newPos);
+    }
+  };
+
+  const handleCut = async () => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+    
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    
+    if (start !== end) {
+      const selectedText = textarea.value.substring(start, end);
+      try {
+        await navigator.clipboard.writeText(selectedText);
+        // We can't easily trigger a native cut event that updates React state,
+        // so we'll just use document.execCommand as a fallback or let the user use native cut.
+        // For a full implementation, we'd need to call a passed down `onUpdateNote` function.
+        document.execCommand('cut');
+      } catch (err) {
+        console.error('Failed to cut text: ', err);
+      }
+    }
+    textarea.focus();
+  };
+
+  const handleCopy = async () => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+    
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    
+    if (start !== end) {
+      const selectedText = textarea.value.substring(start, end);
+      try {
+        await navigator.clipboard.writeText(selectedText);
+      } catch (err) {
+        console.error('Failed to copy text: ', err);
+      }
+    }
+    textarea.focus();
+  };
+
+  const handlePaste = async () => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+    
+    textarea.focus();
+    try {
+      const text = await navigator.clipboard.readText();
+      document.execCommand('insertText', false, text);
+    } catch (err) {
+      console.error('Failed to paste text: ', err);
+    }
+  };
+
   return (
-    <div 
-      ref={toolbarRef}
-      onMouseDown={handleMouseDown}
-      onMouseLeave={handleMouseLeave}
-      onMouseUp={handleMouseUp}
-      onMouseMove={handleMouseMove}
-      className={cn(
-        "flex items-center gap-1 bg-background/90 backdrop-blur-md border border-border shadow-xl rounded-2xl p-1.5 overflow-x-auto no-scrollbar max-w-full flex-nowrap select-none touch-pan-x",
-        isDragging ? "cursor-grabbing" : "cursor-grab"
+    <>
+      {isSelectionMode && (
+        <div 
+          className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-background/90 backdrop-blur-md border border-border rounded-2xl py-1.5 px-2 z-50 animate-in fade-in slide-in-from-bottom-2 zoom-in-95 duration-200 flex items-center gap-1 overflow-x-auto no-scrollbar max-w-[88vw] md:max-w-[700px] flex-nowrap select-none touch-pan-x"
+        >
+          <div className="flex items-center gap-0.5 pr-1 border-r border-border">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setIsSelecting(!isSelecting)}
+              className={cn(
+                "h-8 w-8 rounded-lg shrink-0 transition-colors",
+                isSelecting 
+                  ? "text-blue-600 bg-blue-500/20 dark:text-blue-400 dark:bg-blue-500/30" 
+                  : "text-blue-500 hover:text-blue-600 dark:text-blue-400 hover:bg-blue-500/10"
+              )}
+              title={isSelecting ? "Stop Selecting" : "Start Selecting"}
+            >
+              <MousePointer2 className="w-4 h-4" />
+            </Button>
+          </div>
+
+          <div className="flex items-center gap-0.5 px-1 border-r border-border">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => moveCursor('left')}
+              className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg shrink-0"
+              title="Move Left"
+            >
+              <ArrowLeft className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => moveCursor('up')}
+              className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg shrink-0"
+              title="Move Up"
+            >
+              <ArrowUp className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => moveCursor('down')}
+              className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg shrink-0"
+              title="Move Down"
+            >
+              <ArrowDown className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => moveCursor('right')}
+              className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg shrink-0"
+              title="Move Right"
+            >
+              <ArrowRight className="w-4 h-4" />
+            </Button>
+          </div>
+
+          <div className="flex items-center gap-0.5 px-1 border-r border-border">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleCut}
+              className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg shrink-0"
+              title="Cut"
+            >
+              <Scissors className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleCopy}
+              className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg shrink-0"
+              title="Copy"
+            >
+              <Copy className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handlePaste}
+              className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg shrink-0"
+              title="Paste"
+            >
+              <ClipboardPaste className="w-4 h-4" />
+            </Button>
+          </div>
+
+          <div className="flex items-center gap-0.5 pl-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => {
+                setIsSelectionMode(false);
+                setIsSelecting(false);
+              }}
+              className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg shrink-0"
+              title="Close"
+            >
+              <X className="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
       )}
-    >
+
+      <div 
+        ref={toolbarRef}
+        onMouseDown={handleMouseDown}
+        onMouseLeave={handleMouseLeave}
+        onMouseUp={handleMouseUp}
+        onMouseMove={handleMouseMove}
+        className={cn(
+          "flex items-center gap-1 bg-background/90 backdrop-blur-md border border-border rounded-2xl py-1.5 px-2 overflow-x-auto no-scrollbar max-w-[88vw] md:max-w-[700px] flex-nowrap select-none touch-pan-x",
+          isDragging ? "cursor-grabbing" : "cursor-grab"
+        )}
+      >
+        {/* Selection Mode Toggle */}
+        <div className="flex items-center gap-0.5 pr-1 border-r border-border">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setIsSelectionMode(!isSelectionMode)}
+            className={cn(
+              "h-8 w-8 rounded-lg shrink-0 transition-colors",
+              isSelectionMode
+                ? "text-blue-600 bg-blue-500/20 dark:text-blue-400 dark:bg-blue-500/30"
+                : "text-blue-500 hover:text-blue-600 dark:text-blue-400 hover:bg-blue-500/10"
+            )}
+            title="Selection Mode"
+          >
+            <MousePointer2 className="w-4 h-4" />
+          </Button>
+        </div>
+
       {/* Font Style & Size Group */}
-      <div className="flex items-center gap-0.5 pr-1 border-r border-border">
+      <div className="flex items-center gap-0.5 px-1 border-r border-border">
         <select
           value={fontFamily}
           onChange={(e) => onFontFamilyChange(e.target.value)}
@@ -266,5 +494,6 @@ export const FloatingToolbar = ({
         </Button>
       </div>
     </div>
+    </>
   );
 };
