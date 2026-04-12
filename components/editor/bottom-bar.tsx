@@ -13,7 +13,7 @@ interface BottomBarProps {
   handleSymbolMouseUp: () => void;
   handleSymbolMouseMove: (e: React.MouseEvent) => void;
   isSymbolDragging: boolean;
-  applyFormatting: (prefix: string, suffix?: string) => void;
+  applyFormatting: (prefix: string, suffix?: string, toggle?: boolean) => void;
   toolbarRef: React.RefObject<HTMLDivElement>;
   isDragging: boolean;
   handleMouseDown: (e: React.MouseEvent) => void;
@@ -101,7 +101,7 @@ export const BottomBar = ({
               <button
                 key={sym}
                 onClick={() => {
-                  applyFormatting(sym, "");
+                  applyFormatting(sym, "", false);
                   setShowSymbolMenu(false);
                 }}
                 className="flex-shrink-0 flex items-center justify-center h-8 w-8 rounded-lg hover:bg-muted text-foreground transition-colors"

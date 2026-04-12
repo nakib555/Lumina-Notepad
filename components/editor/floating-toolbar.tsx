@@ -17,7 +17,7 @@ interface FloatingToolbarProps {
   fontFamily: string;
   onFontFamilyChange: (font: string) => void;
   applyFontSize: (size: string) => void;
-  applyFormatting: (prefix: string, suffix?: string) => void;
+  applyFormatting: (prefix: string, suffix?: string, toggle?: boolean) => void;
   onToggleSymbolMenu: () => void;
   textareaRef: React.RefObject<HTMLTextAreaElement>;
 }
@@ -308,7 +308,7 @@ export const FloatingToolbar = ({
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => applyFormatting("**")}
+          onClick={() => applyFormatting("**", "**")}
           className="h-8 w-8 text-blue-500 hover:text-blue-600 dark:text-blue-400 hover:bg-blue-500/10 rounded-lg shrink-0"
           title="Bold"
         >
@@ -317,7 +317,7 @@ export const FloatingToolbar = ({
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => applyFormatting("*")}
+          onClick={() => applyFormatting("*", "*")}
           className="h-8 w-8 text-amber-500 hover:text-amber-600 dark:text-amber-400 hover:bg-amber-500/10 rounded-lg shrink-0"
           title="Italic"
         >
@@ -335,7 +335,7 @@ export const FloatingToolbar = ({
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => applyFormatting("~~")}
+          onClick={() => applyFormatting("~~", "~~")}
           className="h-8 w-8 text-rose-500 hover:text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 rounded-lg shrink-0"
           title="Strikethrough"
         >
@@ -375,7 +375,7 @@ export const FloatingToolbar = ({
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => applyFormatting("`")}
+          onClick={() => applyFormatting("`", "`")}
           className="h-8 w-8 text-pink-500 hover:text-pink-600 dark:text-pink-400 hover:bg-pink-500/10 rounded-lg shrink-0"
           title="Inline Code"
         >
