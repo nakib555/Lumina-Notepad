@@ -3,18 +3,17 @@ import { cn } from "@/lib/utils";
 import { FloatingToolbar } from "./floating-toolbar";
 
 interface BottomBarProps {
-  isPreviewMode: boolean;
-  symbolMenuRef: React.RefObject<HTMLDivElement>;
+  symbolMenuRef: React.RefObject<HTMLDivElement | null>;
   showSymbolMenu: boolean;
   setShowSymbolMenu: (show: boolean) => void;
-  symbolScrollRef: React.RefObject<HTMLDivElement>;
+  symbolScrollRef: React.RefObject<HTMLDivElement | null>;
   handleSymbolMouseDown: (e: React.MouseEvent) => void;
   handleSymbolMouseLeave: () => void;
   handleSymbolMouseUp: () => void;
   handleSymbolMouseMove: (e: React.MouseEvent) => void;
   isSymbolDragging: boolean;
   applyFormatting: (prefix: string, suffix?: string, toggle?: boolean) => void;
-  toolbarRef: React.RefObject<HTMLDivElement>;
+  toolbarRef: React.RefObject<HTMLDivElement | null>;
   isDragging: boolean;
   handleMouseDown: (e: React.MouseEvent) => void;
   handleMouseLeave: () => void;
@@ -23,11 +22,10 @@ interface BottomBarProps {
   fontFamily: string;
   onFontFamilyChange: (font: string) => void;
   applyFontSize: (size: string) => void;
-  textareaRef: React.RefObject<HTMLTextAreaElement>;
+  textareaRef: React.RefObject<HTMLTextAreaElement | null>;
 }
 
 export const BottomBar = ({
-  isPreviewMode,
   symbolMenuRef,
   showSymbolMenu,
   setShowSymbolMenu,
@@ -49,7 +47,6 @@ export const BottomBar = ({
   applyFontSize,
   textareaRef
 }: BottomBarProps) => {
-  if (isPreviewMode) return null;
 
   return (
     <div className="absolute bottom-4 sm:bottom-8 left-0 right-0 z-20 px-2 sm:px-4 flex justify-center pointer-events-none">

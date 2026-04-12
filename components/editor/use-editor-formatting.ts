@@ -4,19 +4,81 @@ import { Note } from '@/hooks/use-notes';
 export const useEditorFormatting = (
   note: Note | null,
   onUpdateNote: (id: string, updates: Partial<Note>) => void,
-  textareaRef: React.RefObject<HTMLTextAreaElement>,
+  textareaRef: React.RefObject<HTMLTextAreaElement | null>,
   addToHistory: (title: string, content: string, immediate?: boolean) => void,
-  setSlashMenuOpen: React.Dispatch<React.SetStateAction<boolean>>
+  setSlashMenuOpen: React.Dispatch<React.SetStateAction<boolean>>,
+  isPreviewMode: boolean = false
 ) => {
   const applyFormatting = useCallback((prefix: string, suffix: string = "", toggle: boolean = true) => {
+    if (isPreviewMode) {
+      const commandMap: Record<string, string> = {
+        "**": "bold",
+        "*": "italic",
+        "<u>": "underline",
+        "~~": "strikeThrough",
+        "<sub>": "subscript",
+        "<sup>": "superscript",
+      };
+      
+      if (commandMap[prefix]) {
+        const selection = window.getSelection();
+        if (selection && !selection.isCollapsed && !selection.toString().trim()) {
+          return;
+        }
+        document.execCommand(commandMap[prefix], false, '');
+      } else if (prefix === "\n> ") {
+        document.execCommand('formatBlock', false, 'BLOCKQUOTE');
+      } else if (prefix === "\n- ") {
+        document.execCommand('insertUnorderedList', false, '');
+      } else if (prefix === "\n1. ") {
+        document.execCommand('insertOrderedList', false, '');
+      } else if (prefix.startsWith("\n#")) {
+        const level = prefix.trim().length;
+        document.execCommand('formatBlock', false, `H${level}`);
+      } else if (prefix === "[") {
+        const url = prompt("Enter link URL:");
+        if (url) document.execCommand('createLink', false, url);
+      } else if (prefix === "![alt](") {
+        const url = prompt("Enter image URL:");
+        if (url) document.execCommand('insertImage', false, url);
+      } else if (prefix === "\n---\n") {
+        document.execCommand('insertHorizontalRule', false, '');
+      } else if (prefix === "`") {
+        const selection = window.getSelection();
+        if (selection && selection.rangeCount > 0 && !selection.isCollapsed) {
+          const text = selection.toString();
+          if (!text.trim()) return;
+          
+          const range = selection.getRangeAt(0);
+          const code = document.createElement('code');
+          code.appendChild(range.extractContents());
+          range.insertNode(code);
+        }
+      } else if (prefix === "\n- [ ] ") {
+        const taskHTML = `<ul class="contains-task-list"><li class="task-list-item"><input type="checkbox" disabled /> </li></ul>`;
+        document.execCommand('insertHTML', false, taskHTML);
+      } else if (prefix.includes("| Header |")) {
+        const tableHTML = `<table class="w-full border-collapse border border-border my-4"><thead><tr><th class="border border-border p-2">Header</th><th class="border border-border p-2">Header</th></tr></thead><tbody><tr><td class="border border-border p-2">Cell</td><td class="border border-border p-2">Cell</td></tr></tbody></table><p><br></p>`;
+        document.execCommand('insertHTML', false, tableHTML);
+      } else {
+        document.execCommand('insertText', false, prefix);
+      }
+      return;
+    }
+
     if (!textareaRef.current || !note) return;
     
     const textarea = textareaRef.current;
-    let start = textarea.selectionStart;
-    let end = textarea.selectionEnd;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
     const text = note.content;
     
-    let selectedText = text.substring(start, end);
+    const selectedText = text.substring(start, end);
+    
+    if (start !== end && !selectedText.trim() && suffix) {
+      return; // Don't apply inline formatting to empty space
+    }
+    
     let newContent = "";
     let newStart = start;
     let newEnd = end;
@@ -99,15 +161,36 @@ export const useEditorFormatting = (
       textarea.focus();
       textarea.setSelectionRange(newStart, newEnd);
     }, 0);
-  }, [note, onUpdateNote, textareaRef, addToHistory]);
+  }, [note, onUpdateNote, textareaRef, addToHistory, isPreviewMode]);
 
   const applyFontSize = useCallback((size: string) => {
+    if (isPreviewMode) {
+      const selection = window.getSelection();
+      if (selection && selection.rangeCount > 0 && !selection.isCollapsed) {
+        const text = selection.toString();
+        if (!text.trim()) return;
+        
+        const range = selection.getRangeAt(0);
+        const span = document.createElement('span');
+        span.style.fontSize = `${size}pt`;
+        span.appendChild(range.extractContents());
+        range.insertNode(span);
+      }
+      return;
+    }
+
     if (!textareaRef.current || !note) return;
     
     const textarea = textareaRef.current;
     let start = textarea.selectionStart;
     let end = textarea.selectionEnd;
-    let text = note.content;
+    
+    if (start === end) return;
+    
+    const text = note.content;
+    const initialSelectedText = text.substring(start, end);
+    
+    if (!initialSelectedText.trim()) return;
     
     // Expand selection to include any overlapping tags
     // Find all tags in the text
@@ -132,7 +215,7 @@ export const useEditorFormatting = (
       }
     }
 
-    let selectedText = text.substring(start, end);
+    const selectedText = text.substring(start, end);
 
     // Check if selectedText is a full tag `[text]{size}`
     const fullTagMatch = selectedText.match(/^\[(.*?)\]\{([^}]+)\}$/);
@@ -155,7 +238,7 @@ export const useEditorFormatting = (
       textarea.focus();
       textarea.setSelectionRange(start + prefix.length, start + prefix.length + innerText.length);
     }, 0);
-  }, [note, onUpdateNote, textareaRef, addToHistory]);
+  }, [note, onUpdateNote, textareaRef, addToHistory, isPreviewMode]);
 
   const executeSlashCommand = useCallback((prefix: string, suffix: string = "") => {
     if (!textareaRef.current || !note) return;

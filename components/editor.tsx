@@ -83,7 +83,8 @@ export function Editor({
     onUpdateNote,
     textareaRef,
     addToHistory,
-    setSlashMenuOpen
+    setSlashMenuOpen,
+    isPreviewMode
   );
 
   const {
@@ -225,13 +226,16 @@ export function Editor({
             handleContentChange={handleContentChange}
             handleDrop={handleDrop}
             handleDragOver={handleDragOver}
+            onPreviewEdit={(newContent) => {
+              onUpdateNote(note.id, { content: newContent });
+              addToHistory(note.title, newContent);
+            }}
           />
         </div>
       </div>
 
       {/* Bottom Formatting Bar */}
       <BottomBar 
-        isPreviewMode={isPreviewMode}
         symbolMenuRef={symbolMenuRef}
         showSymbolMenu={showSymbolMenu}
         setShowSymbolMenu={setShowSymbolMenu}

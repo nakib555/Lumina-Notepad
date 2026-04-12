@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 interface FloatingToolbarProps {
-  toolbarRef: React.RefObject<HTMLDivElement>;
+  toolbarRef: React.RefObject<HTMLDivElement | null>;
   isDragging: boolean;
   handleMouseDown: (e: React.MouseEvent) => void;
   handleMouseLeave: () => void;
@@ -19,7 +19,7 @@ interface FloatingToolbarProps {
   applyFontSize: (size: string) => void;
   applyFormatting: (prefix: string, suffix?: string, toggle?: boolean) => void;
   onToggleSymbolMenu: () => void;
-  textareaRef: React.RefObject<HTMLTextAreaElement>;
+  textareaRef: React.RefObject<HTMLTextAreaElement | null>;
 }
 
 export const FloatingToolbar = ({
@@ -41,7 +41,26 @@ export const FloatingToolbar = ({
 
   const moveCursor = (direction: 'left' | 'right' | 'up' | 'down') => {
     const textarea = textareaRef.current;
-    if (!textarea) return;
+    if (!textarea) {
+      // Preview mode
+      const selection = window.getSelection();
+      if (!selection) return;
+      
+      const modifyStr = isSelecting ? 'extend' : 'move';
+      let dirStr = 'forward';
+      let granularity = 'character';
+      
+      if (direction === 'left') dirStr = 'backward';
+      else if (direction === 'right') dirStr = 'forward';
+      else if (direction === 'up') { dirStr = 'backward'; granularity = 'line'; }
+      else if (direction === 'down') { dirStr = 'forward'; granularity = 'line'; }
+      
+      // modify is non-standard but works in many browsers
+      if ('modify' in selection && typeof selection.modify === 'function') {
+        selection.modify(modifyStr, dirStr, granularity);
+      }
+      return;
+    }
     
     textarea.focus();
     const currentPos = textarea.selectionStart;
@@ -84,7 +103,10 @@ export const FloatingToolbar = ({
 
   const handleCut = async () => {
     const textarea = textareaRef.current;
-    if (!textarea) return;
+    if (!textarea) {
+      document.execCommand('cut');
+      return;
+    }
     
     const start = textarea.selectionStart;
     const end = textarea.selectionEnd;
@@ -106,7 +128,10 @@ export const FloatingToolbar = ({
 
   const handleCopy = async () => {
     const textarea = textareaRef.current;
-    if (!textarea) return;
+    if (!textarea) {
+      document.execCommand('copy');
+      return;
+    }
     
     const start = textarea.selectionStart;
     const end = textarea.selectionEnd;
@@ -124,7 +149,15 @@ export const FloatingToolbar = ({
 
   const handlePaste = async () => {
     const textarea = textareaRef.current;
-    if (!textarea) return;
+    if (!textarea) {
+      try {
+        const text = await navigator.clipboard.readText();
+        document.execCommand('insertText', false, text);
+      } catch (err) {
+        console.error('Failed to paste text: ', err);
+      }
+      return;
+    }
     
     textarea.focus();
     try {

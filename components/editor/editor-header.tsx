@@ -16,11 +16,11 @@ interface EditorHeaderProps {
   historyLength: number;
   showExportMenu: boolean;
   setShowExportMenu: (show: boolean) => void;
-  exportMenuRef: React.RefObject<HTMLDivElement>;
+  exportMenuRef: React.RefObject<HTMLDivElement | null>;
   exportNote: (format: 'txt' | 'md' | 'pdf') => void;
   showCopyMenu: boolean;
   setShowCopyMenu: (show: boolean) => void;
-  copyMenuRef: React.RefObject<HTMLDivElement>;
+  copyMenuRef: React.RefObject<HTMLDivElement | null>;
   handleCopyNote: (format: 'normal' | 'markdown') => void;
   stats: { words: number; chars: number; readingTime: number };
   saveStatus: "saved" | "saving";
