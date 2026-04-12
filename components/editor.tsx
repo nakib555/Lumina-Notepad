@@ -194,14 +194,14 @@ export function Editor({
 
       {/* Editor Area */}
       <div className="flex-1 overflow-y-auto custom-scrollbar print:overflow-visible flex">
-        <div className="flex-1 max-w-3xl mx-auto px-6 pt-6 pb-12 md:px-12 md:pt-8 md:pb-16 flex flex-col gap-6 min-h-full">
-          <div className="space-y-4 shrink-0">
+        <div className="flex-1 max-w-3xl mx-auto px-8 pt-10 pb-24 md:px-16 md:pt-16 md:pb-32 flex flex-col gap-8 min-h-full">
+          <div className="space-y-6 shrink-0">
             <input
               type="text"
               value={note.title}
               onChange={handleTitleChange}
               placeholder="Note Title"
-              className="w-full text-4xl md:text-5xl font-bold text-foreground placeholder:text-muted-foreground/50 border-none outline-none bg-transparent tracking-tight font-serif"
+              className="w-full text-4xl md:text-5xl font-bold text-foreground placeholder:text-muted-foreground/30 border-none outline-none bg-transparent tracking-tight"
             />
             
             {/* Tag Management */}

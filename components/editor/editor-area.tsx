@@ -126,7 +126,7 @@ export const EditorArea = ({
         contentEditable={true}
         suppressContentEditableWarning={true}
         onBlur={handlePreviewBlur}
-        className="prose prose-slate dark:prose-invert max-w-none pb-32 font-sans text-[14pt] whitespace-pre-wrap prose-p:leading-relaxed prose-headings:font-semibold prose-a:text-blue-600 dark:prose-a:text-blue-400 prose-a:no-underline prose-blockquote:border-l-4 prose-blockquote:border-primary/50 prose-blockquote:bg-muted/30 prose-blockquote:px-4 prose-blockquote:py-2 prose-blockquote:not-italic prose-blockquote:text-muted-foreground prose-code:text-primary prose-code:bg-muted/50 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md prose-code:before:content-none prose-code:after:content-none prose-pre:p-0 prose-pre:bg-transparent prose-img:rounded-xl outline-none focus:ring-0"
+        className="prose prose-slate dark:prose-invert max-w-none pb-32 text-lg whitespace-pre-wrap prose-p:leading-[1.8] prose-headings:font-semibold prose-headings:tracking-tight prose-headings:text-foreground prose-a:text-blue-600 dark:prose-a:text-blue-400 prose-a:no-underline prose-strong:font-semibold prose-strong:text-foreground prose-li:marker:text-muted-foreground prose-hr:border-border prose-blockquote:border-l-4 prose-blockquote:border-primary/40 prose-blockquote:bg-muted/20 prose-blockquote:px-6 prose-blockquote:py-3 prose-blockquote:italic prose-blockquote:text-muted-foreground prose-blockquote:rounded-r-lg prose-code:text-foreground prose-code:bg-muted/60 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md prose-code:font-mono prose-code:text-[0.9em] prose-code:font-medium prose-code:before:content-none prose-code:after:content-none prose-pre:p-0 prose-pre:bg-transparent prose-img:rounded-xl outline-none focus:ring-0"
       >
         <MemoizedMarkdown content={content} theme={theme} />
       </div>
@@ -142,7 +142,7 @@ export const EditorArea = ({
         onDrop={handleDrop}
         onDragOver={handleDragOver}
         placeholder="Start typing with markdown support... (# Heading, *italic*, **bold**, etc.)\nType '/' for commands or drag & drop images."
-        className="w-full min-h-[500px] pb-32 text-[14pt] text-foreground placeholder:text-muted-foreground/50 border-none outline-none bg-transparent resize-none focus-visible:ring-0 p-0 leading-relaxed font-sans overflow-hidden"
+        className="w-full min-h-[500px] pb-32 text-lg text-foreground placeholder:text-muted-foreground/30 border-none outline-none bg-transparent resize-none focus-visible:ring-0 p-0 leading-[1.8] overflow-hidden"
       />
     </div>
   );
