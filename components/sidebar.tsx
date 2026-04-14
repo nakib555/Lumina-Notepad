@@ -66,7 +66,7 @@ export function Sidebar({
     
     // Add smart folders
     smartFolders.forEach(sf => {
-      groups[sf.name] = notes.filter(note => {
+      groups[sf.name] = filteredNotes.filter(note => {
         return sf.rules.every(rule => {
           if (rule.type === 'tag') {
             if (rule.operator === 'contains') return note.tags?.some(t => t.includes(rule.value));
@@ -141,11 +141,11 @@ export function Sidebar({
             <h1 className="font-semibold text-sidebar-foreground tracking-tight">Lumina</h1>
           </div>
           <div className="flex items-center gap-1">
-            <Button variant="ghost" size="icon" onClick={onCreateNote} className="text-muted-foreground hover:text-foreground hover:bg-muted hidden md:flex">
-              <Plus className="w-5 h-5" />
+            <Button variant="ghost" size="icon" onClick={onCreateNote} className="text-muted-foreground hover:text-foreground hover:bg-muted hidden md:flex" aria-label="Create new note">
+              <Plus className="w-5 h-5" aria-hidden="true" />
             </Button>
-            <Button variant="ghost" size="icon" onClick={onClose} className="text-muted-foreground hover:text-foreground hover:bg-muted md:hidden">
-              <X className="w-5 h-5" />
+            <Button variant="ghost" size="icon" onClick={onClose} className="text-muted-foreground hover:text-foreground hover:bg-muted md:hidden" aria-label="Close sidebar">
+              <X className="w-5 h-5" aria-hidden="true" />
             </Button>
           </div>
         </div>
@@ -155,13 +155,14 @@ export function Sidebar({
           onClick={onCreateNote} 
           className="w-full justify-start gap-2 bg-background text-foreground border border-border hover:bg-muted hover:text-foreground shadow-sm transition-all" 
           variant="outline"
+          aria-label="Create new note"
         >
-          <Plus className="w-4 h-4" />
+          <Plus className="w-4 h-4" aria-hidden="true" />
           New Note
         </Button>
 
         <div className="relative group">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" aria-hidden="true" />
           <input 
             type="text" 
             placeholder="Search notes..." 
@@ -175,7 +176,8 @@ export function Sidebar({
               const meta = document.querySelector('meta[name=viewport]');
               if (meta) meta.setAttribute('content', 'width=device-width, initial-scale=1.0, interactive-widget=resizes-content, maximum-scale=1.0, user-scalable=0');
             }}
-            className="w-full pl-9 pr-4 py-2 text-base sm:text-sm bg-muted/50 border-transparent focus:bg-background focus:border-border rounded-xl outline-none transition-all placeholder:text-muted-foreground text-foreground"
+            className="w-full pl-9 pr-4 py-2 text-base sm:text-sm bg-muted/50 border-transparent focus:bg-background focus:border-border rounded-xl outline-none transition-all placeholder:text-muted-foreground text-foreground focus:ring-2 focus:ring-primary"
+            aria-label="Search notes"
           />
         </div>
       </div>
@@ -183,7 +185,7 @@ export function Sidebar({
       <div className="px-3 mb-4">
         <div className="flex items-center justify-between px-2 mb-2">
           <div className="flex items-center gap-2">
-            <Folder className="w-3.5 h-3.5 text-muted-foreground" />
+            <Folder className="w-3.5 h-3.5 text-muted-foreground" aria-hidden="true" />
             <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Smart Folders</span>
           </div>
           <Button 
@@ -194,8 +196,9 @@ export function Sidebar({
               setEditingSmartFolder(undefined);
               setIsSmartFolderDialogOpen(true);
             }}
+            aria-label="Add smart folder"
           >
-            <Plus className="w-3.5 h-3.5" />
+            <Plus className="w-3.5 h-3.5" aria-hidden="true" />
           </Button>
         </div>
       </div>
@@ -203,18 +206,19 @@ export function Sidebar({
       {allTags.length > 0 && (
         <div className="px-3 mb-4">
           <div className="flex items-center gap-2 px-2 mb-2">
-            <Tag className="w-3.5 h-3.5 text-muted-foreground" />
+            <Tag className="w-3.5 h-3.5 text-muted-foreground" aria-hidden="true" />
             <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Tags</span>
           </div>
           <div className="flex flex-wrap gap-1.5 px-1">
             <button
               onClick={() => setSelectedTags([])}
               className={cn(
-                "px-2.5 py-1 rounded-full text-[11px] font-medium transition-all",
+                "px-2.5 py-1 rounded-full text-[11px] font-medium transition-all focus:outline-none focus:ring-2 focus:ring-primary",
                 selectedTags.length === 0 
                   ? "bg-primary text-primary-foreground shadow-sm" 
                   : "bg-muted text-muted-foreground hover:bg-muted/80"
               )}
+              aria-pressed={selectedTags.length === 0}
             >
               All
             </button>
@@ -223,13 +227,14 @@ export function Sidebar({
                 key={tag}
                 onClick={() => toggleTag(tag)}
                 className={cn(
-                  "px-2.5 py-1 rounded-full text-[11px] font-medium transition-all flex items-center gap-1",
+                  "px-2.5 py-1 rounded-full text-[11px] font-medium transition-all flex items-center gap-1 focus:outline-none focus:ring-2 focus:ring-primary",
                   selectedTags.includes(tag)
                     ? "bg-primary text-primary-foreground shadow-sm" 
                     : "bg-muted text-muted-foreground hover:bg-muted/80"
                 )}
+                aria-pressed={selectedTags.includes(tag)}
               >
-                <Hash className="w-2.5 h-2.5 opacity-60" />
+                <Hash className="w-2.5 h-2.5 opacity-60" aria-hidden="true" />
                 {tag}
               </button>
             ))}
@@ -245,11 +250,11 @@ export function Sidebar({
                 {folder !== 'All Notes' && (
                   <div className="flex items-center justify-between px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider group">
                     <div className="flex items-center gap-2">
-                      <Folder className="w-3.5 h-3.5" />
+                      <Folder className="w-3.5 h-3.5" aria-hidden="true" />
                       {folder}
                     </div>
                     {smartFolders.some(sf => sf.name === folder) && (
-                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity focus-within:opacity-100">
                         <Button 
                           variant="ghost" 
                           size="icon" 
@@ -258,8 +263,9 @@ export function Sidebar({
                             setEditingSmartFolder(smartFolders.find(sf => sf.name === folder));
                             setIsSmartFolderDialogOpen(true);
                           }}
+                          aria-label={`Edit smart folder ${folder}`}
                         >
-                          <Settings2 className="w-3 h-3" />
+                          <Settings2 className="w-3 h-3" aria-hidden="true" />
                         </Button>
                         <Button 
                           variant="ghost" 
@@ -269,8 +275,9 @@ export function Sidebar({
                             const sf = smartFolders.find(sf => sf.name === folder);
                             if (sf) onDeleteSmartFolder(sf.id);
                           }}
+                          aria-label={`Delete smart folder ${folder}`}
                         >
-                          <Trash2 className="w-3 h-3" />
+                          <Trash2 className="w-3 h-3" aria-hidden="true" />
                         </Button>
                       </div>
                     )}
@@ -286,6 +293,15 @@ export function Sidebar({
                         : "border-transparent hover:bg-muted/50 text-muted-foreground"
                     )}
                     onClick={() => onSelectNote(note.id)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        onSelectNote(note.id);
+                      }
+                    }}
+                    aria-current={activeNoteId === note.id ? "true" : undefined}
                   >
                     <div className="flex flex-col overflow-hidden gap-1.5 w-full pr-2">
                       <span className={cn(
@@ -299,7 +315,7 @@ export function Sidebar({
                           {format(note.updatedAt, "MMM d, yyyy")}
                         </span>
                         {note.tags && note.tags.length > 0 && (
-                          <div className="flex gap-1">
+                          <div className="flex gap-1" aria-hidden="true">
                             {note.tags.slice(0, 2).map(tag => (
                               <div key={tag} className="w-1.5 h-1.5 rounded-full bg-primary/60" />
                             ))}
@@ -311,7 +327,7 @@ export function Sidebar({
                       variant="ghost"
                       size="icon"
                       className={cn(
-                        "opacity-0 group-hover:opacity-100 h-7 w-7 shrink-0 transition-all rounded-full",
+                        "opacity-0 group-hover:opacity-100 focus:opacity-100 h-7 w-7 shrink-0 transition-all rounded-full",
                         activeNoteId === note.id 
                           ? "text-muted-foreground hover:text-destructive hover:bg-destructive/10" 
                           : "text-muted-foreground hover:text-destructive hover:bg-destructive/10"
@@ -320,8 +336,9 @@ export function Sidebar({
                         e.stopPropagation();
                         onDeleteNote(note.id);
                       }}
+                      aria-label={`Delete note ${note.title || "Untitled Note"}`}
                     >
-                      <Trash2 className="w-3.5 h-3.5" />
+                      <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
                     </Button>
                   </div>
                 ))}
@@ -329,8 +346,8 @@ export function Sidebar({
             )
           ))}
           {filteredNotes.length === 0 && (
-            <div className="flex flex-col items-center justify-center p-8 text-center gap-3 mt-10">
-              <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center">
+            <div className="flex flex-col items-center justify-center p-8 text-center gap-3 mt-10" role="status">
+              <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center" aria-hidden="true">
                 <FileText className="w-5 h-5 text-muted-foreground" />
               </div>
               <p className="text-sm text-muted-foreground">
@@ -344,10 +361,10 @@ export function Sidebar({
       {/* Theme Switcher */}
       <div className="p-4 border-t border-border">
         <div className="flex items-center gap-2 px-2 mb-3">
-          <Tag className="w-3.5 h-3.5 text-muted-foreground" />
+          <Tag className="w-3.5 h-3.5 text-muted-foreground" aria-hidden="true" />
           <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Theme</span>
         </div>
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-3 gap-2" role="group" aria-label="Theme selection">
           {[
             { id: 'light', label: 'Light', color: 'bg-white border-slate-200 text-amber-500', icon: Sun },
             { id: 'dark', label: 'Dark', color: 'bg-slate-900 border-slate-800 text-slate-100', icon: Moon },
@@ -362,13 +379,15 @@ export function Sidebar({
                 key={t.id}
                 onClick={() => onThemeChange(t.id)}
                 className={cn(
-                  "h-8 rounded-lg border-2 transition-all flex items-center justify-center",
+                  "h-8 rounded-lg border-2 transition-all flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-primary",
                   t.color,
                   theme === t.id ? "ring-2 ring-primary ring-offset-2 ring-offset-background border-transparent" : "hover:scale-105"
                 )}
                 title={t.label}
+                aria-label={`Switch to ${t.label} theme`}
+                aria-pressed={theme === t.id}
               >
-                <Icon className="w-4 h-4" />
+                <Icon className="w-4 h-4" aria-hidden="true" />
               </button>
             );
           })}

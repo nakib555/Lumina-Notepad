@@ -7,21 +7,27 @@ export const useEditorHistory = (note: Note | null, onUpdateNote: (id: string, u
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [saveStatus, setSaveStatus] = useState<"saved" | "saving">("saved");
 
+  const historyRef = useRef(history);
+  const historyIndexRef = useRef(historyIndex);
+
+  useEffect(() => {
+    historyRef.current = history;
+    historyIndexRef.current = historyIndex;
+  }, [history, historyIndex]);
+
   // Reset history when note changes
   useEffect(() => {
     if (note && (history.length === 0 || history[historyIndex]?.title !== note.title)) {
-      setHistory([{ title: note.title, content: note.content }]);
+      const initialHistory = [{ title: note.title, content: note.content }];
+      setHistory(initialHistory);
       setHistoryIndex(0);
+      historyRef.current = initialHistory;
+      historyIndexRef.current = 0;
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [note?.id]);
 
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const historyIndexRef = useRef(historyIndex);
-
-  useEffect(() => {
-    historyIndexRef.current = historyIndex;
-  }, [historyIndex]);
 
   const addToHistory = useCallback((title: string, content: string, immediate = false) => {
     setSaveStatus("saving");
@@ -32,22 +38,25 @@ export const useEditorHistory = (note: Note | null, onUpdateNote: (id: string, u
     }
 
     const performAdd = () => {
-      setHistory(prev => {
-        const currentIndex = historyIndexRef.current;
-        const lastItem = prev[currentIndex];
-        
-        if (lastItem && lastItem.title === title && lastItem.content === content) {
-          return prev;
-        }
-        
-        const newHistory = prev.slice(0, currentIndex + 1);
-        newHistory.push({ title, content });
-        
-        const finalHistory = newHistory.length > 100 ? newHistory.slice(newHistory.length - 100) : newHistory;
-        
-        setHistoryIndex(finalHistory.length - 1);
-        return finalHistory;
-      });
+      const currentIndex = historyIndexRef.current;
+      const currentHistory = historyRef.current;
+      const lastItem = currentHistory[currentIndex];
+      
+      if (lastItem && lastItem.title === title && lastItem.content === content) {
+        setSaveStatus("saved");
+        return;
+      }
+      
+      const newHistory = currentHistory.slice(0, currentIndex + 1);
+      newHistory.push({ title, content });
+      
+      const finalHistory = newHistory.length > 100 ? newHistory.slice(newHistory.length - 100) : newHistory;
+      
+      historyRef.current = finalHistory;
+      historyIndexRef.current = finalHistory.length - 1;
+      
+      setHistory(finalHistory);
+      setHistoryIndex(finalHistory.length - 1);
       setSaveStatus("saved");
     };
 
@@ -59,20 +68,30 @@ export const useEditorHistory = (note: Note | null, onUpdateNote: (id: string, u
   }, []);
 
   const handleUndo = useCallback(() => {
-    if (historyIndex > 0 && note) {
-      const prevItem = history[historyIndex - 1];
+    const currentHistory = historyRef.current;
+    const currentIndex = historyIndexRef.current;
+    
+    if (currentIndex > 0 && note) {
+      const prevItem = currentHistory[currentIndex - 1];
       onUpdateNote(note.id, { title: prevItem.title, content: prevItem.content });
-      setHistoryIndex(historyIndex - 1);
+      
+      historyIndexRef.current = currentIndex - 1;
+      setHistoryIndex(currentIndex - 1);
     }
-  }, [history, historyIndex, note, onUpdateNote]);
+  }, [note, onUpdateNote]);
 
   const handleRedo = useCallback(() => {
-    if (historyIndex < history.length - 1 && note) {
-      const nextItem = history[historyIndex + 1];
+    const currentHistory = historyRef.current;
+    const currentIndex = historyIndexRef.current;
+    
+    if (currentIndex < currentHistory.length - 1 && note) {
+      const nextItem = currentHistory[currentIndex + 1];
       onUpdateNote(note.id, { title: nextItem.title, content: nextItem.content });
-      setHistoryIndex(historyIndex + 1);
+      
+      historyIndexRef.current = currentIndex + 1;
+      setHistoryIndex(currentIndex + 1);
     }
-  }, [history, historyIndex, note, onUpdateNote]);
+  }, [note, onUpdateNote]);
 
   return {
     history,

@@ -77,14 +77,14 @@ export function useNotes() {
     return notes.length > 0 ? notes[0].id : null;
   });
 
-  const isLoaded = useRef(false);
+  const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
-    isLoaded.current = true;
+    setIsLoaded(true);
   }, []);
 
   useEffect(() => {
-    if (isLoaded.current) {
+    if (isLoaded) {
       localStorage.setItem('lumina-notes', JSON.stringify(notes));
       localStorage.setItem('lumina-smart-folders', JSON.stringify(smartFolders));
     }

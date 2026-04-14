@@ -22,7 +22,7 @@ interface BottomBarProps {
   fontFamily: string;
   onFontFamilyChange: (font: string) => void;
   applyFontSize: (size: string) => void;
-  textareaRef: React.RefObject<HTMLTextAreaElement | null>;
+  textareaRef: React.RefObject<HTMLDivElement | null>;
 }
 
 export const BottomBar = ({
@@ -93,6 +93,9 @@ export const BottomBar = ({
               "absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-background/90 backdrop-blur-md border border-border rounded-2xl py-1.5 px-2 z-50 animate-in fade-in slide-in-from-bottom-2 zoom-in-95 duration-200 flex items-center gap-1 overflow-x-auto no-scrollbar max-w-[88vw] md:max-w-[700px] flex-nowrap select-none touch-pan-x",
               isSymbolDragging ? "cursor-grabbing" : "cursor-grab"
             )}
+            role="menu"
+            aria-label="Symbols"
+            aria-orientation="horizontal"
           >
             {['★', '✓', '→', '←', '↑', '↓', '•', '©', '®', '™', '°', '±', '≠', '∞', '≈', '×', '÷', '∑', 'π', 'Ω'].map(sym => (
               <button
@@ -101,7 +104,9 @@ export const BottomBar = ({
                   applyFormatting(sym, "", false);
                   setShowSymbolMenu(false);
                 }}
-                className="flex-shrink-0 flex items-center justify-center h-8 w-8 rounded-lg hover:bg-muted text-foreground transition-colors"
+                className="flex-shrink-0 flex items-center justify-center h-8 w-8 rounded-lg hover:bg-muted text-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-primary"
+                aria-label={`Insert symbol ${sym}`}
+                role="menuitem"
               >
                 {sym}
               </button>

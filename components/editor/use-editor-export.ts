@@ -54,12 +54,27 @@ export const useEditorExport = (note: Note | null) => {
     setShowCopyMenu(false);
   };
 
+  const downloadLogs = () => {
+    const logs = (window as unknown as { __DEBUG_LOGS__?: unknown[] }).__DEBUG_LOGS__ || [];
+    const blob = new Blob([JSON.stringify(logs, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'editor-debug-logs.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast.success("Debug logs downloaded");
+  };
+
   return {
     showExportMenu,
     setShowExportMenu,
     showCopyMenu,
     setShowCopyMenu,
     exportNote,
-    handleCopyNote
+    handleCopyNote,
+    downloadLogs
   };
 };

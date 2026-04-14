@@ -1,10 +1,9 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Note } from "@/hooks/use-notes";
 import { EditorHeader } from "./editor/editor-header";
 import { BottomBar } from "./editor/bottom-bar";
-import { SlashMenu } from "./editor/slash-menu";
 import { MetadataBar } from "./editor/metadata-bar";
-import { EditorArea } from "./editor/editor-area";
+import { EditorArea, EditorAreaRef } from "./editor/editor-area";
 import { useEditorFormatting } from "./editor/use-editor-formatting";
 import { useEditorHistory } from "./editor/use-editor-history";
 import { useEditorExport } from "./editor/use-editor-export";
@@ -12,6 +11,7 @@ import { useEditorLogic } from "./editor/use-editor-logic";
 import { useDraggable } from "./editor/use-draggable";
 import { FileText, Menu } from "lucide-react";
 import { Button } from "./ui/button";
+import { cn } from "@/lib/utils";
 
 interface EditorProps {
   note: Note | null;
@@ -43,31 +43,16 @@ export function Editor({
     historyIndex,
     saveStatus,
     addToHistory,
-    handleUndo,
-    handleRedo
+    handleUndo: originalHandleUndo,
+    handleRedo: originalHandleRedo
   } = useEditorHistory(note, onUpdateNote);
 
   const {
-    showExportMenu,
-    setShowExportMenu,
-    showCopyMenu,
-    setShowCopyMenu,
-    exportNote,
-    handleCopyNote
-  } = useEditorExport(note);
-
-  const {
     textareaRef,
-    isPreviewMode,
-    setIsPreviewMode,
     tagInput,
     setTagInput,
     folderInput,
     setFolderInput,
-    slashMenuOpen,
-    setSlashMenuOpen,
-    slashMenuPosition,
-    slashSearch,
     handleContentChange,
     handleDrop,
     handleDragOver,
@@ -78,13 +63,42 @@ export function Editor({
     getStats
   } = useEditorLogic(note, onUpdateNote, addToHistory);
 
-  const { applyFormatting, applyFontSize, executeSlashCommand } = useEditorFormatting(
+  const editorAreaRef = useRef<EditorAreaRef>(null);
+
+  const handleUndo = useCallback(() => {
+    if (editorAreaRef.current) {
+      editorAreaRef.current.flushPreviewEdit();
+    }
+    // Use setTimeout to ensure the flush (which updates state) completes before undoing
+    setTimeout(() => {
+      originalHandleUndo();
+    }, 0);
+  }, [originalHandleUndo]);
+
+  const handleRedo = useCallback(() => {
+    if (editorAreaRef.current) {
+      editorAreaRef.current.flushPreviewEdit();
+    }
+    setTimeout(() => {
+      originalHandleRedo();
+    }, 0);
+  }, [originalHandleRedo]);
+
+  const {
+    showExportMenu,
+    setShowExportMenu,
+    showCopyMenu,
+    setShowCopyMenu,
+    exportNote,
+    handleCopyNote,
+    downloadLogs
+  } = useEditorExport(note);
+
+  const { applyFormatting, applyFontSize } = useEditorFormatting(
     note,
     onUpdateNote,
     textareaRef,
-    addToHistory,
-    setSlashMenuOpen,
-    isPreviewMode
+    addToHistory
   );
 
   const {
@@ -170,12 +184,13 @@ export function Editor({
   const stats = getStats();
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-hidden bg-background relative">
+    <div className={cn(
+      "flex-1 flex flex-col h-full overflow-hidden bg-background relative",
+      fontFamily === "serif" ? "font-serif" : fontFamily === "mono" ? "font-mono" : "font-sans"
+    )}>
       {/* Toolbar */}
       <EditorHeader 
         onToggleSidebar={onToggleSidebar}
-        isPreviewMode={isPreviewMode}
-        setIsPreviewMode={setIsPreviewMode}
         handleUndo={handleUndo}
         handleRedo={handleRedo}
         historyIndex={historyIndex}
@@ -190,6 +205,7 @@ export function Editor({
         handleCopyNote={handleCopyNote}
         stats={stats}
         saveStatus={saveStatus}
+        downloadLogs={downloadLogs}
       />
 
       {/* Editor Area */}
@@ -219,17 +235,14 @@ export function Editor({
           </div>
           
           <EditorArea 
-            isPreviewMode={isPreviewMode}
+            editorAreaRef={editorAreaRef}
             content={note.content}
             theme={theme}
-            textareaRef={textareaRef}
             handleContentChange={handleContentChange}
             handleDrop={handleDrop}
             handleDragOver={handleDragOver}
-            onPreviewEdit={(newContent) => {
-              onUpdateNote(note.id, { content: newContent });
-              addToHistory(note.title, newContent);
-            }}
+            noteId={note.id}
+            textareaRef={textareaRef}
           />
         </div>
       </div>
@@ -256,15 +269,6 @@ export function Editor({
         onFontFamilyChange={onFontFamilyChange}
         applyFontSize={applyFontSize}
         textareaRef={textareaRef}
-      />
-
-      {/* Slash Command Menu */}
-      <SlashMenu 
-        slashMenuOpen={slashMenuOpen}
-        slashMenuPosition={slashMenuPosition}
-        slashSearch={slashSearch}
-        insertSlashCommand={executeSlashCommand}
-        onClose={() => setSlashMenuOpen(false)}
       />
     </div>
   );

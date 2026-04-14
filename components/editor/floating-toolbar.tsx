@@ -2,7 +2,8 @@ import { useState } from "react";
 import { 
   Bold, Italic, Underline, Strikethrough, Subscript, Superscript, 
   Quote, Code, Link, Image, Minus, Table, List, ListOrdered, ListTodo,
-  Heading1, Heading2, Heading3, Sigma, MousePointer2, ArrowLeft, ArrowRight, ArrowUp, ArrowDown, Scissors, Copy, ClipboardPaste, X
+  Heading1, Heading2, Heading3, Sigma, MousePointer2, ArrowLeft, ArrowRight, ArrowUp, ArrowDown, Scissors, Copy, ClipboardPaste, X,
+  AlignLeft, AlignCenter, AlignRight
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -19,7 +20,6 @@ interface FloatingToolbarProps {
   applyFontSize: (size: string) => void;
   applyFormatting: (prefix: string, suffix?: string, toggle?: boolean) => void;
   onToggleSymbolMenu: () => void;
-  textareaRef: React.RefObject<HTMLTextAreaElement | null>;
 }
 
 export const FloatingToolbar = ({
@@ -33,133 +33,39 @@ export const FloatingToolbar = ({
   onFontFamilyChange,
   applyFontSize,
   applyFormatting,
-  onToggleSymbolMenu,
-  textareaRef
+  onToggleSymbolMenu
 }: FloatingToolbarProps) => {
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [isSelecting, setIsSelecting] = useState(false);
 
   const moveCursor = (direction: 'left' | 'right' | 'up' | 'down') => {
-    const textarea = textareaRef.current;
-    if (!textarea) {
-      // Preview mode
-      const selection = window.getSelection();
-      if (!selection) return;
-      
-      const modifyStr = isSelecting ? 'extend' : 'move';
-      let dirStr = 'forward';
-      let granularity = 'character';
-      
-      if (direction === 'left') dirStr = 'backward';
-      else if (direction === 'right') dirStr = 'forward';
-      else if (direction === 'up') { dirStr = 'backward'; granularity = 'line'; }
-      else if (direction === 'down') { dirStr = 'forward'; granularity = 'line'; }
-      
-      // modify is non-standard but works in many browsers
-      if ('modify' in selection && typeof selection.modify === 'function') {
-        selection.modify(modifyStr, dirStr, granularity);
-      }
-      return;
-    }
+    const selection = window.getSelection();
+    if (!selection) return;
     
-    textarea.focus();
-    const currentPos = textarea.selectionStart;
-    const currentEnd = textarea.selectionEnd;
+    const modifyStr = isSelecting ? 'extend' : 'move';
+    let dirStr = 'forward';
+    let granularity = 'character';
     
-    let newPos = currentPos;
+    if (direction === 'left') dirStr = 'backward';
+    else if (direction === 'right') dirStr = 'forward';
+    else if (direction === 'up') { dirStr = 'backward'; granularity = 'line'; }
+    else if (direction === 'down') { dirStr = 'forward'; granularity = 'line'; }
     
-    if (direction === 'left') {
-      newPos = Math.max(0, (isSelecting ? currentEnd : currentPos) - 1);
-    } else if (direction === 'right') {
-      newPos = Math.min(textarea.value.length, (isSelecting ? currentEnd : currentPos) + 1);
-    } else if (direction === 'up') {
-      const posToUse = isSelecting ? currentEnd : currentPos;
-      const lines = textarea.value.substring(0, posToUse).split('\n');
-      if (lines.length > 1) {
-        const currentLinePos = lines[lines.length - 1].length;
-        const prevLineLength = lines[lines.length - 2].length;
-        newPos = posToUse - currentLinePos - 1 - (prevLineLength - Math.min(currentLinePos, prevLineLength));
-      }
-    } else if (direction === 'down') {
-      const posToUse = isSelecting ? currentEnd : currentPos;
-      const textBeforeCursor = textarea.value.substring(0, posToUse);
-      const textAfterCursor = textarea.value.substring(posToUse);
-      const currentLinePos = textBeforeCursor.split('\n').pop()?.length || 0;
-      const nextLine = textAfterCursor.split('\n')[1];
-      
-      if (nextLine !== undefined) {
-        const remainingCurrentLine = textAfterCursor.split('\n')[0].length;
-        newPos = posToUse + remainingCurrentLine + 1 + Math.min(currentLinePos, nextLine.length);
-      }
-    }
-
-    if (isSelecting) {
-      // If selecting, we anchor at currentPos and move currentEnd
-      textarea.setSelectionRange(Math.min(currentPos, newPos), Math.max(currentPos, newPos));
-    } else {
-      textarea.setSelectionRange(newPos, newPos);
+    // modify is non-standard but works in many browsers
+    if ('modify' in selection && typeof selection.modify === 'function') {
+      selection.modify(modifyStr, dirStr, granularity);
     }
   };
 
   const handleCut = async () => {
-    const textarea = textareaRef.current;
-    if (!textarea) {
-      document.execCommand('cut');
-      return;
-    }
-    
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    
-    if (start !== end) {
-      const selectedText = textarea.value.substring(start, end);
-      try {
-        await navigator.clipboard.writeText(selectedText);
-        // We can't easily trigger a native cut event that updates React state,
-        // so we'll just use document.execCommand as a fallback or let the user use native cut.
-        // For a full implementation, we'd need to call a passed down `onUpdateNote` function.
-        document.execCommand('cut');
-      } catch (err) {
-        console.error('Failed to cut text: ', err);
-      }
-    }
-    textarea.focus();
+    document.execCommand('cut');
   };
 
   const handleCopy = async () => {
-    const textarea = textareaRef.current;
-    if (!textarea) {
-      document.execCommand('copy');
-      return;
-    }
-    
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    
-    if (start !== end) {
-      const selectedText = textarea.value.substring(start, end);
-      try {
-        await navigator.clipboard.writeText(selectedText);
-      } catch (err) {
-        console.error('Failed to copy text: ', err);
-      }
-    }
-    textarea.focus();
+    document.execCommand('copy');
   };
 
   const handlePaste = async () => {
-    const textarea = textareaRef.current;
-    if (!textarea) {
-      try {
-        const text = await navigator.clipboard.readText();
-        document.execCommand('insertText', false, text);
-      } catch (err) {
-        console.error('Failed to paste text: ', err);
-      }
-      return;
-    }
-    
-    textarea.focus();
     try {
       const text = await navigator.clipboard.readText();
       document.execCommand('insertText', false, text);
@@ -311,8 +217,9 @@ export const FloatingToolbar = ({
         <select
           value={fontFamily}
           onChange={(e) => onFontFamilyChange(e.target.value)}
-          className="h-8 px-1 sm:px-2 bg-transparent text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg outline-none text-xs font-medium cursor-pointer shrink-0"
+          className="h-8 px-1 sm:px-2 bg-transparent text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg outline-none text-xs font-medium cursor-pointer shrink-0 focus:ring-2 focus:ring-primary"
           title="Font Style"
+          aria-label="Font Style"
         >
           <option value="sans">Sans</option>
           <option value="serif">Serif</option>
@@ -326,8 +233,9 @@ export const FloatingToolbar = ({
             }
           }}
           defaultValue=""
-          className="h-8 px-1 sm:px-2 bg-transparent text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg outline-none text-xs font-medium cursor-pointer shrink-0"
+          className="h-8 px-1 sm:px-2 bg-transparent text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg outline-none text-xs font-medium cursor-pointer shrink-0 focus:ring-2 focus:ring-primary"
           title="Font Size"
+          aria-label="Font Size"
         >
           <option value="" disabled>Size</option>
           {[8, 9, 10, 11, 12, 14, 16, 18, 20, 22, 24, 26, 28, 36, 48, 72].map(size => (
@@ -338,6 +246,36 @@ export const FloatingToolbar = ({
 
       {/* Text Style Group */}
       <div className="flex items-center gap-0.5 px-1 border-r border-border">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => applyFormatting('<div align="left">\n\n', '\n\n</div>')}
+          className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg shrink-0"
+          title="Align Left"
+          aria-label="Align Left"
+        >
+          <AlignLeft className="w-4 h-4" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => applyFormatting('<div align="center">\n\n', '\n\n</div>')}
+          className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg shrink-0"
+          title="Align Center"
+          aria-label="Align Center"
+        >
+          <AlignCenter className="w-4 h-4" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => applyFormatting('<div align="right">\n\n', '\n\n</div>')}
+          className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg shrink-0"
+          title="Align Right"
+          aria-label="Align Right"
+        >
+          <AlignRight className="w-4 h-4" />
+        </Button>
         <Button
           variant="ghost"
           size="icon"

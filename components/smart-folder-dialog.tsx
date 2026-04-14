@@ -59,28 +59,29 @@ export function SmartFolderDialog({ isOpen, onClose, onSave, existingFolder }: S
       <DialogContent className="sm:max-w-[500px] overflow-hidden flex flex-col p-0 gap-0" showCloseButton={false}>
         <div className="p-4 border-b shrink-0 flex items-center justify-between">
           <DialogTitle>{existingFolder ? 'Edit Smart Folder' : 'Create Smart Folder'}</DialogTitle>
-          <button onClick={onClose} className="h-7 w-7 flex items-center justify-center rounded-md hover:bg-muted text-muted-foreground transition-colors">
-            <X className="w-4 h-4" />
+          <button onClick={onClose} className="h-7 w-7 flex items-center justify-center rounded-md hover:bg-muted text-muted-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-primary" aria-label="Close dialog">
+            <X className="w-4 h-4" aria-hidden="true" />
           </button>
         </div>
 
         <div className="p-4 shrink-0">
           <div className="space-y-2">
-            <label className="text-sm font-medium">Folder Name</label>
+            <label htmlFor="folder-name" className="text-sm font-medium">Folder Name</label>
             <input
+              id="folder-name"
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. Important Notes"
-              className="w-full px-3 py-2 border border-border rounded-md bg-background text-sm"
+              className="w-full px-3 py-2 border border-border rounded-md bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </div>
         </div>
 
         <div className="px-4 py-3 shrink-0 flex items-center justify-between bg-background">
           <label className="text-sm font-medium">Rules</label>
-          <button type="button" onClick={handleAddRule} className="h-8 px-3 text-xs font-medium border border-border rounded-md hover:bg-muted flex items-center transition-colors">
-            <Plus className="w-4 h-4 mr-1" /> Add Rule
+          <button type="button" onClick={handleAddRule} className="h-8 px-3 text-xs font-medium border border-border rounded-md hover:bg-muted flex items-center transition-colors focus:outline-none focus:ring-2 focus:ring-primary">
+            <Plus className="w-4 h-4 mr-1" aria-hidden="true" /> Add Rule
           </button>
         </div>
         
@@ -92,7 +93,8 @@ export function SmartFolderDialog({ isOpen, onClose, onSave, existingFolder }: S
                     <select
                       value={rule.type}
                       onChange={(e) => handleRuleChange(index, 'type', e.target.value)}
-                      className="bg-background border border-border rounded-md px-2 py-1.5 text-sm flex-1 min-w-0"
+                      className="bg-background border border-border rounded-md px-2 py-1.5 text-sm flex-1 min-w-0 focus:outline-none focus:ring-2 focus:ring-primary"
+                      aria-label={`Rule ${index + 1} type`}
                     >
                       <option value="tag">Tag</option>
                       <option value="keyword">Keyword</option>
@@ -102,7 +104,8 @@ export function SmartFolderDialog({ isOpen, onClose, onSave, existingFolder }: S
                     <select
                       value={rule.operator}
                       onChange={(e) => handleRuleChange(index, 'operator', e.target.value)}
-                      className="bg-background border border-border rounded-md px-2 py-1.5 text-sm flex-1 min-w-0"
+                      className="bg-background border border-border rounded-md px-2 py-1.5 text-sm flex-1 min-w-0 focus:outline-none focus:ring-2 focus:ring-primary"
+                      aria-label={`Rule ${index + 1} operator`}
                     >
                       {rule.type === 'date' ? (
                         <>
@@ -124,7 +127,8 @@ export function SmartFolderDialog({ isOpen, onClose, onSave, existingFolder }: S
                         type="date"
                         value={rule.value}
                         onChange={(e) => handleRuleChange(index, 'value', e.target.value)}
-                        className="flex-1 bg-background border border-border rounded-md px-2 py-1.5 text-sm min-w-0"
+                        className="flex-1 bg-background border border-border rounded-md px-2 py-1.5 text-sm min-w-0 focus:outline-none focus:ring-2 focus:ring-primary"
+                        aria-label={`Rule ${index + 1} value`}
                       />
                     ) : (
                       <input
@@ -132,16 +136,18 @@ export function SmartFolderDialog({ isOpen, onClose, onSave, existingFolder }: S
                         value={rule.value}
                         onChange={(e) => handleRuleChange(index, 'value', e.target.value)}
                         placeholder="Value..."
-                        className="flex-1 bg-background border border-border rounded-md px-2 py-1.5 text-sm min-w-0"
+                        className="flex-1 bg-background border border-border rounded-md px-2 py-1.5 text-sm min-w-0 focus:outline-none focus:ring-2 focus:ring-primary"
+                        aria-label={`Rule ${index + 1} value`}
                       />
                     )}
                     
                     <button 
                       type="button" 
                       onClick={() => handleRemoveRule(index)} 
-                      className="h-8 w-8 text-muted-foreground hover:text-destructive shrink-0 flex items-center justify-center rounded-md hover:bg-muted transition-colors"
+                      className="h-8 w-8 text-muted-foreground hover:text-destructive shrink-0 flex items-center justify-center rounded-md hover:bg-muted transition-colors focus:outline-none focus:ring-2 focus:ring-primary"
+                      aria-label={`Remove rule ${index + 1}`}
                     >
-                      <X className="w-4 h-4" />
+                      <X className="w-4 h-4" aria-hidden="true" />
                     </button>
                   </div>
                 </div>
