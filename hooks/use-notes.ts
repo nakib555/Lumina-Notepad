@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 
 export interface SmartFolderRule {
@@ -80,6 +80,7 @@ export function useNotes() {
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsLoaded(true);
   }, []);
 
@@ -88,7 +89,7 @@ export function useNotes() {
       localStorage.setItem('lumina-notes', JSON.stringify(notes));
       localStorage.setItem('lumina-smart-folders', JSON.stringify(smartFolders));
     }
-  }, [notes, smartFolders]);
+  }, [notes, smartFolders, isLoaded]);
 
   const activeNote = notes.find(n => n.id === activeNoteId) || null;
 

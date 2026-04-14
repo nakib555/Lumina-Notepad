@@ -98,7 +98,7 @@ export function Sidebar({
       }
     });
     return groups;
-  }, [filteredNotes, notes, smartFolders]);
+  }, [filteredNotes, smartFolders]);
 
   const toggleTag = (tag: string) => {
     setSelectedTags(prev => 

@@ -2,7 +2,7 @@ import React, { useRef, useCallback, useEffect, useState } from 'react';
 import TurndownService from 'turndown';
 import { gfm } from 'turndown-plugin-gfm';
 import { marked } from 'marked';
-import { Sparkles, Trash2, Plus, GripHorizontal, GripVertical, Settings2 } from "lucide-react";
+import { Sparkles, Trash2, Settings2 } from "lucide-react";
 import { TableEditDialog } from './table-edit-dialog';
 
 const renderer = new marked.Renderer();
@@ -187,7 +187,7 @@ export const EditorArea = ({
         const style = (node as HTMLElement).getAttribute('style') || '';
         const match = style.match(/font-size:\s*([^;]+)/);
         if (match && match[1]) {
-          return `[${content}]{${match[1].trim()}}`;
+          return `<span style="font-size: ${match[1].trim()}">${content}</span>`;
         }
         return content;
       }
@@ -238,7 +238,6 @@ export const EditorArea = ({
     const thead = hoveredTable.querySelector('thead');
     if (!tbody || !thead) return;
 
-    const currentRows = hoveredTable.querySelectorAll('tr').length;
     const firstRow = hoveredTable.querySelector('tr');
     const currentCols = firstRow ? firstRow.querySelectorAll('th, td').length : 0;
 
@@ -382,8 +381,7 @@ export const EditorArea = ({
   // Sync content when it changes externally (e.g. Undo/Redo)
   useEffect(() => {
     if (previewRef.current && content !== lastProcessedContent.current) {
-      const preProcessedContent = (content || '').replace(/\[(.*?)\]\{([^}]+)\}/g, '<span style="font-size: $2">$1</span>');
-      const html = parseMarkdown(preProcessedContent);
+      const html = parseMarkdown(content || '');
       previewRef.current.innerHTML = html;
       lastProcessedContent.current = content;
     }
@@ -393,8 +391,7 @@ export const EditorArea = ({
   useEffect(() => {
     lastProcessedContent.current = content;
     if (previewRef.current) {
-      const preProcessedContent = (content || '').replace(/\[(.*?)\]\{([^}]+)\}/g, '<span style="font-size: $2">$1</span>');
-      const html = parseMarkdown(preProcessedContent);
+      const html = parseMarkdown(content || '');
       previewRef.current.innerHTML = html;
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps

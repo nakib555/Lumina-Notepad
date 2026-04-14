@@ -97,8 +97,7 @@ export function Editor({
   const { applyFormatting, applyFontSize } = useEditorFormatting(
     note,
     onUpdateNote,
-    textareaRef,
-    addToHistory
+    textareaRef
   );
 
   const {

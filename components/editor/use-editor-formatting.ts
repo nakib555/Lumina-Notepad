@@ -4,8 +4,7 @@ import { Note } from '@/hooks/use-notes';
 export const useEditorFormatting = (
   note: Note | null,
   onUpdateNote: (id: string, updates: Partial<Note>) => void,
-  textareaRef: React.RefObject<HTMLDivElement | null>,
-  addToHistory: (title: string, content: string, immediate?: boolean) => void
+  textareaRef: React.RefObject<HTMLDivElement | null>
 ) => {
   const applyFormatting = useCallback((prefix: string) => {
     const commandMap: Record<string, string> = {
@@ -73,33 +72,45 @@ export const useEditorFormatting = (
 
   const applyFontSize = useCallback((size: string) => {
     const selection = window.getSelection();
-    if (selection && selection.rangeCount > 0 && !selection.isCollapsed) {
-      const text = selection.toString();
-      if (!text.trim()) return;
-      
-      // Use execCommand to apply a temporary font size
-      document.execCommand('fontSize', false, '7');
-      
-      // Find the created font elements and replace them with spans
-      const fontElements = document.getElementsByTagName('font');
-      for (let i = fontElements.length - 1; i >= 0; i--) {
-        const fontEl = fontElements[i];
-        if (fontEl.getAttribute('size') === '7') {
-          fontEl.removeAttribute('size');
-          fontEl.style.fontSize = `${size}pt`;
-          
-          // Change <font> to <span>
-          const span = document.createElement('span');
-          span.style.fontSize = `${size}pt`;
+    if (!selection || selection.rangeCount === 0) return;
+    
+    const isCollapsed = selection.isCollapsed;
+    
+    // Use execCommand to apply a temporary font size
+    document.execCommand('fontSize', false, '7');
+    
+    // Find the created font elements and replace them with spans
+    const fontElements = document.getElementsByTagName('font');
+    for (let i = fontElements.length - 1; i >= 0; i--) {
+      const fontEl = fontElements[i];
+      if (fontEl.getAttribute('size') === '7') {
+        fontEl.removeAttribute('size');
+        
+        // Change <font> to <span>
+        const span = document.createElement('span');
+        span.style.fontSize = `${size}pt`;
+        
+        if (isCollapsed && !fontEl.innerHTML) {
+          span.innerHTML = '&#8203;'; // Zero-width space to allow typing inside
+        } else {
           span.innerHTML = fontEl.innerHTML;
-          fontEl.parentNode?.replaceChild(span, fontEl);
+        }
+        
+        fontEl.parentNode?.replaceChild(span, fontEl);
+        
+        if (isCollapsed) {
+          const range = document.createRange();
+          range.selectNodeContents(span);
+          range.collapse(false);
+          selection.removeAllRanges();
+          selection.addRange(range);
         }
       }
-      
-      // Trigger input event to sync with React state
-      if (textareaRef.current) {
-        textareaRef.current.dispatchEvent(new Event('input', { bubbles: true }));
-      }
+    }
+    
+    // Trigger input event to sync with React state
+    if (textareaRef.current) {
+      textareaRef.current.dispatchEvent(new Event('input', { bubbles: true }));
     }
   }, [textareaRef]);
 
