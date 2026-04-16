@@ -9,6 +9,7 @@ interface SlashMenuProps {
   slashSearch: string;
   insertSlashCommand: (prefix: string, suffix?: string) => void;
   onClose: () => void;
+  onInsertImageClick?: () => void;
 }
 
 export const SlashMenu = ({
@@ -16,7 +17,8 @@ export const SlashMenu = ({
   slashMenuPosition,
   slashSearch,
   insertSlashCommand,
-  onClose
+  onClose,
+  onInsertImageClick
 }: SlashMenuProps) => {
   if (!slashMenuOpen) return null;
 
@@ -31,7 +33,7 @@ export const SlashMenu = ({
     { icon: Code, label: 'Code Block', desc: 'Capture a code snippet', prefix: '```\n', suffix: '\n```' },
     { icon: Minus, label: 'Divider', desc: 'Visually divide blocks', prefix: '\n---\n' },
     { icon: Table, label: 'Table', desc: 'Add a markdown table', prefix: '\n| Header | Header |\n| --- | --- |\n| Cell | Cell |\n' },
-    { icon: Image, label: 'Image', desc: 'Embed an image', prefix: '![alt](', suffix: ')' },
+    { icon: Image, label: 'Image', desc: 'Embed an image', action: () => { if (onInsertImageClick) onInsertImageClick(); onClose(); } },
   ].filter(cmd => cmd.label.toLowerCase().includes(slashSearch.toLowerCase()));
 
   if (commands.length === 0) return null;
@@ -54,7 +56,13 @@ export const SlashMenu = ({
         {commands.map((cmd, i) => (
           <button
             key={i}
-            onClick={() => insertSlashCommand(cmd.prefix, cmd.suffix)}
+            onClick={() => {
+              if (cmd.action) {
+                cmd.action();
+              } else if (cmd.prefix) {
+                insertSlashCommand(cmd.prefix, cmd.suffix);
+              }
+            }}
             className="w-full flex items-center gap-3 px-2 py-2 text-left hover:bg-muted rounded-lg transition-colors group"
           >
             <div className="w-8 h-8 rounded-md bg-background border border-border flex items-center justify-center group-hover:bg-primary/10 group-hover:border-primary/20 group-hover:text-primary transition-colors shrink-0">

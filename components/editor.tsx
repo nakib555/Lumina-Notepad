@@ -12,6 +12,8 @@ import { useDraggable } from "./editor/use-draggable";
 import { FileText, Menu } from "lucide-react";
 import { Button } from "./ui/button";
 import { cn } from "@/lib/utils";
+import { ImageInsertDialog } from "./editor/image-insert-dialog";
+import { toast } from "sonner";
 
 interface EditorProps {
   note: Note | null;
@@ -37,6 +39,9 @@ export function Editor({
   const symbolScrollRef = useRef<HTMLDivElement>(null);
 
   const [showSymbolMenu, setShowSymbolMenu] = useState(false);
+  const [showImageDialog, setShowImageDialog] = useState(false);
+  const [isAutoMarkdownEnabled, setIsAutoMarkdownEnabled] = useState(false);
+  const savedRangeRef = useRef<Range | null>(null);
 
   const {
     history,
@@ -120,6 +125,37 @@ export function Editor({
     const newTitle = e.target.value;
     onUpdateNote(note!.id, { title: newTitle });
     addToHistory(newTitle, note!.content);
+  };
+
+  const handleInsertImageUrl = (url: string, alt: string) => {
+    if (textareaRef.current) {
+      textareaRef.current.focus();
+      if (savedRangeRef.current) {
+        const selection = window.getSelection();
+        selection?.removeAllRanges();
+        selection?.addRange(savedRangeRef.current);
+      }
+      document.execCommand('insertText', false, `![${alt}](${url})`);
+      toast.success("Image added successfully");
+    }
+  };
+
+  const handleInsertImageFile = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const base64String = event.target?.result as string;
+      if (textareaRef.current) {
+        textareaRef.current.focus();
+        if (savedRangeRef.current) {
+          const selection = window.getSelection();
+          selection?.removeAllRanges();
+          selection?.addRange(savedRangeRef.current);
+        }
+        document.execCommand('insertHTML', false, `<img src="${base64String}" alt="Uploaded Image" style="max-width: 100%;" />`);
+        toast.success("Image added successfully");
+      }
+    };
+    reader.readAsDataURL(file);
   };
 
   // Keyboard shortcuts for Undo/Redo and outside clicks
@@ -209,7 +245,7 @@ export function Editor({
 
       {/* Editor Area */}
       <div className="flex-1 overflow-y-auto custom-scrollbar print:overflow-visible flex">
-        <div className="flex-1 w-full min-w-0 max-w-3xl mx-auto px-8 pt-10 pb-24 md:px-16 md:pt-16 md:pb-32 flex flex-col gap-8 min-h-full">
+        <div className="flex-1 w-full min-w-0 px-8 pt-10 pb-24 md:px-12 md:pt-16 md:pb-32 flex flex-col gap-8 min-h-full">
           <div className="space-y-6 shrink-0">
             <input
               type="text"
@@ -242,6 +278,7 @@ export function Editor({
             handleDragOver={handleDragOver}
             noteId={note.id}
             textareaRef={textareaRef}
+            isAutoMarkdownEnabled={isAutoMarkdownEnabled}
           />
         </div>
       </div>
@@ -268,6 +305,24 @@ export function Editor({
         onFontFamilyChange={onFontFamilyChange}
         applyFontSize={applyFontSize}
         textareaRef={textareaRef}
+        isAutoMarkdownEnabled={isAutoMarkdownEnabled}
+        setIsAutoMarkdownEnabled={setIsAutoMarkdownEnabled}
+        onInsertImageClick={() => {
+          const selection = window.getSelection();
+          if (selection && selection.rangeCount > 0) {
+            savedRangeRef.current = selection.getRangeAt(0).cloneRange();
+          } else {
+            savedRangeRef.current = null;
+          }
+          setShowImageDialog(true);
+        }}
+      />
+
+      <ImageInsertDialog 
+        isOpen={showImageDialog}
+        onClose={() => setShowImageDialog(false)}
+        onInsertUrl={handleInsertImageUrl}
+        onInsertFile={handleInsertImageFile}
       />
     </div>
   );

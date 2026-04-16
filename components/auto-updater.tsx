@@ -6,7 +6,7 @@ import { FileOpener } from '@capawesome-team/capacitor-file-opener';
 import { CapacitorZip } from '@capgo/capacitor-zip';
 import type { PluginListenerHandle } from '@capacitor/core';
 
-const VERSION_URL = 'https://apkdistributionserver.nakibprince666.workers.dev/updates/version.json';
+const VERSION_URL = 'https://goog-65o.pages.dev/updates/version.json';
 
 // Simple semantic version comparison (returns true if v1 > v2)
 const isNewerVersion = (v1: string, v2: string) => {
@@ -111,8 +111,8 @@ export function AutoUpdater() {
       let downloadUrl = updateAvailable.downloadUrl;
       let isZip = false;
       
-      if (downloadUrl === 'https://apkdistributionserver.nakibprince666.workers.dev/updates/Lumina%20Notepad.apk') {
-        downloadUrl = 'https://apkdistributionserver.nakibprince666.workers.dev/updates/Lumina%20Notepad.zip';
+      if (downloadUrl.includes('Lumina%20Notepad.apk') || downloadUrl.includes('Lumina Notepad.apk')) {
+        downloadUrl = downloadUrl.replace('.apk', '.zip');
         isZip = true;
       } else if (downloadUrl.endsWith('.zip')) {
         isZip = true;

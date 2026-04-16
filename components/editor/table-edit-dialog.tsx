@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -43,7 +44,6 @@ export const TableEditDialog = ({ isOpen, onClose, table, onConfirm }: TableEdit
       );
       
       const wrapper = table.closest('.overflow-x-auto');
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       let currentCurveLevel = 0;
       if (wrapper && wrapper.classList.contains('rounded-table')) {
         const classes = Array.from(wrapper.classList);
@@ -55,16 +55,11 @@ export const TableEditDialog = ({ isOpen, onClose, table, onConfirm }: TableEdit
           currentCurveLevel = 4;
         }
       }
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setCurveLevel(currentCurveLevel);
       
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setRows(currentRows);
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setCols(currentCols);
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setTableData({ headers, rows: rowsData });
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setActiveTab('rows'); // Reset to rows when opened
     }
   }, [isOpen, table]);

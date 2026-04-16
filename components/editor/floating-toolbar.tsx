@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { 
   Bold, Italic, Underline, Strikethrough, Subscript, Superscript, 
-  Quote, Code, Link, Image, Minus, Table, List, ListOrdered, ListTodo,
+  Quote, Code, Terminal, Link, Image, Minus, Table, List, ListOrdered, ListTodo,
   Heading1, Heading2, Heading3, Sigma, MousePointer2, ArrowLeft, ArrowRight, ArrowUp, ArrowDown, Scissors, Copy, ClipboardPaste, X,
-  AlignLeft, AlignCenter, AlignRight
+  AlignLeft, AlignCenter, AlignRight, Wand2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -20,6 +20,10 @@ interface FloatingToolbarProps {
   applyFontSize: (size: string) => void;
   applyFormatting: (prefix: string, suffix?: string, toggle?: boolean) => void;
   onToggleSymbolMenu: () => void;
+  onInsertImageClick: () => void;
+  textareaRef: React.RefObject<HTMLDivElement | null>;
+  isAutoMarkdownEnabled: boolean;
+  setIsAutoMarkdownEnabled: (enabled: boolean) => void;
 }
 
 export const FloatingToolbar = ({
@@ -33,12 +37,53 @@ export const FloatingToolbar = ({
   onFontFamilyChange,
   applyFontSize,
   applyFormatting,
-  onToggleSymbolMenu
+  onToggleSymbolMenu,
+  onInsertImageClick,
+  textareaRef,
+  isAutoMarkdownEnabled,
+  setIsAutoMarkdownEnabled
 }: FloatingToolbarProps) => {
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [isSelecting, setIsSelecting] = useState(false);
 
+  const scrollToSelection = () => {
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) return;
+    const range = selection.getRangeAt(0);
+    let rect = range.getBoundingClientRect();
+    
+    if (rect.width === 0 && rect.height === 0) {
+      const span = document.createElement('span');
+      span.textContent = '\u200b';
+      range.insertNode(span);
+      rect = span.getBoundingClientRect();
+      if (span.parentNode) span.parentNode.removeChild(span);
+    }
+    
+    if (rect.top === 0 && rect.bottom === 0) return;
+    
+    const scrollContainer = document.querySelector('.custom-scrollbar');
+    if (scrollContainer) {
+      const containerRect = scrollContainer.getBoundingClientRect();
+      if (rect.top < containerRect.top || rect.bottom > containerRect.bottom) {
+        const cursorY = rect.top - containerRect.top;
+        const targetY = containerRect.height / 2;
+        scrollContainer.scrollBy({
+          top: cursorY - targetY,
+          behavior: 'smooth'
+        });
+      }
+    }
+  };
+
+  const ensureFocus = () => {
+    if (textareaRef?.current && document.activeElement !== textareaRef.current) {
+      textareaRef.current.focus();
+    }
+  };
+
   const moveCursor = (direction: 'left' | 'right' | 'up' | 'down') => {
+    ensureFocus();
     const selection = window.getSelection();
     if (!selection) return;
     
@@ -54,21 +99,34 @@ export const FloatingToolbar = ({
     // modify is non-standard but works in many browsers
     if ('modify' in selection && typeof selection.modify === 'function') {
       selection.modify(modifyStr, dirStr, granularity);
+      setTimeout(scrollToSelection, 10);
     }
   };
 
   const handleCut = async () => {
-    document.execCommand('cut');
+    ensureFocus();
+    try {
+      document.execCommand('cut');
+    } catch (err) {
+      console.error('Cut failed', err);
+    }
   };
 
   const handleCopy = async () => {
-    document.execCommand('copy');
+    ensureFocus();
+    try {
+      document.execCommand('copy');
+    } catch (err) {
+      console.error('Copy failed', err);
+    }
   };
 
   const handlePaste = async () => {
+    ensureFocus();
     try {
       const text = await navigator.clipboard.readText();
       document.execCommand('insertText', false, text);
+      setTimeout(scrollToSelection, 10);
     } catch (err) {
       console.error('Failed to paste text: ', err);
     }
@@ -355,6 +413,15 @@ export const FloatingToolbar = ({
         <Button
           variant="ghost"
           size="icon"
+          onClick={() => applyFormatting("```\n")}
+          className="h-8 w-8 text-pink-600 hover:text-pink-700 dark:text-pink-300 hover:bg-pink-500/10 rounded-lg shrink-0"
+          title="Code Block"
+        >
+          <Terminal className="w-4 h-4" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
           onClick={() => applyFormatting("[", "](url)")}
           className="h-8 w-8 text-cyan-500 hover:text-cyan-600 dark:text-cyan-400 hover:bg-cyan-500/10 rounded-lg shrink-0"
           title="Link"
@@ -364,7 +431,7 @@ export const FloatingToolbar = ({
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => applyFormatting("![alt](", ")")}
+          onClick={onInsertImageClick}
           className="h-8 w-8 text-teal-500 hover:text-teal-600 dark:text-teal-400 hover:bg-teal-500/10 rounded-lg shrink-0"
           title="Image"
         >
@@ -452,8 +519,22 @@ export const FloatingToolbar = ({
         </Button>
       </div>
 
-      {/* Symbol Group */}
+      {/* Symbol & Magic Group */}
       <div className="flex items-center gap-0.5 pl-1">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => setIsAutoMarkdownEnabled(!isAutoMarkdownEnabled)}
+          className={cn(
+            "h-8 w-8 rounded-lg shrink-0 transition-colors",
+            isAutoMarkdownEnabled
+              ? "text-primary bg-primary/20 dark:bg-primary/30"
+              : "text-muted-foreground hover:text-foreground hover:bg-muted"
+          )}
+          title={isAutoMarkdownEnabled ? "Auto Markdown: ON" : "Auto Markdown: OFF"}
+        >
+          <Wand2 className="w-4 h-4" />
+        </Button>
         <Button
           variant="ghost"
           size="icon"
