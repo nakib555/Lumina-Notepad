@@ -100,9 +100,9 @@ const parseMarkdown = (text: string) => {
   return marked.parse(text, { renderer, breaks: true, gfm: true }) as string;
 };
 
-export interface EditorAreaRef {
-  flushPreviewEdit: () => void;
-}
+  export interface EditorAreaRef {
+    flushPreviewEdit: () => string | undefined;
+  }
 
 interface EditorAreaProps {
   content: string;
@@ -479,8 +479,11 @@ export const EditorArea = ({
     if (previewRef.current) {
       const htmlContent = previewRef.current.innerHTML;
       const markdown = turndownService.turndown(htmlContent);
-      lastProcessedContent.current = markdown;
-      handleContentChange(markdown);
+      if (markdown !== lastProcessedContent.current) {
+        lastProcessedContent.current = markdown;
+        handleContentChange(markdown);
+      }
+      return markdown;
     }
   }, [handleContentChange, turndownService]);
 
@@ -704,7 +707,15 @@ export const EditorArea = ({
              parseState.scrollContainers.push({ el: window, top: window.scrollY, left: window.scrollX });
              
              const htmlWithMarker = previewRef.current.innerHTML;
-             const mdWithMarker = turndownService.turndown(htmlWithMarker);
+             let mdWithMarker = turndownService.turndown(htmlWithMarker);
+             
+             // Fix caret inside table separator: move caret to the end of the previous line (header) to allow table parsing
+             if (/^[ \t]*\|?[-: \t]*<span id="caret-marker"><\/span>[-: \t]*\|?[ \t]*$/m.test(mdWithMarker)) {
+                 mdWithMarker = mdWithMarker.replace(/([^\n]+)\n([ \t]*\|?[-: \t]*)(<span id="caret-marker"><\/span>)([-: \t]*\|?[ \t]*(\n|$))/g, '$1<span id="caret-marker"></span>\n$2$4');
+             }
+
+             // Also fix if caret is placed exactly after pipes in header/separator line in a way that breaks regex
+             mdWithMarker = mdWithMarker.replace(/(\n[ \t]*\|[-: \t]*)(<span id="caret-marker"><\/span>)([-: \t]+\|[ \t]*\n)/g, '$1$3$2');
              
              const newHtml = parseMarkdown(mdWithMarker);
              previewRef.current.innerHTML = newHtml;

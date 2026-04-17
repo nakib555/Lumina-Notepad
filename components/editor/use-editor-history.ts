@@ -61,11 +61,11 @@ export const useEditorHistory = (note: Note | null, onUpdateNote: (id: string, u
     if (immediate) {
       performAdd();
     } else {
-      debounceTimerRef.current = setTimeout(performAdd, 10);
+      debounceTimerRef.current = setTimeout(performAdd, 1500);
     }
   }, []);
 
-  const handleUndo = useCallback(() => {
+  const handleUndo = useCallback((currentContent?: string) => {
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current);
       debounceTimerRef.current = null;
@@ -74,12 +74,13 @@ export const useEditorHistory = (note: Note | null, onUpdateNote: (id: string, u
 
     const currentHistory = historyRef.current;
     let currentIndex = historyIndexRef.current;
+    const activeContent = currentContent !== undefined ? currentContent : note?.content;
     
     // Save current unsaved changes to history so we can Redo them
     if (note && currentHistory[currentIndex] && 
-        (currentHistory[currentIndex].content !== note.content || currentHistory[currentIndex].title !== note.title)) {
+        (currentHistory[currentIndex].content !== activeContent || currentHistory[currentIndex].title !== note.title)) {
       const newHistory = currentHistory.slice(0, currentIndex + 1);
-      newHistory.push({ title: note.title, content: note.content });
+      newHistory.push({ title: note.title, content: activeContent as string });
       historyRef.current = newHistory;
       setHistory(newHistory);
       currentIndex = newHistory.length - 1;
@@ -95,7 +96,7 @@ export const useEditorHistory = (note: Note | null, onUpdateNote: (id: string, u
     }
   }, [note, onUpdateNote]);
 
-  const handleRedo = useCallback(() => {
+  const handleRedo = useCallback((currentContent?: string) => {
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current);
       debounceTimerRef.current = null;

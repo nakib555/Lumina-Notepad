@@ -93,11 +93,11 @@ export function useNotes() {
 
   const activeNote = notes.find(n => n.id === activeNoteId) || null;
 
-  const createNote = () => {
+  const createNote = (title?: string, content?: string) => {
     const newNote: Note = {
       id: uuidv4(),
-      title: 'Untitled Note',
-      content: '',
+      title: title || 'Untitled Note',
+      content: content || '',
       tags: [],
       updatedAt: Date.now(),
     };

@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Note } from "@/hooks/use-notes";
 import { EditorHeader } from "./editor/editor-header";
 import { BottomBar } from "./editor/bottom-bar";
@@ -168,6 +168,22 @@ export function Editor({
     reader.readAsDataURL(file);
   };
 
+  const onUndo = useCallback(() => {
+    let currentContent: string | undefined = undefined;
+    if (editorAreaRef.current) {
+      currentContent = editorAreaRef.current.flushPreviewEdit();
+    }
+    handleUndo(currentContent);
+  }, [handleUndo]);
+
+  const onRedo = useCallback(() => {
+    let currentContent: string | undefined = undefined;
+    if (editorAreaRef.current) {
+      currentContent = editorAreaRef.current.flushPreviewEdit();
+    }
+    handleRedo(currentContent);
+  }, [handleRedo]);
+
   // Keyboard shortcuts for Undo/Redo and outside clicks
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -188,14 +204,14 @@ export function Editor({
       if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
         if (e.shiftKey) {
           e.preventDefault();
-          handleRedo();
+          onRedo();
         } else {
           e.preventDefault();
-          handleUndo();
+          onUndo();
         }
       } else if ((e.ctrlKey || e.metaKey) && e.key === 'y') {
         e.preventDefault();
-        handleRedo();
+        onRedo();
       }
     };
 
@@ -204,7 +220,7 @@ export function Editor({
       window.removeEventListener('keydown', handleKeyDown);
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [handleUndo, handleRedo, setShowExportMenu, setShowCopyMenu, isViewMode]);
+  }, [onUndo, onRedo, setShowExportMenu, setShowCopyMenu, isViewMode]);
 
   if (!note) {
     return (
@@ -237,8 +253,8 @@ export function Editor({
       {/* Toolbar */}
       <EditorHeader 
         onToggleSidebar={onToggleSidebar}
-        handleUndo={handleUndo}
-        handleRedo={handleRedo}
+        handleUndo={onUndo}
+        handleRedo={onRedo}
         historyIndex={historyIndex}
         historyLength={history.length}
         showExportMenu={showExportMenu}

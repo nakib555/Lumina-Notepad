@@ -1,10 +1,10 @@
 import { Button } from "@/components/ui/button";
-import { Plus, Trash2, FileText, X, Download, Tag, Search, Hash, Sun, Moon, Folder, Settings2 } from "lucide-react";
+import { Plus, Trash2, FileText, X, Download, Tag, Search, Hash, Sun, Moon, Folder, Settings2, FileUp } from "lucide-react";
 import { Note, SmartFolder } from "@/hooks/use-notes";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { usePWAInstall } from "@/hooks/use-pwa-install";
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { SmartFolderDialog } from "./smart-folder-dialog";
 import { App as CapacitorApp } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
@@ -15,7 +15,7 @@ interface SidebarProps {
   smartFolders: SmartFolder[];
   activeNoteId: string | null;
   onSelectNote: (id: string) => void;
-  onCreateNote: () => void;
+  onCreateNote: (title?: string, content?: string) => void;
   onDeleteNote: (id: string) => void;
   onCreateSmartFolder: (folder: Omit<SmartFolder, 'id'>) => void;
   onUpdateSmartFolder: (id: string, updates: Partial<SmartFolder>) => void;
@@ -47,6 +47,7 @@ export function Sidebar({
   const [isSmartFolderDialogOpen, setIsSmartFolderDialogOpen] = useState(false);
   const [editingSmartFolder, setEditingSmartFolder] = useState<SmartFolder | undefined>();
   const [appVersion, setAppVersion] = useState<string>(packageJson.version || "1.0.0");
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (Capacitor.isNativePlatform()) {
@@ -118,6 +119,26 @@ export function Sidebar({
     );
   };
 
+  const handleImportFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+
+    Array.from(files).forEach((file) => {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const content = event.target?.result as string;
+        const title = file.name.replace(/\.[^/.]+$/, ""); // Strip extension
+        onCreateNote(title, content);
+      };
+      reader.readAsText(file);
+    });
+
+    // Reset input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
   return (
     <>
       {/* Mobile Overlay */}
@@ -154,7 +175,10 @@ export function Sidebar({
             <span className="text-[10px] font-bold text-muted-foreground uppercase ml-1">V {appVersion}</span>
           </div>
           <div className="flex items-center gap-1">
-            <Button variant="ghost" size="icon" onClick={onCreateNote} className="text-muted-foreground hover:text-foreground hover:bg-muted hidden md:flex" aria-label="Create new note">
+            <Button variant="ghost" size="icon" onClick={() => fileInputRef.current?.click()} className="text-muted-foreground hover:text-foreground hover:bg-muted hidden md:flex" aria-label="Import files">
+              <FileUp className="w-5 h-5" aria-hidden="true" />
+            </Button>
+            <Button variant="ghost" size="icon" onClick={() => onCreateNote()} className="text-muted-foreground hover:text-foreground hover:bg-muted hidden md:flex" aria-label="Create new note">
               <Plus className="w-5 h-5" aria-hidden="true" />
             </Button>
             <Button variant="ghost" size="icon" onClick={onClose} className="text-muted-foreground hover:text-foreground hover:bg-muted md:hidden" aria-label="Close sidebar">
@@ -164,15 +188,33 @@ export function Sidebar({
         </div>
       
       <div className="p-4 space-y-3">
-        <Button 
-          onClick={onCreateNote} 
-          className="w-full justify-start gap-2 bg-background text-foreground border border-border hover:bg-muted hover:text-foreground shadow-sm transition-all" 
-          variant="outline"
-          aria-label="Create new note"
-        >
-          <Plus className="w-4 h-4" aria-hidden="true" />
-          New Note
-        </Button>
+        <input 
+          type="file" 
+          ref={fileInputRef} 
+          accept=".md,.txt" 
+          multiple 
+          className="hidden" 
+          onChange={handleImportFiles}
+        />
+        <div className="flex gap-2">
+          <Button 
+            onClick={() => onCreateNote()} 
+            className="flex-1 justify-start gap-2 bg-background text-foreground border border-border hover:bg-muted hover:text-foreground shadow-sm transition-all" 
+            variant="outline"
+            aria-label="Create new note"
+          >
+            <Plus className="w-4 h-4" aria-hidden="true" />
+            New Note
+          </Button>
+          <Button 
+            onClick={() => fileInputRef.current?.click()} 
+            className="px-3 bg-background text-foreground border border-border hover:bg-muted hover:text-foreground shadow-sm transition-all md:hidden" 
+            variant="outline"
+            aria-label="Import files"
+          >
+            <FileUp className="w-4 h-4" aria-hidden="true" />
+          </Button>
+        </div>
 
         <div className="relative group">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" aria-hidden="true" />
