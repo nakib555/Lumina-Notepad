@@ -84,7 +84,7 @@ export function Editor({
     downloadLogs
   } = useEditorExport(note);
 
-  const { applyFormatting, applyFontSize } = useEditorFormatting(
+  const { applyFormatting, applyFontSize, clearFormatting } = useEditorFormatting(
     note,
     onUpdateNote,
     textareaRef
@@ -338,6 +338,7 @@ export function Editor({
           fontFamily={fontFamily}
           onFontFamilyChange={onFontFamilyChange}
           applyFontSize={applyFontSize}
+          clearFormatting={clearFormatting}
           textareaRef={textareaRef}
           isAutoMarkdownEnabled={isAutoMarkdownEnabled}
           setIsAutoMarkdownEnabled={setIsAutoMarkdownEnabled}

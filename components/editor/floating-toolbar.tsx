@@ -1,13 +1,16 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { 
   Bold, Italic, Underline, Strikethrough, Subscript, Superscript, 
   Quote, Code, Terminal, Link, Image, Minus, Table, List, ListOrdered, ListTodo,
-  Heading1, Heading2, Heading3, Sigma, MousePointer2, ArrowLeft, ArrowRight, ArrowUp, ArrowDown, Scissors, Copy, ClipboardPaste, X,
+  Heading1, Heading2, Heading3, Sigma, MousePointer2, ArrowLeft, ArrowRight, ArrowUp, ArrowDown, Scissors, Copy, ClipboardPaste, X, Eraser,
   AlignLeft, AlignCenter, AlignRight, Wand2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { Clipboard } from '@capacitor/clipboard';
+import { Capacitor } from '@capacitor/core';
+import { useDraggable } from "./use-draggable";
 
 interface FloatingToolbarProps {
   toolbarRef: React.RefObject<HTMLDivElement | null>;
@@ -19,6 +22,7 @@ interface FloatingToolbarProps {
   fontFamily: string;
   onFontFamilyChange: (font: string) => void;
   applyFontSize: (size: string) => void;
+  clearFormatting?: () => void;
   applyFormatting: (prefix: string, suffix?: string, toggle?: boolean) => void;
   onToggleSymbolMenu: () => void;
   onInsertImageClick: () => void;
@@ -40,6 +44,7 @@ export const FloatingToolbar = ({
   fontFamily,
   onFontFamilyChange,
   applyFontSize,
+  clearFormatting,
   applyFormatting,
   onToggleSymbolMenu,
   onInsertImageClick,
@@ -52,6 +57,32 @@ export const FloatingToolbar = ({
 }: FloatingToolbarProps) => {
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [isSelecting, setIsSelecting] = useState(false);
+  const savedRangeRef = useRef<Range | null>(null);
+  
+  const selectionToolbarRef = useRef<HTMLDivElement>(null);
+  const {
+    isDragging: isSelectionDragging,
+    handleMouseDown: handleSelectionMouseDown,
+    handleMouseLeave: handleSelectionMouseLeave,
+    handleMouseUp: handleSelectionMouseUp,
+    handleMouseMove: handleSelectionMouseMove
+  } = useDraggable(selectionToolbarRef);
+
+  const saveSelection = () => {
+    const selection = window.getSelection();
+    if (selection && selection.rangeCount > 0) {
+      savedRangeRef.current = selection.getRangeAt(0);
+    }
+  };
+
+  const restoreSelection = () => {
+    ensureFocus();
+    if (savedRangeRef.current) {
+      const selection = window.getSelection();
+      selection?.removeAllRanges();
+      selection?.addRange(savedRangeRef.current);
+    }
+  };
 
   const scrollToSelection = () => {
     const selection = window.getSelection();
@@ -121,22 +152,30 @@ export const FloatingToolbar = ({
   const handleCut = async () => {
     ensureFocus();
     try {
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        try {
-          const selection = window.getSelection();
-          if (selection && !selection.isCollapsed) {
-            await navigator.clipboard.writeText(selection.toString());
+      const selection = window.getSelection();
+      if (selection && !selection.isCollapsed) {
+        const textToCut = selection.toString();
+        
+        if (Capacitor.isNativePlatform()) {
+          await Clipboard.write({ string: textToCut });
+          document.execCommand('delete');
+          return;
+        }
+        
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          try {
+            await navigator.clipboard.writeText(textToCut);
             document.execCommand('delete');
             return;
+          } catch (clipboardError) {
+            console.warn('Clipboard API failed, falling back to execCommand', clipboardError);
           }
-        } catch (clipboardError) {
-          console.warn('Clipboard API failed, falling back to execCommand', clipboardError);
         }
-      }
-      
-      const success = document.execCommand('cut');
-      if (!success) {
-        toast.error("Your browser's security settings prevent cutting via this button. Please use Ctrl+X (or Cmd+X).");
+        
+        const success = document.execCommand('cut');
+        if (!success) {
+          toast.error("Your browser's security settings prevent cutting via this button. Please use Ctrl+X (or Cmd+X).");
+        }
       }
     } catch (err) {
       console.error('Cut failed', err);
@@ -147,24 +186,32 @@ export const FloatingToolbar = ({
   const handleCopy = async () => {
     ensureFocus();
     try {
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        try {
-          const selection = window.getSelection();
-          if (selection && !selection.isCollapsed) {
-            await navigator.clipboard.writeText(selection.toString());
+      const selection = window.getSelection();
+      if (selection && !selection.isCollapsed) {
+        const textToCopy = selection.toString();
+        
+        if (Capacitor.isNativePlatform()) {
+          await Clipboard.write({ string: textToCopy });
+          toast.success("Copied to clipboard");
+          return;
+        }
+
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          try {
+            await navigator.clipboard.writeText(textToCopy);
             toast.success("Copied to clipboard");
             return;
+          } catch (clipboardError) {
+            console.warn('Clipboard API failed, falling back to execCommand', clipboardError);
           }
-        } catch (clipboardError) {
-          console.warn('Clipboard API failed, falling back to execCommand', clipboardError);
         }
-      }
-      
-      const success = document.execCommand('copy');
-      if (!success) {
-        toast.error("Your browser's security settings prevent copying via this button. Please use Ctrl+C (or Cmd+C).");
-      } else {
-        toast.success("Copied to clipboard");
+        
+        const success = document.execCommand('copy');
+        if (!success) {
+          toast.error("Your browser's security settings prevent copying via this button. Please use Ctrl+C (or Cmd+C).");
+        } else {
+          toast.success("Copied to clipboard");
+        }
       }
     } catch (err) {
       console.error('Copy failed', err);
@@ -175,6 +222,15 @@ export const FloatingToolbar = ({
   const handlePaste = async () => {
     ensureFocus();
     try {
+      if (Capacitor.isNativePlatform()) {
+        const { type, value } = await Clipboard.read();
+        if (type === 'text/plain' && value) {
+          document.execCommand('insertText', false, value);
+          setTimeout(scrollToSelection, 10);
+          return;
+        }
+      }
+
       if (navigator.clipboard && navigator.clipboard.readText) {
         try {
           const text = await navigator.clipboard.readText();
@@ -203,7 +259,15 @@ export const FloatingToolbar = ({
     <>
       {isSelectionMode && (
         <div 
-          className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-background/90 backdrop-blur-md border border-border rounded-2xl py-1.5 px-2 z-50 animate-in fade-in slide-in-from-bottom-2 zoom-in-95 duration-200 flex items-center gap-1 overflow-x-auto no-scrollbar max-w-[88vw] md:max-w-[700px] flex-nowrap select-none touch-pan-x"
+          ref={selectionToolbarRef}
+          onMouseDown={handleSelectionMouseDown}
+          onMouseLeave={handleSelectionMouseLeave}
+          onMouseUp={handleSelectionMouseUp}
+          onMouseMove={handleSelectionMouseMove}
+          className={cn(
+            "absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-background/90 backdrop-blur-md border border-border rounded-2xl py-1.5 px-2 z-50 animate-in fade-in slide-in-from-bottom-2 zoom-in-95 duration-200 flex items-center gap-1 overflow-x-auto no-scrollbar max-w-[88vw] md:max-w-[700px] flex-nowrap select-none touch-pan-x",
+            isSelectionDragging ? "cursor-grabbing" : "cursor-grab"
+          )}
         >
           <div className="flex items-center gap-0.5 pr-1 border-r border-border">
             <Button
@@ -380,7 +444,11 @@ export const FloatingToolbar = ({
       <div className="flex items-center gap-0.5 px-1 border-r border-border">
         <select
           value={fontFamily}
-          onChange={(e) => onFontFamilyChange(e.target.value)}
+          onMouseDown={saveSelection}
+          onChange={(e) => {
+            restoreSelection();
+            onFontFamilyChange(e.target.value);
+          }}
           className="h-8 px-1 sm:px-2 bg-transparent text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg outline-none text-xs font-medium cursor-pointer shrink-0 focus:ring-2 focus:ring-primary"
           title="Font Style"
           aria-label="Font Style"
@@ -390,8 +458,10 @@ export const FloatingToolbar = ({
           <option value="mono">Mono</option>
         </select>
         <select
+          onMouseDown={saveSelection}
           onChange={(e) => {
             if (e.target.value) {
+              restoreSelection();
               applyFontSize(e.target.value);
               e.target.value = ""; // reset
             }
@@ -493,6 +563,20 @@ export const FloatingToolbar = ({
           title="Superscript"
         >
           <Superscript className="w-4 h-4" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => {
+            if (clearFormatting) {
+               clearFormatting();
+            }
+          }}
+          className="h-8 w-8 text-rose-500 hover:text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 rounded-lg shrink-0"
+          title="Clear Formatting"
+          aria-label="Clear Formatting"
+        >
+          <Eraser className="w-4 h-4" />
         </Button>
       </div>
 

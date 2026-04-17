@@ -126,8 +126,19 @@ export function Sidebar({
     Array.from(files).forEach((file) => {
       const reader = new FileReader();
       reader.onload = (event) => {
-        const content = event.target?.result as string;
-        const title = file.name.replace(/\.[^/.]+$/, ""); // Strip extension
+        let content = event.target?.result as string;
+        let title = file.name.replace(/\.[^/.]+$/, ""); // Default to file name without extension
+        
+        // Match a first-line markdown heading (e.g., "# Title", "## Title", matching up to H6)
+        const headingMatch = content.match(/^#+\s+(.*)/);
+        
+        if (headingMatch && headingMatch[1]) {
+           title = headingMatch[1].trim(); // Override with heading text
+           
+           // Remove that entire first line and any immediately following blank lines
+           content = content.replace(/^#+\s+.*\n?/, "").trimStart();
+        }
+
         onCreateNote(title, content);
       };
       reader.readAsText(file);

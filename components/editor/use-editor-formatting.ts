@@ -109,29 +109,37 @@ export const useEditorFormatting = (
     
     const isCollapsed = selection.isCollapsed;
     
-    // Use execCommand to apply a temporary font size
-    document.execCommand('fontSize', false, '7');
+    // Use a unique font name to reliably find the wrapped elements
+    const tempFontName = `__temp_font_${Date.now()}__`;
+    document.execCommand('fontName', false, tempFontName);
     
-    // Find the created font elements and replace them with spans
-    const fontElements = document.getElementsByTagName('font');
-    for (let i = fontElements.length - 1; i >= 0; i--) {
-      const fontEl = fontElements[i];
-      if (fontEl.getAttribute('size') === '7') {
-        fontEl.removeAttribute('size');
-        
-        // Change <font> to <span>
+    // Find all elements with this temporary font family
+    const elements = document.querySelectorAll(`[style*="${tempFontName}"], font[face="${tempFontName}"]`);
+    
+    if (elements.length === 0 && !isCollapsed) {
+       // fallback if execCommand failed
+       document.execCommand('fontSize', false, '7');
+       const fontElements = document.getElementsByTagName('font');
+       for (let i = fontElements.length - 1; i >= 0; i--) {
+         if (fontElements[i].getAttribute('size') === '7') {
+             const span = document.createElement('span');
+             span.style.fontSize = `${size}pt`;
+             span.innerHTML = fontElements[i].innerHTML;
+             fontElements[i].parentNode?.replaceChild(span, fontElements[i]);
+         }
+       }
+    } else {
+      elements.forEach((el) => {
         const span = document.createElement('span');
         span.style.fontSize = `${size}pt`;
         
-        if (isCollapsed && !fontEl.innerHTML) {
+        if (isCollapsed && !el.innerHTML) {
           span.innerHTML = '&#8203;'; // Zero-width space to allow typing inside
         } else {
-          span.innerHTML = fontEl.innerHTML;
+          span.innerHTML = el.innerHTML;
         }
         
-        if (fontEl.parentNode) {
-          fontEl.parentNode.replaceChild(span, fontEl);
-        }
+        el.parentNode?.replaceChild(span, el);
         
         if (isCollapsed) {
           const range = document.createRange();
@@ -140,7 +148,7 @@ export const useEditorFormatting = (
           selection.removeAllRanges();
           selection.addRange(range);
         }
-      }
+      });
     }
     
     // Trigger input event to sync with React state
@@ -149,8 +157,65 @@ export const useEditorFormatting = (
     }
   }, [textareaRef]);
 
+  const clearFormatting = useCallback(() => {
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0 || selection.isCollapsed) return;
+
+    // Use built-in removeFormat command
+    document.execCommand('removeFormat', false, '');
+
+    // For any remaining styled spans (like font-size), we can unwrap them manually
+    // The previous removeFormat should remove most inline styles in standard contenteditable
+    
+    // Also remove block-level formatting like align or H1-H6 inside the selected range
+    const tempFontName = `__temp_clear_${Date.now()}__`;
+    document.execCommand('fontName', false, tempFontName);
+    
+    // Find wrapped elements
+    const elements = document.querySelectorAll(`[style*="${tempFontName}"], font[face="${tempFontName}"]`);
+    
+    elements.forEach(el => {
+       // Look up the tree for block elements (H1-H6, BLOCKQUOTE, PRE, DIV with align)
+       let current = el.parentElement;
+       const editor = textareaRef.current;
+       while (current && current !== editor) {
+         if (/^(H[1-6]|BLOCKQUOTE|PRE)$/i.test(current.tagName)) {
+           // Swap it for a P tag by moving nodes to preserve references
+           const p = document.createElement('p');
+           while (current.firstChild) {
+             p.appendChild(current.firstChild);
+           }
+           current.parentNode?.replaceChild(p, current);
+           current = p; // Continue up from the p tag
+         } else if (current.tagName === 'DIV' && (current.getAttribute('align') || current.style.textAlign)) {
+           current.removeAttribute('align');
+           current.style.textAlign = '';
+         } else if (current.tagName === 'SPAN') {
+             // Remove styles on span
+             current.removeAttribute('style');
+             if (current.className.includes('katex')) {
+                 // Convert katex back
+             }
+         }
+         current = current.parentElement;
+       }
+       
+       // remove the temporary font wrapper
+       const parent = el.parentNode;
+       while(el.firstChild) {
+         parent?.insertBefore(el.firstChild, el);
+       }
+       parent?.removeChild(el);
+    });
+
+    if (textareaRef.current) {
+      textareaRef.current.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+  }, [textareaRef]);
+
   return {
     applyFormatting,
-    applyFontSize
+    applyFontSize,
+    clearFormatting
   };
 };
