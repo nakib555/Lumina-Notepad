@@ -7,14 +7,14 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ReactCrop, { Crop, PixelCrop, centerCrop, makeAspectCrop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
-import { Crop as CropIcon, Maximize2 } from "lucide-react";
+import { Crop as CropIcon, Maximize2, Settings, AlignLeft, AlignCenter, AlignRight, CheckCircle2, XCircle, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 interface ImageEditDialogProps {
   isOpen: boolean;
   onClose: () => void;
   image: HTMLImageElement | null;
-  onConfirm: (newSrc: string, width: string, height: string) => void;
+  onConfirm: (newSrc: string, width: string, height: string, alt: string, align: 'left'|'center'|'right') => void;
 }
 
 function centerAspectCrop(
@@ -40,11 +40,65 @@ function centerAspectCrop(
 export function ImageEditDialog({ isOpen, onClose, image, onConfirm }: ImageEditDialogProps) {
   const [width, setWidth] = useState('');
   const [height, setHeight] = useState('');
+  const [alt, setAlt] = useState('');
+  const [align, setAlign] = useState<'left'|'center'|'right'>('center');
   const [crop, setCrop] = useState<Crop>();
   const [completedCrop, setCompletedCrop] = useState<PixelCrop>();
   const imgRef = useRef<HTMLImageElement>(null);
   const [imgSrc, setImgSrc] = useState('');
   const [isExternal, setIsExternal] = useState(false);
+  const [isValidating, setIsValidating] = useState(false);
+  const [isValid, setIsValid] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    if (!imgSrc.trim()) {
+      setIsValid(null);
+      setIsValidating(false);
+      return;
+    }
+
+    let isMounted = true;
+    setIsValidating(true);
+    setIsValid(null);
+
+    const checkImage = new Image();
+    
+    // Attempt multiple loading strategies for external images
+    checkImage.crossOrigin = isExternal ? "anonymous" : "";
+    
+    checkImage.onload = () => {
+      if (isMounted) {
+        setIsValid(true);
+        setIsValidating(false);
+      }
+    };
+    checkImage.onerror = () => {
+      if (isMounted) {
+        // Fallback for CORS errors - if crossOrigin caused death, try without it
+        if (checkImage.crossOrigin === "anonymous") {
+           const fallbackImage = new Image();
+           fallbackImage.onload = () => { if (isMounted) { setIsValid(true); setIsValidating(false); }};
+           fallbackImage.onerror = () => { if (isMounted) { setIsValid(false); setIsValidating(false); }};
+           fallbackImage.src = imgSrc.trim();
+        } else {
+           setIsValid(false);
+           setIsValidating(false);
+        }
+      }
+    };
+    
+    const timeoutId = setTimeout(() => {
+      if (isMounted) {
+        checkImage.src = imgSrc.trim();
+      }
+    }, 500); // Increased slightly to prevent spamming while typing
+
+    return () => {
+      isMounted = false;
+      clearTimeout(timeoutId);
+      checkImage.src = ""; // cancel image load
+    };
+  }, [imgSrc, isExternal]);
 
   useEffect(() => {
     if (isOpen && image) {
@@ -56,6 +110,13 @@ export function ImageEditDialog({ isOpen, onClose, image, onConfirm }: ImageEdit
       
       setWidth(image.style.width || image.getAttribute('width') || `${image.naturalWidth}px`);
       setHeight(image.style.height || image.getAttribute('height') || 'auto');
+      setAlt(image.alt || '');
+      
+      const parentStyle = image.parentElement?.style.textAlign || image.parentElement?.style.justifyContent;
+      if (parentStyle === 'left' || parentStyle === 'flex-start') setAlign('left');
+      else if (parentStyle === 'right' || parentStyle === 'flex-end') setAlign('right');
+      else setAlign('center');
+
       setCrop(undefined);
       setCompletedCrop(undefined);
     }
@@ -67,7 +128,7 @@ export function ImageEditDialog({ isOpen, onClose, image, onConfirm }: ImageEdit
   }
 
   const handleResizeConfirm = () => {
-    onConfirm(imgSrc, width, height);
+    onConfirm(imgSrc, width, height, alt, align);
     onClose();
   };
 
@@ -97,7 +158,7 @@ export function ImageEditDialog({ isOpen, onClose, image, onConfirm }: ImageEdit
         );
 
         const base64Image = canvas.toDataURL('image/jpeg', 0.9);
-        onConfirm(base64Image, `${canvas.width}px`, 'auto');
+        onConfirm(base64Image, `${canvas.width}px`, 'auto', alt, align);
         onClose();
       } catch (err) {
         console.error("Failed to crop image. It might be a CORS issue with external URLs.", err);
@@ -114,15 +175,88 @@ export function ImageEditDialog({ isOpen, onClose, image, onConfirm }: ImageEdit
         </DialogHeader>
         
         <Tabs defaultValue="resize" className="w-full mt-2">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="resize" className="flex items-center gap-2">
               <Maximize2 className="w-4 h-4" /> Resize
             </TabsTrigger>
             <TabsTrigger value="crop" className="flex items-center gap-2">
               <CropIcon className="w-4 h-4" /> Crop
             </TabsTrigger>
+            <TabsTrigger value="settings" className="flex items-center gap-2">
+              <Settings className="w-4 h-4" /> Settings
+            </TabsTrigger>
           </TabsList>
           
+          <TabsContent value="settings" className="space-y-4 mt-4">
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="img-src">Image Source (URL)</Label>
+                <div className="relative">
+                  <Input 
+                    id="img-src" 
+                    value={imgSrc}
+                    onChange={(e) => setImgSrc(e.target.value)}
+                    placeholder="https://..."
+                    className="pr-10 border-r-0"
+                  />
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center justify-center">
+                    {isValidating && <Loader2 className="w-4 h-4 text-muted-foreground animate-spin" />}
+                    {!isValidating && isValid === true && <CheckCircle2 className="w-4 h-4 text-green-500" />}
+                    {!isValidating && isValid === false && <XCircle className="w-4 h-4 text-destructive" />}
+                  </div>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="img-alt">Alt Text & Caption</Label>
+                <Input 
+                  id="img-alt" 
+                  value={alt}
+                  onChange={(e) => setAlt(e.target.value)}
+                  placeholder="Describe image..."
+                />
+                <p className="text-xs text-muted-foreground">Used for accessibility and markdown image alt tag.</p>
+              </div>
+              
+              <div className="space-y-2">
+                <Label>Alignment</Label>
+                <div className="flex bg-muted/50 p-1 rounded-lg">
+                  <Button
+                    type="button"
+                    variant={align === 'left' ? 'secondary' : 'ghost'}
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => setAlign('left')}
+                  >
+                    <AlignLeft className="w-4 h-4 mr-2" /> Left
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={align === 'center' ? 'secondary' : 'ghost'}
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => setAlign('center')}
+                  >
+                    <AlignCenter className="w-4 h-4 mr-2" /> Center
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={align === 'right' ? 'secondary' : 'ghost'}
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => setAlign('right')}
+                  >
+                    <AlignRight className="w-4 h-4 mr-2" /> Right
+                  </Button>
+                </div>
+              </div>
+
+              <DialogFooter className="pt-2">
+                <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
+                <Button onClick={handleResizeConfirm} disabled={!imgSrc.trim() || isValid === false}>Apply Settings</Button>
+              </DialogFooter>
+            </div>
+          </TabsContent>
+
           <TabsContent value="resize" className="space-y-4 mt-4">
             <div className="space-y-4">
               <div className="flex flex-col items-center justify-center border border-border rounded-lg p-4 bg-muted/30 overflow-hidden min-h-[200px]">

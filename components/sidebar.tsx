@@ -1,25 +1,27 @@
 import { Button } from "@/components/ui/button";
 import { Plus, Trash2, FileText, X, Download, Tag, Search, Hash, Sun, Moon, Folder, Settings2, FileUp } from "lucide-react";
-import { Note, SmartFolder } from "@/hooks/use-notes";
+import { Note, Folder as CommonFolder } from "@/hooks/use-notes";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { usePWAInstall } from "@/hooks/use-pwa-install";
-import { useState, useMemo, useEffect, useRef } from "react";
-import { SmartFolderDialog } from "./smart-folder-dialog";
+import { useState, useMemo, useEffect } from "react";
+import { SidebarFileTree } from "./sidebar-file-tree";
 import { App as CapacitorApp } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
 import packageJson from '../package.json';
 
 interface SidebarProps {
   notes: Note[];
-  smartFolders: SmartFolder[];
+  folders: CommonFolder[];
   activeNoteId: string | null;
   onSelectNote: (id: string) => void;
-  onCreateNote: (title?: string, content?: string) => void;
+  onCreateNote: (title?: string, content?: string, folderId?: string) => string | void;
   onDeleteNote: (id: string) => void;
-  onCreateSmartFolder: (folder: Omit<SmartFolder, 'id'>) => void;
-  onUpdateSmartFolder: (id: string, updates: Partial<SmartFolder>) => void;
-  onDeleteSmartFolder: (id: string) => void;
+  onCreateFolder: (name: string, parentId?: string | null) => string | void;
+  onUpdateFolder: (id: string, updates: Partial<CommonFolder>) => void;
+  onDeleteFolder: (id: string) => void;
+  onMoveNote: (noteId: string, folderId: string | null, referenceId?: string) => void;
+  onMoveFolder?: (folderId: string, parentId: string | null, referenceId?: string) => void;
   isOpen: boolean;
   onClose: () => void;
   theme: string;
@@ -28,14 +30,16 @@ interface SidebarProps {
 
 export function Sidebar({ 
   notes, 
-  smartFolders,
+  folders,
   activeNoteId, 
   onSelectNote, 
   onCreateNote, 
   onDeleteNote, 
-  onCreateSmartFolder,
-  onUpdateSmartFolder,
-  onDeleteSmartFolder,
+  onCreateFolder,
+  onUpdateFolder,
+  onDeleteFolder,
+  onMoveNote,
+  onMoveFolder,
   isOpen, 
   onClose,
   theme,
@@ -44,10 +48,7 @@ export function Sidebar({
   const { isInstallable, installApp } = usePWAInstall();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [isSmartFolderDialogOpen, setIsSmartFolderDialogOpen] = useState(false);
-  const [editingSmartFolder, setEditingSmartFolder] = useState<SmartFolder | undefined>();
   const [appVersion, setAppVersion] = useState<string>(packageJson.version || "1.0.0");
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (Capacitor.isNativePlatform()) {
@@ -74,80 +75,10 @@ export function Sidebar({
     });
   }, [notes, searchQuery, selectedTags]);
 
-  const groupedNotes = useMemo(() => {
-    const groups: Record<string, Note[]> = { 'All Notes': [] };
-    
-    // Add smart folders
-    smartFolders.forEach(sf => {
-      groups[sf.name] = filteredNotes.filter(note => {
-        return sf.rules.every(rule => {
-          if (rule.type === 'tag') {
-            if (rule.operator === 'contains') return note.tags?.some(t => t.includes(rule.value));
-            if (rule.operator === 'equals') return note.tags?.includes(rule.value);
-          }
-          if (rule.type === 'keyword') {
-            const content = (note.title + ' ' + note.content).toLowerCase();
-            const val = rule.value.toLowerCase();
-            if (rule.operator === 'contains') return content.includes(val);
-            if (rule.operator === 'equals') return content === val;
-          }
-          if (rule.type === 'date') {
-            const noteDate = new Date(note.updatedAt).getTime();
-            const ruleDate = new Date(rule.value).getTime();
-            if (rule.operator === 'after') return noteDate > ruleDate;
-            if (rule.operator === 'before') return noteDate < ruleDate;
-          }
-          return false;
-        });
-      });
-    });
-
-    filteredNotes.forEach(note => {
-      const folder = note.folderId || 'All Notes';
-      if (!groups[folder]) groups[folder] = [];
-      // Prevent duplicates if note is already in a smart folder
-      if (!smartFolders.some(sf => groups[sf.name]?.includes(note))) {
-        groups[folder].push(note);
-      }
-    });
-    return groups;
-  }, [filteredNotes, smartFolders]);
-
   const toggleTag = (tag: string) => {
     setSelectedTags(prev => 
       prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
     );
-  };
-
-  const handleImportFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files) return;
-
-    Array.from(files).forEach((file) => {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        let content = event.target?.result as string;
-        let title = file.name.replace(/\.[^/.]+$/, ""); // Default to file name without extension
-        
-        // Match a first-line markdown heading (e.g., "# Title", "## Title", matching up to H6)
-        const headingMatch = content.match(/^#+\s+(.*)/);
-        
-        if (headingMatch && headingMatch[1]) {
-           title = headingMatch[1].trim(); // Override with heading text
-           
-           // Remove that entire first line and any immediately following blank lines
-           content = content.replace(/^#+\s+.*\n?/, "").trimStart();
-        }
-
-        onCreateNote(title, content);
-      };
-      reader.readAsText(file);
-    });
-
-    // Reset input
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
   };
 
   return (
@@ -186,12 +117,6 @@ export function Sidebar({
             <span className="text-[10px] font-bold text-muted-foreground uppercase ml-1">V {appVersion}</span>
           </div>
           <div className="flex items-center gap-1">
-            <Button variant="ghost" size="icon" onClick={() => fileInputRef.current?.click()} className="text-muted-foreground hover:text-foreground hover:bg-muted hidden md:flex" aria-label="Import files">
-              <FileUp className="w-5 h-5" aria-hidden="true" />
-            </Button>
-            <Button variant="ghost" size="icon" onClick={() => onCreateNote()} className="text-muted-foreground hover:text-foreground hover:bg-muted hidden md:flex" aria-label="Create new note">
-              <Plus className="w-5 h-5" aria-hidden="true" />
-            </Button>
             <Button variant="ghost" size="icon" onClick={onClose} className="text-muted-foreground hover:text-foreground hover:bg-muted md:hidden" aria-label="Close sidebar">
               <X className="w-5 h-5" aria-hidden="true" />
             </Button>
@@ -199,34 +124,6 @@ export function Sidebar({
         </div>
       
       <div className="p-4 space-y-3">
-        <input 
-          type="file" 
-          ref={fileInputRef} 
-          accept=".md,.txt" 
-          multiple 
-          className="hidden" 
-          onChange={handleImportFiles}
-        />
-        <div className="flex gap-2">
-          <Button 
-            onClick={() => onCreateNote()} 
-            className="flex-1 justify-start gap-2 bg-background text-foreground border border-border hover:bg-muted hover:text-foreground shadow-sm transition-all" 
-            variant="outline"
-            aria-label="Create new note"
-          >
-            <Plus className="w-4 h-4" aria-hidden="true" />
-            New Note
-          </Button>
-          <Button 
-            onClick={() => fileInputRef.current?.click()} 
-            className="px-3 bg-background text-foreground border border-border hover:bg-muted hover:text-foreground shadow-sm transition-all md:hidden" 
-            variant="outline"
-            aria-label="Import files"
-          >
-            <FileUp className="w-4 h-4" aria-hidden="true" />
-          </Button>
-        </div>
-
         <div className="relative group">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" aria-hidden="true" />
           <input 
@@ -245,27 +142,6 @@ export function Sidebar({
             className="w-full pl-9 pr-4 py-2 text-base sm:text-sm bg-muted/50 border-transparent focus:bg-background focus:border-border rounded-xl outline-none transition-all placeholder:text-muted-foreground text-foreground focus:ring-2 focus:ring-primary"
             aria-label="Search notes"
           />
-        </div>
-      </div>
-
-      <div className="px-3 mb-4">
-        <div className="flex items-center justify-between px-2 mb-2">
-          <div className="flex items-center gap-2">
-            <Folder className="w-3.5 h-3.5 text-muted-foreground" aria-hidden="true" />
-            <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Smart Folders</span>
-          </div>
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="h-5 w-5 text-muted-foreground hover:text-foreground"
-            onClick={() => {
-              setEditingSmartFolder(undefined);
-              setIsSmartFolderDialogOpen(true);
-            }}
-            aria-label="Add smart folder"
-          >
-            <Plus className="w-3.5 h-3.5" aria-hidden="true" />
-          </Button>
         </div>
       </div>
 
@@ -308,120 +184,33 @@ export function Sidebar({
         </div>
       )}
 
-      <div className="flex-1 px-3 overflow-y-auto custom-scrollbar">
-        <div className="space-y-4 pb-4">
-          {Object.entries(groupedNotes).map(([folder, folderNotes]) => (
-            folderNotes.length > 0 && (
-              <div key={folder} className="space-y-1">
-                {folder !== 'All Notes' && (
-                  <div className="flex items-center justify-between px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider group">
-                    <div className="flex items-center gap-2">
-                      <Folder className="w-3.5 h-3.5" aria-hidden="true" />
-                      {folder}
-                    </div>
-                    {smartFolders.some(sf => sf.name === folder) && (
-                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity focus-within:opacity-100">
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="h-5 w-5 hover:bg-muted"
-                          onClick={() => {
-                            setEditingSmartFolder(smartFolders.find(sf => sf.name === folder));
-                            setIsSmartFolderDialogOpen(true);
-                          }}
-                          aria-label={`Edit smart folder ${folder}`}
-                        >
-                          <Settings2 className="w-3 h-3" aria-hidden="true" />
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="h-5 w-5 hover:bg-destructive/10 hover:text-destructive"
-                          onClick={() => {
-                            const sf = smartFolders.find(sf => sf.name === folder);
-                            if (sf) onDeleteSmartFolder(sf.id);
-                          }}
-                          aria-label={`Delete smart folder ${folder}`}
-                        >
-                          <Trash2 className="w-3 h-3" aria-hidden="true" />
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                )}
-                {folderNotes.map(note => (
-                  <div
-                    key={note.id}
-                    className={cn(
-                      "group flex items-start justify-between p-3 rounded-xl cursor-pointer transition-all duration-200 border",
-                      activeNoteId === note.id 
-                        ? "bg-background border-border shadow-sm" 
-                        : "border-transparent hover:bg-muted/50 text-muted-foreground"
-                    )}
-                    onClick={() => onSelectNote(note.id)}
-                    role="button"
-                    tabIndex={0}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        onSelectNote(note.id);
-                      }
-                    }}
-                    aria-current={activeNoteId === note.id ? "true" : undefined}
-                  >
-                    <div className="flex flex-col overflow-hidden gap-1.5 w-full pr-2">
-                      <span className={cn(
-                        "font-medium truncate text-sm transition-colors",
-                        activeNoteId === note.id ? "text-foreground" : "text-foreground/80 group-hover:text-foreground"
-                      )}>
-                        {note.title || "Untitled Note"}
-                      </span>
-                      <div className="flex items-center justify-between">
-                        <span className="text-[11px] text-muted-foreground font-medium tracking-wide uppercase">
-                          {format(note.updatedAt, "MMM d, yyyy")}
-                        </span>
-                        {note.tags && note.tags.length > 0 && (
-                          <div className="flex gap-1" aria-hidden="true">
-                            {note.tags.slice(0, 2).map(tag => (
-                              <div key={tag} className="w-1.5 h-1.5 rounded-full bg-primary/60" />
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className={cn(
-                        "opacity-0 group-hover:opacity-100 focus:opacity-100 h-7 w-7 shrink-0 transition-all rounded-full",
-                        activeNoteId === note.id 
-                          ? "text-muted-foreground hover:text-destructive hover:bg-destructive/10" 
-                          : "text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                      )}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onDeleteNote(note.id);
-                      }}
-                      aria-label={`Delete note ${note.title || "Untitled Note"}`}
-                    >
-                      <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            )
-          ))}
-          {filteredNotes.length === 0 && (
-            <div className="flex flex-col items-center justify-center p-8 text-center gap-3 mt-10" role="status">
-              <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center" aria-hidden="true">
-                <FileText className="w-5 h-5 text-muted-foreground" />
-              </div>
-              <p className="text-sm text-muted-foreground">
-                {searchQuery || selectedTags.length > 0 ? "No matching notes found." : "No notes yet.\nCreate one to get started."}
-              </p>
+      <div className="flex-1 px-3 overflow-y-auto custom-scrollbar overflow-x-hidden">
+        <SidebarFileTree 
+          notes={notes}
+          folders={folders}
+          activeNoteId={activeNoteId}
+          onSelectNote={onSelectNote}
+          onCreateNote={onCreateNote}
+          onDeleteNote={onDeleteNote}
+          onCreateFolder={onCreateFolder}
+          onUpdateFolder={onUpdateFolder}
+          onDeleteFolder={onDeleteFolder}
+          onMoveNote={onMoveNote}
+          onMoveFolder={onMoveFolder}
+          searchQuery={searchQuery}
+          selectedTags={selectedTags}
+        />
+        
+        {filteredNotes.length === 0 && (
+          <div className="flex flex-col items-center justify-center p-8 text-center gap-3 mt-10" role="status">
+            <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center" aria-hidden="true">
+              <FileText className="w-5 h-5 text-muted-foreground" />
             </div>
-          )}
-        </div>
+            <p className="text-sm text-muted-foreground">
+              {searchQuery || selectedTags.length > 0 ? "No matching notes found." : "No notes yet.\nCreate one to get started."}
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Theme Switcher */}
@@ -472,19 +261,6 @@ export function Sidebar({
 
 
     </div>
-
-      <SmartFolderDialog 
-        isOpen={isSmartFolderDialogOpen}
-        onClose={() => setIsSmartFolderDialogOpen(false)}
-        existingFolder={editingSmartFolder}
-        onSave={(folder) => {
-          if (editingSmartFolder) {
-            onUpdateSmartFolder(editingSmartFolder.id, folder);
-          } else {
-            onCreateSmartFolder(folder);
-          }
-        }}
-      />
     </>
   );
 }

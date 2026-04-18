@@ -23,6 +23,8 @@ interface FloatingToolbarProps {
   onFontFamilyChange: (font: string) => void;
   applyFontSize: (size: string) => void;
   clearFormatting?: () => void;
+  isEraserMode?: boolean;
+  setIsEraserMode?: (isEraserMode: boolean) => void;
   applyFormatting: (prefix: string, suffix?: string, toggle?: boolean) => void;
   onToggleSymbolMenu: () => void;
   onInsertImageClick: () => void;
@@ -45,6 +47,8 @@ export const FloatingToolbar = ({
   onFontFamilyChange,
   applyFontSize,
   clearFormatting,
+  isEraserMode,
+  setIsEraserMode,
   applyFormatting,
   onToggleSymbolMenu,
   onInsertImageClick,
@@ -565,16 +569,22 @@ export const FloatingToolbar = ({
           <Superscript className="w-4 h-4" />
         </Button>
         <Button
-          variant="ghost"
+          variant={isEraserMode ? "default" : "ghost"}
           size="icon"
           onClick={() => {
-            if (clearFormatting) {
-               clearFormatting();
+            if (setIsEraserMode) {
+               setIsEraserMode(!isEraserMode);
             }
           }}
-          className="h-8 w-8 text-rose-500 hover:text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 rounded-lg shrink-0"
-          title="Clear Formatting"
-          aria-label="Clear Formatting"
+          className={cn(
+            "h-8 w-8 shrink-0 rounded-lg",
+            isEraserMode 
+              ? "bg-rose-500 hover:bg-rose-600 text-white dark:text-white" 
+              : "text-rose-500 hover:text-rose-600 dark:text-rose-400 hover:bg-rose-500/10"
+          )}
+          title="Toggle Eraser Mode (remove markdown on click)"
+          aria-label="Toggle Eraser Mode"
+          aria-pressed={isEraserMode}
         >
           <Eraser className="w-4 h-4" />
         </Button>

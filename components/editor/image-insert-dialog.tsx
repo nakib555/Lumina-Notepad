@@ -1,10 +1,10 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Link, Upload, Image as ImageIcon } from "lucide-react";
+import { Link, Upload, Image as ImageIcon, CheckCircle2, XCircle, Loader2 } from "lucide-react";
 
 interface ImageInsertDialogProps {
   isOpen: boolean;
@@ -16,7 +16,47 @@ interface ImageInsertDialogProps {
 export function ImageInsertDialog({ isOpen, onClose, onInsertUrl, onInsertFile }: ImageInsertDialogProps) {
   const [url, setUrl] = useState("");
   const [alt, setAlt] = useState("");
+  const [isValidating, setIsValidating] = useState(false);
+  const [isValid, setIsValid] = useState<boolean | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!url.trim()) {
+      setIsValid(null);
+      setIsValidating(false);
+      return;
+    }
+
+    let isMounted = true;
+    setIsValidating(true);
+    setIsValid(null);
+
+    const checkImage = new Image();
+    checkImage.onload = () => {
+      if (isMounted) {
+        setIsValid(true);
+        setIsValidating(false);
+      }
+    };
+    checkImage.onerror = () => {
+      if (isMounted) {
+        setIsValid(false);
+        setIsValidating(false);
+      }
+    };
+    
+    // Add a slight delay to avoid spamming network requests while typing
+    const timeoutId = setTimeout(() => {
+      if (isMounted) {
+        checkImage.src = url.trim();
+      }
+    }, 300);
+
+    return () => {
+      isMounted = false;
+      clearTimeout(timeoutId);
+    };
+  }, [url]);
 
   const handleUrlSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,6 +64,7 @@ export function ImageInsertDialog({ isOpen, onClose, onInsertUrl, onInsertFile }
       onInsertUrl(url.trim(), alt.trim() || "image");
       setUrl("");
       setAlt("");
+      setIsValid(null);
       onClose();
     }
   };
@@ -38,6 +79,16 @@ export function ImageInsertDialog({ isOpen, onClose, onInsertUrl, onInsertFile }
       fileInputRef.current.value = "";
     }
   };
+
+  // Rest of the effect reset when closed
+  useEffect(() => {
+    if (!isOpen) {
+      setUrl("");
+      setAlt("");
+      setIsValid(null);
+      setIsValidating(false);
+    }
+  }, [isOpen]);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -63,13 +114,21 @@ export function ImageInsertDialog({ isOpen, onClose, onInsertUrl, onInsertFile }
             <form onSubmit={handleUrlSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="image-url">Image URL</Label>
-                <Input 
-                  id="image-url" 
-                  placeholder="https://example.com/image.png" 
-                  value={url}
-                  onChange={(e) => setUrl(e.target.value)}
-                  autoFocus
-                />
+                <div className="relative">
+                  <Input 
+                    id="image-url" 
+                    placeholder="https://example.com/image.png" 
+                    value={url}
+                    onChange={(e) => setUrl(e.target.value)}
+                    autoFocus
+                    className="pr-10 border-r-0"
+                  />
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center justify-center">
+                    {isValidating && <Loader2 className="w-4 h-4 text-muted-foreground animate-spin" />}
+                    {!isValidating && isValid === true && <CheckCircle2 className="w-4 h-4 text-green-500" />}
+                    {!isValidating && isValid === false && <XCircle className="w-4 h-4 text-destructive" />}
+                  </div>
+                </div>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="image-alt">Alt Text (optional)</Label>
@@ -82,7 +141,7 @@ export function ImageInsertDialog({ isOpen, onClose, onInsertUrl, onInsertFile }
               </div>
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
-                <Button type="submit" disabled={!url.trim()}>Insert</Button>
+                <Button type="submit" disabled={!url.trim() || isValid === false}>Insert</Button>
               </DialogFooter>
             </form>
           </TabsContent>

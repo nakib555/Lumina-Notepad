@@ -22,6 +22,9 @@ interface BottomBarProps {
   fontFamily: string;
   onFontFamilyChange: (font: string) => void;
   applyFontSize: (size: string) => void;
+  clearFormatting?: () => void;
+  isEraserMode?: boolean;
+  setIsEraserMode?: (isEraserMode: boolean) => void;
   textareaRef: React.RefObject<HTMLDivElement | null>;
   onInsertImageClick: () => void;
   onInsertLinkClick: () => void;
@@ -49,6 +52,9 @@ export const BottomBar = ({
   fontFamily,
   onFontFamilyChange,
   applyFontSize,
+  clearFormatting,
+  isEraserMode,
+  setIsEraserMode,
   textareaRef,
   onInsertImageClick,
   onInsertLinkClick,
@@ -131,6 +137,9 @@ export const BottomBar = ({
           fontFamily={fontFamily}
           onFontFamilyChange={onFontFamilyChange}
           applyFontSize={applyFontSize}
+          clearFormatting={clearFormatting}
+          isEraserMode={isEraserMode}
+          setIsEraserMode={setIsEraserMode}
           applyFormatting={applyFormatting}
           onToggleSymbolMenu={() => setShowSymbolMenu(!showSymbolMenu)}
           textareaRef={textareaRef}

@@ -1,16 +1,11 @@
 import { useState, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 
-export interface SmartFolderRule {
-  type: 'tag' | 'keyword' | 'date';
-  operator: 'contains' | 'equals' | 'after' | 'before';
-  value: string;
-}
-
-export interface SmartFolder {
+export interface Folder {
   id: string;
   name: string;
-  rules: SmartFolderRule[];
+  parentId: string | null;
+  createdAt: number;
 }
 
 export interface Note {
@@ -23,6 +18,20 @@ export interface Note {
 }
 
 export function useNotes() {
+  const [folders, setFolders] = useState<Folder[]>(() => {
+    if (typeof window !== 'undefined') {
+      const savedFolders = localStorage.getItem('lumina-folders');
+      if (savedFolders) {
+        try {
+          return JSON.parse(savedFolders);
+        } catch (e) {
+          console.error('Failed to parse folders', e);
+        }
+      }
+    }
+    return [];
+  });
+
   const [notes, setNotes] = useState<Note[]>(() => {
     if (typeof window !== 'undefined') {
       const savedNotes = localStorage.getItem('lumina-notes');
@@ -44,20 +53,6 @@ export function useNotes() {
       tags: ['getting-started'],
       updatedAt: Date.now(),
     }];
-  });
-
-  const [smartFolders, setSmartFolders] = useState<SmartFolder[]>(() => {
-    if (typeof window !== 'undefined') {
-      const savedSmartFolders = localStorage.getItem('lumina-smart-folders');
-      if (savedSmartFolders) {
-        try {
-          return JSON.parse(savedSmartFolders);
-        } catch (e) {
-          console.error('Failed to parse smart folders', e);
-        }
-      }
-    }
-    return [];
   });
 
   const [activeNoteId, setActiveNoteId] = useState<string | null>(() => {
@@ -87,28 +82,53 @@ export function useNotes() {
   useEffect(() => {
     if (isLoaded) {
       localStorage.setItem('lumina-notes', JSON.stringify(notes));
-      localStorage.setItem('lumina-smart-folders', JSON.stringify(smartFolders));
+      localStorage.setItem('lumina-folders', JSON.stringify(folders));
     }
-  }, [notes, smartFolders, isLoaded]);
+  }, [notes, folders, isLoaded]);
 
   const activeNote = notes.find(n => n.id === activeNoteId) || null;
 
-  const createNote = (title?: string, content?: string) => {
+  const createNote = (title?: string, content?: string, folderId?: string) => {
     const newNote: Note = {
       id: uuidv4(),
       title: title || 'Untitled Note',
       content: content || '',
       tags: [],
+      folderId,
       updatedAt: Date.now(),
     };
     setNotes(prev => [newNote, ...prev]);
     setActiveNoteId(newNote.id);
+    return newNote.id;
   };
 
   const updateNote = (id: string, updates: Partial<Note>) => {
     setNotes(prev => prev.map(n => 
       n.id === id ? { ...n, ...updates, updatedAt: Date.now() } : n
     ));
+  };
+
+  const reorderNote = (id: string, folderId: string | null, referenceNoteId?: string | null) => {
+    setNotes(prev => {
+      const sourceIndex = prev.findIndex(n => n.id === id);
+      if (sourceIndex === -1) return prev;
+      const sourceNote = prev[sourceIndex];
+      const updatedNote = { ...sourceNote, folderId: folderId === null ? undefined : folderId, updatedAt: Date.now() };
+
+      const newNotes = [...prev];
+      newNotes.splice(sourceIndex, 1);
+
+      if (referenceNoteId) {
+        const targetIndex = newNotes.findIndex(n => n.id === referenceNoteId);
+        if (targetIndex !== -1) {
+          newNotes.splice(targetIndex + 1, 0, updatedNote);
+          return newNotes;
+        }
+      }
+
+      newNotes.unshift(updatedNote);
+      return newNotes;
+    });
   };
 
   const deleteNote = (id: string) => {
@@ -121,36 +141,84 @@ export function useNotes() {
     });
   };
 
-  const createSmartFolder = (folder: Omit<SmartFolder, 'id'>) => {
-    const newFolder: SmartFolder = {
-      ...folder,
+  const createFolder = (name: string, parentId: string | null = null) => {
+    const newFolder: Folder = {
       id: uuidv4(),
+      name,
+      parentId,
+      createdAt: Date.now(),
     };
-    setSmartFolders(prev => [...prev, newFolder]);
+    setFolders(prev => [...prev, newFolder]);
+    return newFolder.id;
   };
 
-  const updateSmartFolder = (id: string, updates: Partial<SmartFolder>) => {
-    setSmartFolders(prev => prev.map(f => 
+  const updateFolder = (id: string, updates: Partial<Folder>) => {
+    setFolders(prev => prev.map(f => 
       f.id === id ? { ...f, ...updates } : f
     ));
   };
 
-  const deleteSmartFolder = (id: string) => {
-    setSmartFolders(prev => prev.filter(f => f.id !== id));
+  const reorderFolder = (id: string, parentId: string | null, referenceFolderId?: string | null) => {
+    setFolders(prev => {
+      const sourceIndex = prev.findIndex(f => f.id === id);
+      if (sourceIndex === -1) return prev;
+      const sourceFolder = prev[sourceIndex];
+      const updatedFolder = { ...sourceFolder, parentId };
+
+      const newFolders = [...prev];
+      newFolders.splice(sourceIndex, 1);
+
+      if (referenceFolderId) {
+        const targetIndex = newFolders.findIndex(f => f.id === referenceFolderId);
+        if (targetIndex !== -1) {
+          newFolders.splice(targetIndex + 1, 0, updatedFolder);
+          return newFolders;
+        }
+      }
+
+      newFolders.unshift(updatedFolder);
+      return newFolders;
+    });
+  };
+
+  const deleteFolder = (id: string) => {
+    setFolders(prev => {
+      // Find all nested folders to delete
+      const getNestedFolderIds = (parentId: string): string[] => {
+        const children = prev.filter(f => f.parentId === parentId);
+        return [
+          parentId,
+          ...children.flatMap(child => getNestedFolderIds(child.id))
+        ];
+      };
+      
+      const idsToDelete = new Set(getNestedFolderIds(id));
+      
+      // Also update notes in these folders to be at root (or move to parent?)
+      // Actually, standard behavior is often just move them to root, or delete them.
+      // Let's move them to root for safety.
+      setNotes(notesPrev => notesPrev.map(n => 
+        n.folderId && idsToDelete.has(n.folderId) ? { ...n, folderId: undefined } : n
+      ));
+
+      return prev.filter(f => !idsToDelete.has(f.id));
+    });
   };
 
   return {
     notes,
-    smartFolders,
+    folders,
     activeNoteId,
     activeNote,
     setActiveNoteId,
     createNote,
     updateNote,
     deleteNote,
-    createSmartFolder,
-    updateSmartFolder,
-    deleteSmartFolder,
+    createFolder,
+    updateFolder,
+    deleteFolder,
+    reorderNote,
+    reorderFolder,
     isLoaded
   };
 }

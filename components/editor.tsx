@@ -9,15 +9,21 @@ import { useEditorHistory } from "./editor/use-editor-history";
 import { useEditorExport } from "./editor/use-editor-export";
 import { useEditorLogic } from "./editor/use-editor-logic";
 import { useDraggable } from "./editor/use-draggable";
-import { FileText, Menu } from "lucide-react";
+import { FileText, Menu, Plus, Trash2, Clock, Search } from "lucide-react";
 import { Button } from "./ui/button";
 import { cn } from "@/lib/utils";
 import { ImageInsertDialog } from "./editor/image-insert-dialog";
 import { LinkEditDialog } from "./editor/link-edit-dialog";
 import { toast } from "sonner";
+import { format } from "date-fns";
+import { Input } from "./ui/input";
 
 interface EditorProps {
   note: Note | null;
+  notes?: Note[];
+  onSelectNote?: (id: string) => void;
+  onCreateNote?: (title?: string, content?: string) => void;
+  onDeleteNote?: (id: string) => void;
   onUpdateNote: (id: string, updates: Partial<Note>) => void;
   onToggleSidebar: () => void;
   theme: string;
@@ -27,6 +33,10 @@ interface EditorProps {
 
 export function Editor({ 
   note, 
+  notes = [],
+  onSelectNote,
+  onCreateNote,
+  onDeleteNote,
   onUpdateNote, 
   onToggleSidebar,
   theme,
@@ -45,6 +55,7 @@ export function Editor({
   const [initialLinkText, setInitialLinkText] = useState('');
   const [isAutoMarkdownEnabled, setIsAutoMarkdownEnabled] = useState(false);
   const [isViewMode, setIsViewMode] = useState(false);
+  const [isEraserMode, setIsEraserMode] = useState(false);
   const savedRangeRef = useRef<Range | null>(null);
 
   const {
@@ -222,23 +233,94 @@ export function Editor({
     };
   }, [onUndo, onRedo, setShowExportMenu, setShowCopyMenu, isViewMode]);
 
+  const [lobbySearch, setLobbySearch] = useState("");
+
   if (!note) {
+    const filteredNotes = notes.filter(n => 
+      n.title.toLowerCase().includes(lobbySearch.toLowerCase()) || 
+      n.content.toLowerCase().includes(lobbySearch.toLowerCase())
+    );
+
     return (
       <div className="flex-1 flex flex-col h-screen overflow-hidden bg-background relative">
-        <header className="h-16 border-b border-border flex items-center px-4 shrink-0 bg-background/80 backdrop-blur-md z-10">
-          <Button variant="ghost" size="icon" onClick={onToggleSidebar} className="text-muted-foreground md:hidden">
-            <Menu className="w-5 h-5" />
+        <header className="h-16 border-b border-border flex items-center justify-between px-4 shrink-0 bg-background/80 backdrop-blur-md z-10">
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="icon" onClick={onToggleSidebar} className="text-muted-foreground md:hidden">
+              <Menu className="w-5 h-5" />
+            </Button>
+            <h1 className="text-lg font-semibold text-foreground tracking-tight hidden md:block w-32 truncate">Lumina</h1>
+          </div>
+          <div className="flex items-center gap-4 flex-1 max-w-xl mx-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input 
+                placeholder="Search your notes..." 
+                value={lobbySearch}
+                onChange={e => setLobbySearch(e.target.value)}
+                className="pl-9 bg-muted/50 border-transparent focus-visible:ring-1 focus-visible:ring-primary/30 rounded-full w-full"
+              />
+            </div>
+          </div>
+          <Button onClick={() => onCreateNote?.()} className="gap-2 rounded-full shrink-0">
+            <Plus className="w-4 h-4" />
+            <span className="hidden sm:inline">New Note</span>
           </Button>
         </header>
-        <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground gap-4 p-8 text-center">
-          <div className="w-20 h-20 rounded-3xl bg-muted flex items-center justify-center border border-border">
-            <FileText className="w-10 h-10 text-muted-foreground/50" />
+        
+        <main className="flex-1 overflow-y-auto w-full p-4 md:p-8 space-y-8 bg-muted/10">
+          <div className="max-w-5xl mx-auto space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-2xl font-light text-foreground tracking-tight">Recent Notes</h2>
+              <p className="text-sm text-muted-foreground">{filteredNotes.length} total</p>
+            </div>
+            
+            {filteredNotes.length === 0 ? (
+              <div className="flex flex-col items-center justify-center text-muted-foreground gap-4 py-20 text-center">
+                <div className="w-20 h-20 rounded-3xl bg-muted flex items-center justify-center border border-border">
+                  <FileText className="w-10 h-10 text-muted-foreground/50" />
+                </div>
+                <div className="space-y-1">
+                  <h3 className="text-foreground font-semibold">No notes found</h3>
+                  <p className="text-sm max-w-[240px]">Create a new note or adjust your search.</p>
+                </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {filteredNotes.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()).map(n => (
+                  <div 
+                    key={n.id}
+                    onClick={() => onSelectNote?.(n.id)}
+                    className="group relative flex flex-col bg-background p-5 rounded-2xl border border-border hover:border-primary/30 shadow-sm hover:shadow-md transition-all cursor-pointer h-48 overflow-hidden gap-3"
+                  >
+                    <div className="flex justify-between items-start gap-2">
+                      <h3 className="font-medium text-foreground line-clamp-1 flex-1">{n.title || "Untitled"}</h3>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="w-7 h-7 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity -mr-2 -mt-2 shrink-0 hover:bg-destructive/10 hover:text-destructive"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (confirm("Are you sure you want to delete this note?")) {
+                            onDeleteNote?.(n.id);
+                          }
+                        }}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                    <p className="text-sm text-muted-foreground line-clamp-3 leading-relaxed flex-1 font-serif opacity-80 break-words">
+                      {n.content ? n.content.replace(/[#*`_]/g, '') : "No content..."}
+                    </p>
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground/70 mt-auto pt-3 border-t border-border/50">
+                      <Clock className="w-3.5 h-3.5" />
+                      <span>{format(new Date(n.updatedAt), "MMM d, yyyy")}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
-          <div className="space-y-1">
-            <h3 className="text-foreground font-semibold">No Note Selected</h3>
-            <p className="text-sm max-w-[240px]">Select a note from the sidebar or create a new one to start writing.</p>
-          </div>
-        </div>
+        </main>
       </div>
     );
   }
@@ -312,6 +394,7 @@ export function Editor({
             textareaRef={textareaRef}
             isAutoMarkdownEnabled={isAutoMarkdownEnabled}
             isViewMode={isViewMode}
+            isEraserMode={isEraserMode}
           />
         </div>
       </div>
@@ -339,6 +422,8 @@ export function Editor({
           onFontFamilyChange={onFontFamilyChange}
           applyFontSize={applyFontSize}
           clearFormatting={clearFormatting}
+          isEraserMode={isEraserMode}
+          setIsEraserMode={setIsEraserMode}
           textareaRef={textareaRef}
           isAutoMarkdownEnabled={isAutoMarkdownEnabled}
           setIsAutoMarkdownEnabled={setIsAutoMarkdownEnabled}

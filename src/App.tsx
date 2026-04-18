@@ -44,16 +44,16 @@ const INTRO_SLIDES = [
 export default function App() {
   const {
     notes,
-    smartFolders,
+    folders,
     activeNoteId,
     activeNote,
     setActiveNoteId,
     createNote,
     updateNote,
     deleteNote,
-    createSmartFolder,
-    updateSmartFolder,
-    deleteSmartFolder,
+    createFolder,
+    updateFolder,
+    deleteFolder,
     isLoaded
   } = useNotes();
 
@@ -278,14 +278,16 @@ export default function App() {
           <AutoUpdater />
           <Sidebar 
             notes={notes}
-            smartFolders={smartFolders}
+            folders={folders}
             activeNoteId={activeNoteId}
             onSelectNote={handleSelectNote}
             onCreateNote={createNote}
             onDeleteNote={deleteNote}
-            onCreateSmartFolder={createSmartFolder}
-            onUpdateSmartFolder={updateSmartFolder}
-            onDeleteSmartFolder={deleteSmartFolder}
+            onCreateFolder={createFolder}
+            onUpdateFolder={updateFolder}
+            onDeleteFolder={deleteFolder}
+            onMoveNote={(noteId, folderId, referenceId) => reorderNote(noteId, folderId, referenceId)}
+            onMoveFolder={(folderId, parentId, referenceId) => reorderFolder(folderId, parentId, referenceId)}
             isOpen={isSidebarOpen}
             onClose={() => setIsSidebarOpen(false)}
             theme={theme}
@@ -293,6 +295,10 @@ export default function App() {
           />
           <Editor
             note={activeNote}
+            notes={notes}
+            onSelectNote={handleSelectNote}
+            onCreateNote={createNote}
+            onDeleteNote={deleteNote}
             onUpdateNote={updateNote}
             onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
             theme={theme}
