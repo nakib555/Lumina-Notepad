@@ -7,6 +7,8 @@ import { AnimatePresence, motion } from "motion/react";
 import { Feather, Layers, ArrowRight, Edit3, ImageIcon, Eye } from "lucide-react";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { AutoUpdater } from "@/components/auto-updater";
+import { App as CapacitorApp } from "@capacitor/app";
+import { toast } from "sonner";
 
 const INTRO_SLIDES = [
   {
@@ -30,7 +32,7 @@ const INTRO_SLIDES = [
   {
     icon: Layers,
     title: "Organize effortlessly",
-    desc: "Use context tags and dynamic smart folders to keep your notes perfectly organized without any manual work.",
+    desc: "Use context tags to keep your notes perfectly organized without any manual work.",
     button: "Next"
   },
   {
@@ -116,6 +118,29 @@ export default function App() {
       return () => clearTimeout(timer);
     }
   }, [isLoaded, introStep]);
+
+  // Double tap back button to exit app (Android/Capacitor)
+  useEffect(() => {
+    let lastTimeBackPress = 0;
+    const timePeriodToExit = 2000; // 2 seconds
+
+    const handleBackButton = async () => {
+      const timeNow = new Date().getTime();
+      if (timeNow - lastTimeBackPress < timePeriodToExit) {
+        // Exit app on double tap
+        await CapacitorApp.exitApp();
+      } else {
+        toast("Press back again to exit");
+        lastTimeBackPress = timeNow;
+      }
+    };
+
+    const backButtonListener = CapacitorApp.addListener('backButton', handleBackButton);
+
+    return () => {
+      backButtonListener.then(listener => listener.remove());
+    };
+  }, []);
 
   const nextStep = () => {
     if (introStep < INTRO_SLIDES.length) {

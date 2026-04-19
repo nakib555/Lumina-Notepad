@@ -348,6 +348,16 @@ export const EditorArea = ({
       }
     });
 
+    service.addRule('bookmarkMarker', {
+      filter: function (node) {
+        return node.nodeType === 1 && node.nodeName === 'SPAN' && (node as HTMLElement).classList.contains('bookmark-marker');
+      },
+      replacement: function (_content, node) {
+        const id = (node as HTMLElement).getAttribute('data-bookmark-id') || '';
+        return `<span class="bookmark-marker" data-bookmark-id="${id}" style="display:inline-block; border-radius:4px; margin:0 2px; cursor:pointer;" title="Bookmark">🔖</span>`;
+      }
+    });
+
     service.addRule('preserveBr', {
       filter: 'br',
       replacement: function () {
@@ -605,18 +615,25 @@ export const EditorArea = ({
     hoveredImage.title = alt; // Use alt as caption title
     /* eslint-enable react-hooks/immutability */
 
+    if (align === 'left') {
+      hoveredImage.style.display = 'block';
+      hoveredImage.style.marginLeft = '0';
+      hoveredImage.style.marginRight = 'auto';
+    } else if (align === 'right') {
+      hoveredImage.style.display = 'block';
+      hoveredImage.style.marginLeft = 'auto';
+      hoveredImage.style.marginRight = '0';
+    } else {
+      hoveredImage.style.display = 'block';
+      hoveredImage.style.marginLeft = 'auto';
+      hoveredImage.style.marginRight = 'auto';
+    }
+    
+    // Clear wrapper alignment if any exists from previous versions
     const wrapper = hoveredImage.parentElement;
     if (wrapper) {
-      if (align === 'left') {
-        wrapper.style.textAlign = 'left';
-        wrapper.style.justifyContent = 'flex-start';
-      } else if (align === 'right') {
-        wrapper.style.textAlign = 'right';
-        wrapper.style.justifyContent = 'flex-end';
-      } else {
-        wrapper.style.textAlign = 'center';
-        wrapper.style.justifyContent = 'center';
-      }
+      wrapper.style.textAlign = '';
+      wrapper.style.justifyContent = '';
     }
     
     flushPreviewEdit();
@@ -989,14 +1006,47 @@ export const EditorArea = ({
     if (previewRef.current) {
       const html = parseMarkdown(content || '');
       previewRef.current.innerHTML = html;
+
+      // Auto-scroll to mark when opening file
+      setTimeout(() => {
+        if (!previewRef.current) return;
+        const marks = Array.from(previewRef.current.querySelectorAll('.bookmark-marker'));
+        if (marks.length > 0) {
+          // Reset to first mark when newly loading a different note
+          previewRef.current.setAttribute('data-current-mark', '0');
+          const targetMark = marks[0] as HTMLElement;
+          targetMark.scrollIntoView({ behavior: 'auto', block: 'center' });
+          
+          try {
+             const range = document.createRange();
+             range.setStartAfter(targetMark);
+             range.collapse(true);
+             const selection = window.getSelection();
+             selection?.removeAllRanges();
+             selection?.addRange(range);
+          } catch (err) {
+             console.debug('Handled selection edge case during bookmark load:', err);
+          }
+        }
+      }, 50);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [noteId]);
 
-  const handleKeyDown = useCallback(() => {
-    // We removed the auto-formatting on Space/Enter based on user request.
-    // The markdown rendering is now handled entirely by the Auto Markdown toggle button
-    // and the paste handler.
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    const target = e.target as HTMLElement;
+
+    // Code block specific handling
+    if (target.tagName === 'CODE') {
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        document.execCommand('insertText', false, '  ');
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        document.execCommand('insertText', false, '\n');
+        // Let the auto-update happen via the oninput handler on the code tag itself
+      }
+    }
   }, []);
 
   const prevAutoMarkdown = useRef(isAutoMarkdownEnabled);
@@ -1049,15 +1099,11 @@ export const EditorArea = ({
          return;
       }
 
+      e.preventDefault();
+      // Always paste as raw text to avoid any escaping/rich text formatting issues
+      document.execCommand('insertText', false, text);
+      
       if (isAutoMarkdownEnabled) {
-        e.preventDefault();
-        let html = parseMarkdown(text);
-        
-        if (!text.includes('\n') && html.startsWith('<p>') && html.endsWith('</p>\n')) {
-          html = html.substring(3, html.length - 5);
-        }
-        
-        document.execCommand('insertHTML', false, html);
         flushPreviewEdit();
       }
     }

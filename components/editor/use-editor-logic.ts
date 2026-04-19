@@ -23,6 +23,7 @@ export const useEditorLogic = (
 
     const files = Array.from(e.dataTransfer.files);
     const imageFiles = files.filter(file => file.type.startsWith('image/'));
+    const textFiles = files.filter(file => file.type.startsWith('text/') || file.name.endsWith('.md'));
 
     if (imageFiles.length > 0) {
       const file = imageFiles[0];
@@ -30,14 +31,22 @@ export const useEditorLogic = (
       
       reader.onload = (event) => {
         const base64String = event.target?.result as string;
-        
-        // Insert image using execCommand
-        document.execCommand('insertImage', false, base64String);
-        
+        document.execCommand('insertHTML', false, `<img src="${base64String}" alt="Dropped Image" style="max-width: 100%;" /><p>&#8203;</p>`);
         toast.success("Image added successfully");
       };
       
       reader.readAsDataURL(file);
+    } else if (textFiles.length > 0) {
+      const file = textFiles[0];
+      const reader = new FileReader();
+
+      reader.onload = (event) => {
+        const textContext = event.target?.result as string;
+        document.execCommand('insertText', false, textContext);
+        toast.success("Text file content inserted");
+      }
+
+      reader.readAsText(file);
     }
   };
 

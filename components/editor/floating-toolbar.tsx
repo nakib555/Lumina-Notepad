@@ -3,7 +3,7 @@ import {
   Bold, Italic, Underline, Strikethrough, Subscript, Superscript, 
   Quote, Code, Terminal, Link, Image, Minus, Table, List, ListOrdered, ListTodo,
   Heading1, Heading2, Heading3, Sigma, MousePointer2, ArrowLeft, ArrowRight, ArrowUp, ArrowDown, Scissors, Copy, ClipboardPaste, X, Eraser,
-  AlignLeft, AlignCenter, AlignRight, Wand2
+  AlignLeft, AlignCenter, AlignRight, Wand2, Bookmark, ChevronLeft, ChevronRight
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -255,6 +255,48 @@ export const FloatingToolbar = ({
       console.error('Failed to paste text: ', err);
       toast.error("Your browser's security settings prevent pasting via this button. Please use Ctrl+V (or Cmd+V) to paste.");
     }
+  };
+
+  const handleAddBookmark = () => {
+    ensureFocus();
+    const id = `mark-${Date.now()}`;
+    document.execCommand('insertHTML', false, `<span class="bookmark-marker" data-bookmark-id="${id}" style="display:inline-block; border-radius:4px; margin:0 2px; cursor:pointer;" title="Bookmark">🔖</span>`);
+    toast.success("Bookmark added!");
+  };
+
+  const jumpToMark = (direction: 'next' | 'prev') => {
+    if (!textareaRef.current) {
+      toast.error("Editor not found");
+      return;
+    }
+    const marks = Array.from(textareaRef.current.querySelectorAll('.bookmark-marker'));
+    if (marks.length === 0) {
+      toast.info("No bookmarks found in this document");
+      return;
+    }
+
+    let currentIndex = parseInt(textareaRef.current.getAttribute('data-current-mark') || '-1');
+    if (direction === 'next') {
+      currentIndex = (currentIndex + 1) % marks.length;
+    } else {
+      currentIndex = (currentIndex - 1 + marks.length) % marks.length;
+    }
+    textareaRef.current.setAttribute('data-current-mark', currentIndex.toString());
+    
+    const targetMark = marks[currentIndex] as HTMLElement;
+    targetMark.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    
+    // Give time for scroll to settle, then set focus
+    setTimeout(() => {
+        const range = document.createRange();
+        range.setStartAfter(targetMark);
+        range.collapse(true);
+        const selection = window.getSelection();
+        selection?.removeAllRanges();
+        selection?.addRange(range);
+    }, 50);
+    
+    toast.success(`Jumped to bookmark ${currentIndex + 1} of ${marks.length}`);
   };
 
   return (
@@ -585,6 +627,37 @@ export const FloatingToolbar = ({
           aria-pressed={isEraserMode}
         >
           <Eraser className="w-4 h-4" />
+        </Button>
+      </div>
+
+      {/* Bookmark Group */}
+      <div className="flex items-center gap-0.5 px-1 border-r border-border">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => jumpToMark('prev')}
+          className="h-8 w-8 text-yellow-600 hover:text-yellow-700 dark:text-yellow-400 hover:bg-yellow-500/10 rounded-lg shrink-0"
+          title="Previous Bookmark"
+        >
+          <ChevronLeft className="w-4 h-4" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={handleAddBookmark}
+          className="h-8 w-8 text-yellow-600 hover:text-yellow-700 dark:text-yellow-400 hover:bg-yellow-500/10 rounded-lg shrink-0"
+          title="Add Bookmark"
+        >
+          <Bookmark className="w-4 h-4 text-yellow-500 fill-yellow-500/20" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => jumpToMark('next')}
+          className="h-8 w-8 text-yellow-600 hover:text-yellow-700 dark:text-yellow-400 hover:bg-yellow-500/10 rounded-lg shrink-0"
+          title="Next Bookmark"
+        >
+          <ChevronRight className="w-4 h-4" />
         </Button>
       </div>
 
