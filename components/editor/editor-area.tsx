@@ -11,6 +11,24 @@ import markedKatex from 'marked-katex-extension';
 import 'katex/dist/katex.min.css';
 import { cn } from "@/lib/utils";
 
+const CARET_MARKER = '\u200B\u200C\u200D';
+
+const findAndRemoveMarker = (node: Node): { foundNode: Text, offset: number } | null => {
+    if (node.nodeType === Node.TEXT_NODE) {
+        const index = node.nodeValue?.indexOf(CARET_MARKER);
+        if (index !== undefined && index > -1) {
+            node.nodeValue = node.nodeValue?.replace(CARET_MARKER, '') || '';
+            return { foundNode: node as Text, offset: index };
+        }
+    } else {
+        for (let i = 0; i < node.childNodes.length; i++) {
+            const result = findAndRemoveMarker(node.childNodes[i]);
+            if (result) return result;
+        }
+    }
+    return null;
+};
+
 marked.use(markedKatex({ throwOnError: false, nonStandard: true }));
 
 const renderer = new marked.Renderer();
@@ -339,22 +357,13 @@ export const EditorArea = ({
       }
     });
 
-    service.addRule('caretMarker', {
-      filter: function (node) {
-        return node.nodeType === 1 && node.nodeName === 'SPAN' && (node as HTMLElement).id === 'caret-marker';
-      },
-      replacement: function () {
-        return '<span id="caret-marker"></span>';
-      }
-    });
-
     service.addRule('bookmarkMarker', {
       filter: function (node) {
         return node.nodeType === 1 && node.nodeName === 'SPAN' && (node as HTMLElement).classList.contains('bookmark-marker');
       },
       replacement: function (_content, node) {
         const id = (node as HTMLElement).getAttribute('data-bookmark-id') || '';
-        return `<span class="bookmark-marker" data-bookmark-id="${id}" style="display:inline-block; border-radius:4px; margin:0 2px; cursor:pointer;" title="Bookmark">🔖</span>`;
+        return `<span class="bookmark-marker" data-bookmark-id="${id}" style="display:inline-block; border-radius:4px; margin:0 2px; cursor:pointer;" title="Bookmark" contenteditable="false">��</span>`;
       }
     });
 
@@ -479,15 +488,6 @@ export const EditorArea = ({
       },
       replacement: function (_content, node) {
         return (node as HTMLElement).textContent || '';
-      }
-    });
-
-    service.addRule('preserveCaret', {
-      filter: function (node) {
-        return node.nodeName === 'SPAN' && (node as HTMLElement).id === 'caret-marker';
-      },
-      replacement: function (_content, node) {
-        return (node as HTMLElement).outerHTML;
       }
     });
 
@@ -787,9 +787,9 @@ export const EditorArea = ({
         const sel = window.getSelection();
         if (sel && sel.rangeCount > 0 && previewRef.current.contains(sel.anchorNode)) {
              const range = sel.getRangeAt(0);
-             const marker = document.createElement('span');
-             marker.id = "caret-marker";
-             range.insertNode(marker);
+             const markerNode = document.createTextNode(CARET_MARKER);
+             range.insertNode(markerNode);
+             // Move caret after the marker so subsequent character insertions don't get messed up if we had to return early, though we don't return early here
              
              const parseState = {
                  scrollContainers: [] as Array<{ el: Element | Window, top: number, left: number }>
@@ -805,25 +805,27 @@ export const EditorArea = ({
              let mdWithMarker = turndownService.turndown(htmlWithMarker);
              
              // Fix caret inside table separator: move caret to the end of the previous line (header) to allow table parsing
-             if (/^[ \t]*\|?[-: \t]*<span id="caret-marker"><\/span>[-: \t]*\|?[ \t]*$/m.test(mdWithMarker)) {
-                 mdWithMarker = mdWithMarker.replace(/([^\n]+)\n([ \t]*\|?[-: \t]*)(<span id="caret-marker"><\/span>)([-: \t]*\|?[ \t]*(\n|$))/g, '$1<span id="caret-marker"></span>\n$2$4');
+             const tableSepRegex = new RegExp(`^[ \\t]*\\|?[-: \\t]*${CARET_MARKER}[-: \\t]*\\|?[ \\t]*$`, 'm');
+             if (tableSepRegex.test(mdWithMarker)) {
+                 const replaceRegex = new RegExp(`([^\\n]+)\\n([ \\t]*\\|?[-: \\t]*)(${CARET_MARKER})([-: \\t]*\\|?[ \\t]*(\\n|$))`, 'g');
+                 mdWithMarker = mdWithMarker.replace(replaceRegex, `$1${CARET_MARKER}\n$2$4`);
              }
 
              // Also fix if caret is placed exactly after pipes in header/separator line in a way that breaks regex
-             mdWithMarker = mdWithMarker.replace(/(\n[ \t]*\|[-: \t]*)(<span id="caret-marker"><\/span>)([-: \t]+\|[ \t]*\n)/g, '$1$3$2');
+             const afterPipeRegex = new RegExp(`(\\n[ \\t]*\\|[-: \\t]*)(${CARET_MARKER})([-: \\t]+\\|[ \\t]*\\n)`, 'g');
+             mdWithMarker = mdWithMarker.replace(afterPipeRegex, '$1$3$2');
              
              const newHtml = parseMarkdown(mdWithMarker);
              previewRef.current.innerHTML = newHtml;
              
-             const newMarker = previewRef.current.querySelector('#caret-marker');
-             if (newMarker) {
+             const markerResult = findAndRemoveMarker(previewRef.current);
+             if (markerResult) {
+                 const { foundNode, offset } = markerResult;
                  const newRange = document.createRange();
-                 // Safer caret restoration: place it immediately after the marker.
-                 newRange.setStartAfter(newMarker);
+                 newRange.setStart(foundNode, offset);
                  newRange.collapse(true);
                  sel.removeAllRanges();
                  sel.addRange(newRange);
-                 newMarker.remove();
              }
              
              // Restore true scroll targeting
@@ -1054,13 +1056,40 @@ export const EditorArea = ({
   useEffect(() => {
     if (isAutoMarkdownEnabled && !prevAutoMarkdown.current) {
       if (previewRef.current) {
-        const html = parseMarkdown(content || '');
+        const sel = window.getSelection();
+        let markerInserted = false;
+        if (sel && sel.rangeCount > 0 && previewRef.current.contains(sel.anchorNode)) {
+            const range = sel.getRangeAt(0);
+            const markerNode = document.createTextNode(CARET_MARKER);
+            range.insertNode(markerNode);
+            markerInserted = true;
+        }
+
+        const htmlWithMarker = previewRef.current.innerHTML;
+        let mdWithMarker = turndownService.turndown(htmlWithMarker);
+        
+        mdWithMarker = mdWithMarker.replace(new RegExp(`([^\\n]+)\\n([ \\t]*\\|?[-: \\t]*)(${CARET_MARKER})([-: \\t]*\\|?[ \\t]*(\\n|$))`, 'g'), `$1${CARET_MARKER}\n$2$4`);
+        mdWithMarker = mdWithMarker.replace(new RegExp(`(\\n[ \\t]*\\|[-: \\t]*)(${CARET_MARKER})([-: \\t]+\\|[ \\t]*\\n)`, 'g'), '$1$3$2');
+             
+        const html = parseMarkdown(mdWithMarker);
         previewRef.current.innerHTML = html;
+        
+        if (markerInserted) {
+            const markerResult = findAndRemoveMarker(previewRef.current);
+            if (markerResult && sel) {
+                const { foundNode, offset } = markerResult;
+                const newRange = document.createRange();
+                newRange.setStart(foundNode, offset);
+                newRange.collapse(true);
+                sel.removeAllRanges();
+                sel.addRange(newRange);
+            }
+        }
         flushPreviewEdit();
       }
     }
     prevAutoMarkdown.current = isAutoMarkdownEnabled;
-  }, [isAutoMarkdownEnabled, content, flushPreviewEdit]);
+  }, [isAutoMarkdownEnabled, content, flushPreviewEdit, turndownService]);
 
   const handleSelectionChange = useCallback(() => {
     // Disabled text selection hover based on user request

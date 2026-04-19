@@ -7,6 +7,9 @@ export const useDraggable = (ref: RefObject<HTMLElement | null>) => {
 
   const handleMouseDown = (e: React.MouseEvent) => {
     if (!ref.current) return;
+    if ((e.target as HTMLElement).closest('button')) {
+      e.preventDefault();
+    }
     setIsDragging(true);
     setStartX(e.pageX - ref.current.offsetLeft);
     setScrollLeft(ref.current.scrollLeft);

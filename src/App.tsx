@@ -142,19 +142,149 @@ export default function App() {
     };
   }, []);
 
+  const handleSelectNote = (id: string) => {
+    setActiveNoteId(id);
+    if (window.innerWidth < 768) {
+      setIsSidebarOpen(false);
+    }
+  };
+
+  // Handle opening files from Android Action VIEW/EDIT intents
+  useEffect(() => {
+    if (!isLoaded) return;
+
+    const decodeBase64UTF8 = (b64: string) => {
+      try {
+        const binString = atob(b64);
+        const bytes = new Uint8Array(binString.length);
+        for (let i = 0; i < binString.length; i++) {
+          bytes[i] = binString.charCodeAt(i);
+        }
+        return new TextDecoder().decode(bytes);
+      } catch (e) {
+        console.error("Base64 decode error", e);
+        return "";
+      }
+    };
+
+    const processIncomingFile = async (fileDetail: { base64Name: string, base64Content: string }) => {
+        if (!fileDetail || !fileDetail.base64Content) return;
+        const fileName = decodeBase64UTF8(fileDetail.base64Name);
+        
+        const isZip = fileName.toLowerCase().endsWith('.zip') || fileDetail.base64Content.startsWith('UEsD');
+        
+        if (isZip) {
+            try {
+                // Decode base64 to binary
+                const binaryString = atob(fileDetail.base64Content);
+                const bytes = new Uint8Array(binaryString.length);
+                for (let i = 0; i < binaryString.length; i++) {
+                    bytes[i] = binaryString.charCodeAt(i);
+                }
+                
+                const JSZip = (await import('jszip')).default;
+                const zip = new JSZip();
+                const result = await zip.loadAsync(bytes);
+                
+                const pathToId: Record<string, string> = {};
+                const fileEntries = Object.entries(result.files).filter(([, f]) => !f.dir);
+
+                let importedCount = 0;
+
+                for (const [relativePath, fileEntry] of fileEntries) {
+                   if (relativePath.includes('__MACOSX')) continue; 
+                   if (relativePath.split('/').some(p => p.startsWith('.') && p !== '.' && p !== '..')) continue;
+
+                   const extension = relativePath.split('.').pop()?.toLowerCase();
+                   if (!['md', 'txt'].includes(extension || '')) continue;
+
+                   const pathParts = relativePath.split('/');
+                   const entryFileName = pathParts.pop();
+                   
+                   let currentParentId: string | null = null; 
+                   let currentPathPath = "";
+
+                   for (const part of pathParts) {
+                     if (!part) continue;
+                     currentPathPath = currentPathPath ? `${currentPathPath}/${part}` : part;
+                     if (pathToId[currentPathPath]) {
+                       currentParentId = pathToId[currentPathPath];
+                     } else {
+                       const tempParentId = currentParentId;
+                       // createFolder is synchronous for returning ID
+                       const newId = createFolder(part, tempParentId) as string;
+                       currentParentId = newId;
+                       pathToId[currentPathPath] = currentParentId;
+                     }
+                   }
+
+                   const text = await fileEntry.async('text');
+                   let title = entryFileName?.replace(/\.[^/.]+$/, "") || "Untitled"; 
+                   const headingMatch = text.match(/^#+\s+(.*)/);
+                   let content = text;
+                   if (headingMatch && headingMatch[1]) {
+                      title = headingMatch[1].trim(); 
+                      content = content.replace(/^#+\s+.*\n?/, "").trimStart();
+                   }
+                   createNote(title, content, currentParentId || undefined);
+                   importedCount++;
+                }
+                toast.success(`Imported ${importedCount} files from ZIP`);
+            } catch (err) {
+                console.error("Failed to parse zip", err);
+                toast.error("Failed to read ZIP file");
+            }
+            return;
+        }
+
+        const title = fileName.replace(/\.(md|txt)$/i, '');
+        const content = decodeBase64UTF8(fileDetail.base64Content);
+        
+        // Use a unique ID marker so we only process it once per file payload
+        const processMarker = `processed-${fileDetail.base64Name}-${fileDetail.base64Content.length}`;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        if ((window as any)[processMarker]) return;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (window as any)[processMarker] = true;
+
+        // Check if a note with this title already exists to avoid duplicates
+        const existingNote = notes.find(n => n.title === title);
+        if (existingNote) {
+           updateNote(existingNote.id, { content });
+           handleSelectNote(existingNote.id);
+           toast.success(`Updated "${title}"`);
+        } else {
+           const newId = createNote();
+           updateNote(newId, { title, content });
+           handleSelectNote(newId);
+           toast.success(`Opened "${title}"`);
+        }
+    };
+
+    const handleOpenFile = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      processIncomingFile(customEvent.detail);
+    };
+
+    // Check if there's already one queued up from extremely early launch
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    if ((window as any).luminaInitialFile) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      processIncomingFile((window as any).luminaInitialFile);
+    }
+
+    window.addEventListener('lumina-open-file', handleOpenFile);
+    return () => {
+      window.removeEventListener('lumina-open-file', handleOpenFile);
+    };
+  }, [isLoaded, notes, createNote, updateNote, setActiveNoteId, createFolder, handleSelectNote]);
+
   const nextStep = () => {
     if (introStep < INTRO_SLIDES.length) {
       setIntroStep(introStep + 1);
     } else {
       localStorage.setItem('lumina-onboarding-v2', 'true');
       setShowIntro(false);
-    }
-  };
-
-  const handleSelectNote = (id: string) => {
-    setActiveNoteId(id);
-    if (window.innerWidth < 768) {
-      setIsSidebarOpen(false);
     }
   };
 
