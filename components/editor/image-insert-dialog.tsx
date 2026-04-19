@@ -22,6 +22,7 @@ export function ImageInsertDialog({ isOpen, onClose, onInsertUrl, onInsertFile }
 
   useEffect(() => {
     if (!url.trim()) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsValid(null);
       setIsValidating(false);
       return;
@@ -83,6 +84,7 @@ export function ImageInsertDialog({ isOpen, onClose, onInsertUrl, onInsertFile }
   // Rest of the effect reset when closed
   useEffect(() => {
     if (!isOpen) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setUrl("");
       setAlt("");
       setIsValid(null);

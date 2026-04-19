@@ -22,7 +22,6 @@ interface FloatingToolbarProps {
   fontFamily: string;
   onFontFamilyChange: (font: string) => void;
   applyFontSize: (size: string) => void;
-  clearFormatting?: () => void;
   isEraserMode?: boolean;
   setIsEraserMode?: (isEraserMode: boolean) => void;
   applyFormatting: (prefix: string, suffix?: string, toggle?: boolean) => void;
@@ -46,7 +45,6 @@ export const FloatingToolbar = ({
   fontFamily,
   onFontFamilyChange,
   applyFontSize,
-  clearFormatting,
   isEraserMode,
   setIsEraserMode,
   applyFormatting,

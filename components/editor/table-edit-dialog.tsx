@@ -171,7 +171,7 @@ export const TableEditDialog = ({ isOpen, onClose, table, onConfirm }: TableEdit
     /* Create a visually helpful image for column drop is hard, but native element works */
   };
 
-  const handleDragColOver = (e: React.DragEvent, index: number) => {
+  const handleDragColOver = (e: React.DragEvent) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
   };
@@ -210,7 +210,7 @@ export const TableEditDialog = ({ isOpen, onClose, table, onConfirm }: TableEdit
     e.dataTransfer.effectAllowed = 'move';
   };
 
-  const handleDragRowOver = (e: React.DragEvent, index: number) => {
+  const handleDragRowOver = (e: React.DragEvent) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
   };
@@ -479,11 +479,11 @@ export const TableEditDialog = ({ isOpen, onClose, table, onConfirm }: TableEdit
                             onDragOver={(e) => {
                              if (draggedColIndex !== null) {
                                e.preventDefault();
-                               handleDragColOver(e, i);
+                               handleDragColOver(e);
                              }
                              else if (draggedRowIndex !== null) {
                                e.preventDefault();
-                               handleDragRowOver(e, 0);
+                               handleDragRowOver(e);
                              }
                             }}
                             onDrop={(e) => {
@@ -502,7 +502,7 @@ export const TableEditDialog = ({ isOpen, onClose, table, onConfirm }: TableEdit
                             }}
                             onClick={() => handleCellClick(-1, i)} 
                             className={`p-3 bg-muted text-xs font-medium text-muted-foreground whitespace-nowrap cursor-text transition-colors hover:bg-muted/80 ${selectedCell?.r === -1 && selectedCell?.c === i ? 'ring-2 ring-inset ring-primary z-30 relative' : ''} ${draggedColIndex === i ? 'opacity-50 blur-[1px]' : ''} ${isRounded ? 'border-b border-r last:border-r-0 border-border/50' : 'border border-border/50'}`}
-                            style={{ textAlign: (tableData.alignments[i] as any) || 'left', cursor: 'grab' }}
+                            style={{ textAlign: (tableData.alignments[i] as React.CSSProperties['textAlign']) || 'left', cursor: 'grab' }}
                             contentEditable={!isKeyboardLocked}
                             suppressContentEditableWarning
                             onBlur={(e) => handleCellTextChange(-1, i, e.currentTarget.innerHTML)}
@@ -529,11 +529,11 @@ export const TableEditDialog = ({ isOpen, onClose, table, onConfirm }: TableEdit
                               onDragOver={(e) => {
                               if (draggedColIndex !== null) {
                                 e.preventDefault();
-                                handleDragColOver(e, c);
+                                handleDragColOver(e);
                               }
                               else if (draggedRowIndex !== null) {
                                 e.preventDefault();
-                                handleDragRowOver(e, r);
+                                handleDragRowOver(e);
                               }
                               }}
                               onDrop={(e) => {
@@ -548,7 +548,7 @@ export const TableEditDialog = ({ isOpen, onClose, table, onConfirm }: TableEdit
                               }}
                               onClick={() => handleCellClick(r, c)} 
                               className={`p-3 text-xs text-foreground whitespace-nowrap cursor-text transition-colors hover:bg-muted/50 ${selectedCell?.r === r && selectedCell?.c === c ? 'ring-2 ring-inset ring-primary z-10 relative bg-background' : ''} ${draggedColIndex === c ? 'bg-muted/30' : ''} ${isRounded ? `border-b border-r last:border-r-0 ${r === Math.max(0, previewRows - 1) - 1 ? 'border-b-0' : ''} border-border/50` : 'border border-border/50'}`}
-                              style={{ textAlign: (tableData.alignments[c] as any) || 'left' }}
+                              style={{ textAlign: (tableData.alignments[c] as React.CSSProperties['textAlign']) || 'left' }}
                               contentEditable={!isKeyboardLocked}
                               suppressContentEditableWarning
                               onBlur={(e) => handleCellTextChange(r, c, e.currentTarget.innerHTML)}

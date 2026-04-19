@@ -1,7 +1,6 @@
 import { Button } from "@/components/ui/button";
-import { Plus, Trash2, FileText, X, Download, Tag, Search, Hash, Sun, Moon, Folder, Settings2, FileUp } from "lucide-react";
+import { FileText, X, Download, Tag, Search, Hash, Sun, Moon } from "lucide-react";
 import { Note, Folder as CommonFolder } from "@/hooks/use-notes";
-import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { usePWAInstall } from "@/hooks/use-pwa-install";
 import { useState, useMemo, useEffect } from "react";

@@ -4,7 +4,7 @@ import { gfm } from 'turndown-plugin-gfm';
 import { marked } from 'marked';
 import hljs from 'highlight.js';
 import 'highlight.js/styles/atom-one-light.css';
-import { Sparkles, Trash2, Settings2, ExternalLink, Bold, Italic, Strikethrough, Heading1, Link as LinkIcon, Code } from "lucide-react";
+import { Sparkles, Trash2, Settings2, ExternalLink } from "lucide-react";
 import { TableEditDialog } from './table-edit-dialog';
 import { ImageEditDialog } from './image-edit-dialog';
 import markedKatex from 'marked-katex-extension';
@@ -157,11 +157,19 @@ export const EditorArea = ({
   const resizeStartData = useRef<{ startX: number, startY: number, startWidth: number, startHeight: number, startLeft: number, startTop: number, direction: string } | null>(null);
 
   // Sync previewRef with textareaRef if provided
+  /* eslint-disable react-hooks/immutability */
   useEffect(() => {
     if (textareaRef && previewRef.current) {
-      (textareaRef as React.MutableRefObject<HTMLDivElement | null>).current = previewRef.current;
+      if (typeof textareaRef === 'function') {
+        textareaRef(previewRef.current);
+      } else {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (textareaRef as any).current = previewRef.current;
+      }
     }
-  }, [textareaRef]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  /* eslint-enable react-hooks/immutability */
 
   const updateTableRect = useCallback((table: HTMLTableElement) => {
     if (!previewRef.current || !previewRef.current.parentElement) return;
@@ -585,11 +593,17 @@ export const EditorArea = ({
   const handleImageEditConfirm = useCallback((newSrc: string, width: string, height: string, alt: string, align: 'left'|'center'|'right') => {
     if (!hoveredImage) return;
     
+    /* eslint-disable react-hooks/immutability */
     hoveredImage.src = newSrc;
-    if (width) hoveredImage.style.width = width;
-    if (height) hoveredImage.style.height = height;
+    if (width) {
+      hoveredImage.style.width = width;
+    }
+    if (height) {
+      hoveredImage.style.height = height;
+    }
     hoveredImage.alt = alt;
     hoveredImage.title = alt; // Use alt as caption title
+    /* eslint-enable react-hooks/immutability */
 
     const wrapper = hoveredImage.parentElement;
     if (wrapper) {
@@ -610,11 +624,13 @@ export const EditorArea = ({
 
   const sparkleTable = useCallback(() => {
     if (hoveredTable) {
+      /* eslint-disable react-hooks/immutability */
       hoveredTable.style.transition = 'all 0.5s ease';
       hoveredTable.style.boxShadow = '0 0 15px rgba(251, 191, 36, 0.5)';
       setTimeout(() => {
         hoveredTable.style.boxShadow = 'none';
       }, 1000);
+      /* eslint-enable react-hooks/immutability */
     }
   }, [hoveredTable]);
 
@@ -860,7 +876,7 @@ export const EditorArea = ({
         // 2. Identify the enclosing block
         const block = target.closest('p, h1, h2, h3, h4, h5, h6, li, blockquote, pre');
         if (block && editor.contains(block)) {
-          let tagName = block.tagName;
+          const tagName = block.tagName;
           let pNode = block;
           
           // Convert block element to P
@@ -893,10 +909,10 @@ export const EditorArea = ({
               
               // Only strip block markers if it's the very beginning of the block
               if (node === pNode.firstChild || (node.previousSibling && node.previousSibling.nodeType === Node.ELEMENT_NODE && (node.previousSibling as Element).tagName === 'BR')) {
-                text = text.replace(/^[#>\-\*+]+\s*/, ''); // strip leading block formatting
+                text = text.replace(/^[#>\-*+]+\s*/, ''); // strip leading block formatting
                 text = text.replace(/^\d+\.\s*/, '');      // strip numbered lists
                 // If it's literally just a symbol left behind
-                if (/^[#>\-\*+]+$/.test(text.trim())) {
+                if (/^[#>\-*+]+$/.test(text.trim())) {
                   text = '';
                 }
               }
@@ -1004,11 +1020,6 @@ export const EditorArea = ({
     document.addEventListener('selectionchange', handleSelectionChange);
     return () => document.removeEventListener('selectionchange', handleSelectionChange);
   }, [handleSelectionChange]);
-
-  const execFormatting = (command: string, value?: string) => {
-    document.execCommand(command, false, value);
-    flushPreviewEdit();
-  };
 
   const handlePaste = useCallback((e: React.ClipboardEvent<HTMLDivElement>) => {
     if (e.clipboardData.files && e.clipboardData.files.length > 0) {

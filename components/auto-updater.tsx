@@ -126,6 +126,7 @@ export function AutoUpdater() {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     checkForUpdates();
   }, [checkForUpdates]);
 

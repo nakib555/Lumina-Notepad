@@ -1,8 +1,7 @@
-import { useState, useMemo, useRef, useEffect } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { Note, Folder as CommonFolder } from '@/hooks/use-notes';
-import { ChevronRight, ChevronDown, Folder, Trash2, Settings2, Download, Plus, Upload, MoreHorizontal, FileText, FileUp, Edit2 } from 'lucide-react';
+import { ChevronRight, ChevronDown, Folder, Trash2, Download, Plus, Upload, MoreHorizontal, FileText, FileUp, Edit2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
 import { Button, buttonVariants } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -281,12 +280,15 @@ export function SidebarFileTree({
   };
 
   const processDroppedItems = async (items: DataTransferItemList, parentId: string | null) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const getFileFromEntry = (entry: any): Promise<File> => 
       new Promise(resolve => entry.file(resolve));
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const readEntriesPromise = (reader: any): Promise<any[]> =>
       new Promise(resolve => reader.readEntries(resolve));
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const processEntry = async (entry: any, currentParentId: string | null) => {
       if (entry.isFile) {
         const extension = entry.name.split('.').pop()?.toLowerCase();
@@ -323,7 +325,7 @@ export function SidebarFileTree({
 
   const processZipContent = async (result: JSZip, parentId: string | null) => {
     const pathToId: Record<string, string> = {};
-    const fileEntries = Object.entries(result.files).filter(([_, f]) => !f.dir);
+    const fileEntries = Object.entries(result.files).filter(([, f]) => !f.dir);
 
     for (const [relativePath, fileEntry] of fileEntries) {
        if (relativePath.includes('__MACOSX')) continue; 
@@ -657,7 +659,7 @@ export function SidebarFileTree({
       <input 
         type="file" 
         ref={folderInputRef} 
-        /* @ts-ignore - directory attributes are non-standard but work in modern browsers */
+        /* @ts-expect-error - directory attributes are non-standard but work in modern browsers */
         webkitdirectory="" directory=""
         className="hidden" 
         onChange={handleNativeFolderImport}
