@@ -139,31 +139,31 @@ export function SidebarFileTree({
     e.dataTransfer.setData('text/plain', JSON.stringify({ id, type })); 
   };
 
-  const handleDragOver = (e: React.DragEvent, id: string | 'root', type: 'note' | 'folder' | 'root') => {
+  const handleDragOver = (e: React.DragEvent, id: string | 'root', type: 'note' | 'folder' | 'folder-container' | 'root') => {
     e.preventDefault();
     e.stopPropagation();
     e.dataTransfer.dropEffect = 'move';
 
     let position: DragPosition = 'inside';
     
-    if (type !== 'root') {
+    if (type !== 'root' && type !== 'folder-container') {
       const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
       const y = e.clientY - rect.top;
       
       if (type === 'note') {
         position = (y / rect.height) < 0.5 ? 'before' : 'after';
       } else if (type === 'folder') {
-        if ((y / rect.height) < 0.25) position = 'before';
-        else if ((y / rect.height) > 0.75) position = 'after';
+        if ((y / rect.height) < 0.15) position = 'before';
+        else if ((y / rect.height) > 0.85) position = 'after';
         else position = 'inside';
       }
     }
 
     if (dragState?.id !== id || dragState?.position !== position) {
-      setDragState({ id, type, position });
+      setDragState({ id, type: type === 'folder-container' ? 'folder' : type, position });
       // If we hover over a folder in 'inside' position, expand it after a short delay
-      if (type === 'folder' && position === 'inside' && id !== 'root') {
-          setTimeout(() => expandFolder(id as string), 600);
+      if ((type === 'folder' || type === 'folder-container') && position === 'inside' && id !== 'root') {
+          setTimeout(() => expandFolder(id as string), 500);
       }
     }
   };
@@ -181,7 +181,7 @@ export function SidebarFileTree({
     return parent ? isDescendant(folderId, parent.parentId) : false;
   };
 
-  const handleDrop = async (e: React.DragEvent, dropTargetId: string | 'root', dropTargetType: 'note' | 'folder' | 'root') => {
+  const handleDrop = async (e: React.DragEvent, dropTargetId: string | 'root', dropTargetType: 'note' | 'folder' | 'folder-container' | 'root') => {
     e.preventDefault();
     e.stopPropagation();
     
@@ -197,8 +197,8 @@ export function SidebarFileTree({
       const targetNote = notes.find(n => n.id === dropTargetId);
       targetFolderId = targetNote?.folderId || null;
       referenceId = dropTargetId !== 'root' ? dropTargetId : undefined;
-    } else if (dropTargetType === 'folder') {
-      if (pos === 'inside') {
+    } else if (dropTargetType === 'folder' || dropTargetType === 'folder-container') {
+      if (pos === 'inside' || dropTargetType === 'folder-container') {
         targetFolderId = dropTargetId !== 'root' ? dropTargetId : null;
       } else {
         const targetFolder = folders.find(f => f.id === dropTargetId);
@@ -482,6 +482,7 @@ export function SidebarFileTree({
       key={note.id}
       draggable="true"
       onDragStart={(e) => handleDragStart(e, note.id, 'note')}
+      onDragEnter={(e) => e.preventDefault()}
       onDragOver={(e) => handleDragOver(e, note.id, 'note')}
       onDragLeave={handleDragLeave}
       onDrop={(e) => handleDrop(e, note.id, 'note')}
@@ -535,6 +536,7 @@ export function SidebarFileTree({
         <div
           draggable="true"
           onDragStart={(e) => handleDragStart(e, folder.id, 'folder')}
+          onDragEnter={(e) => e.preventDefault()}
           onDragOver={(e) => handleDragOver(e, folder.id, 'folder')}
           onDragLeave={handleDragLeave}
           onDrop={(e) => handleDrop(e, folder.id, 'folder')}
@@ -608,12 +610,13 @@ export function SidebarFileTree({
         {isExpanded && (
           <div
             className={cn(
-               "w-full flex-col",
+               "w-full flex-col min-h-2",
                dragState?.id === folder.id && dragState?.position === 'inside' ? "bg-primary/5 ring-1 ring-primary/20 rounded-md py-1" : ""
             )}
-            onDragOver={(e) => handleDragOver(e, folder.id, 'folder')}
+            onDragEnter={(e) => e.preventDefault()}
+            onDragOver={(e) => handleDragOver(e, folder.id, 'folder-container')}
             onDragLeave={handleDragLeave}
-            onDrop={(e) => handleDrop(e, folder.id, 'folder')}
+            onDrop={(e) => handleDrop(e, folder.id, 'folder-container')}
           >
             {childrenFolders.map(childFolder => renderFolder(childFolder, level + 1))}
             {childrenNotes.map(childNote => renderNote(childNote, level + 1))}
@@ -667,6 +670,7 @@ export function SidebarFileTree({
           "min-h-[100px] space-y-1 pb-4 rounded-xl transition-all",
           dragState?.id === 'root' ? "bg-primary/5 ring-1 ring-primary/30" : ""
         )}
+        onDragEnter={(e) => e.preventDefault()}
         onDragOver={(e) => handleDragOver(e, 'root', 'root')}
         onDragLeave={handleDragLeave}
         onDrop={(e) => handleDrop(e, 'root', 'root')}
