@@ -77,7 +77,7 @@ export const useEditorFormatting = (
       const displayLang = langRaw ? langRaw.charAt(0).toUpperCase() + langRaw.slice(1) : 'Code';
       
       const codeHTML = `
-<div class="code-block-wrapper border border-[#e5e7eb] dark:border-[#374151] rounded-md my-6 overflow-hidden not-prose shadow-sm" contenteditable="false">
+<div class="code-block-wrapper border border-[#e5e7eb] dark:border-[#374151] rounded-md my-4 overflow-hidden not-prose shadow-sm" contenteditable="false">
   <div class="bg-[#f8f9fa] dark:bg-[#1f2937] border-b border-[#e5e7eb] dark:border-[#374151] px-4 py-2 flex justify-between items-center text-[13px]">
     <div class="font-semibold text-[#6366f1] dark:text-[#818cf8] language-label flex items-center">
       ${displayLang}
@@ -96,7 +96,7 @@ export const useEditorFormatting = (
     </div>
   </div>
   <div class="bg-[#f4f7f9] dark:bg-[#0d1117] overflow-x-auto w-full code-container m-0 text-slate-800 dark:text-slate-200">
-    <pre style="margin:0;padding:1.5rem;font-size:13px;line-height:1.5;font-family:'Fira Code', monospace;background:transparent;"><code class="code-element outline-none block min-h-[20px] whitespace-pre [font-variant-ligatures:none]" contenteditable="true">// Your code here...</code></pre>
+    <pre style="margin:0;padding:1rem 1.25rem;font-size:13px;line-height:1.5;font-family:'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;background:transparent;"><code class="code-element outline-none block min-h-[20px] whitespace-pre [font-variant-ligatures:none]" contenteditable="plaintext-only">// Your code here...</code></pre>
   </div>
 </div>
 <p>&#8203;</p>`;

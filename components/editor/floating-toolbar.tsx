@@ -87,7 +87,7 @@ export const FloatingToolbar = ({
     const found = window.find(searchQuery, false, !forward, true, false, false, false);
     
     if (found) {
-      scrollToSelection();
+      scrollToSelection(true);
     } else {
       toast.error("Text not found");
     }
@@ -170,7 +170,7 @@ export const FloatingToolbar = ({
     }
   };
 
-  const scrollToSelection = () => {
+  const scrollToSelection = (forceCenter: boolean = false) => {
     const selection = window.getSelection();
     if (!selection || selection.rangeCount === 0) return;
     const range = selection.getRangeAt(0);
@@ -189,7 +189,7 @@ export const FloatingToolbar = ({
     const scrollContainer = document.querySelector('.custom-scrollbar');
     if (scrollContainer) {
       const containerRect = scrollContainer.getBoundingClientRect();
-      if (rect.top < containerRect.top || rect.bottom > containerRect.bottom) {
+      if (forceCenter || rect.top < containerRect.top || rect.bottom > containerRect.bottom) {
         const cursorY = rect.top - containerRect.top;
         const targetY = containerRect.height / 2;
         scrollContainer.scrollBy({
