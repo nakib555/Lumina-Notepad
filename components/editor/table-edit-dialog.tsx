@@ -371,8 +371,13 @@ export const TableEditDialog = ({ isOpen, onClose, table, onConfirm }: TableEdit
                       value={activeTab === 'rows' ? rows : cols} 
                       onChange={(e) => {
                         const val = e.target.value === '' ? '' : parseInt(e.target.value);
-                        if (activeTab === 'rows') setRows(val);
-                        else setCols(val);
+                        if (val !== '') {
+                          if (activeTab === 'rows') updateTableDimensions(val as number, Number(cols) || 1);
+                          else updateTableDimensions(Number(rows) || 1, val as number);
+                        } else {
+                          if (activeTab === 'rows') setRows('');
+                          else setCols('');
+                        }
                       }} 
                     />
                     <Button 
