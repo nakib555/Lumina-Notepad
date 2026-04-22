@@ -201,7 +201,8 @@ export default function App() {
 
                 let importedCount = 0;
 
-                for (const [relativePath, fileEntry] of fileEntries) {
+                for (const [rawPath, fileEntry] of fileEntries) {
+                   const relativePath = rawPath.replace(/\\/g, '/');
                    if (relativePath.includes('__MACOSX')) continue; 
                    if (relativePath.split('/').some(p => p.startsWith('.') && p !== '.' && p !== '..')) continue;
 

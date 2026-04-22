@@ -11,7 +11,7 @@ import markedKatex from 'marked-katex-extension';
 import 'katex/dist/katex.min.css';
 import { cn } from "@/lib/utils";
 
-const CARET_MARKER = '\u200B\u200C\u200D';
+const CARET_MARKER = '%%%%CARETMARKER%%%%';
 
 const getCaretCharacterOffsetWithin = (element: HTMLElement) => {
     let caretOffset = 0;
@@ -68,21 +68,7 @@ const setCaretPosition = (element: HTMLElement, offset: number) => {
     }
 };
 
-const findAndRemoveMarker = (node: Node): { foundNode: Text, offset: number } | null => {
-    if (node.nodeType === Node.TEXT_NODE) {
-        const index = node.nodeValue?.indexOf(CARET_MARKER);
-        if (index !== undefined && index > -1) {
-            node.nodeValue = node.nodeValue?.replace(CARET_MARKER, '') || '';
-            return { foundNode: node as Text, offset: index };
-        }
-    } else {
-        for (let i = 0; i < node.childNodes.length; i++) {
-            const result = findAndRemoveMarker(node.childNodes[i]);
-            if (result) return result;
-        }
-    }
-    return null;
-};
+// We use standard selection finding without custom recursive text marker finders
 
 marked.use(markedKatex({ throwOnError: false, nonStandard: true }));
 
@@ -90,7 +76,7 @@ const renderer = new marked.Renderer();
 
 const CUSTOM_STYLE = {
   margin: 0,
-  padding: '1rem 1.25rem',
+  padding: '0.5rem 1.5rem 0.5rem 1.25rem',
   fontSize: '13px',
   lineHeight: '1.5',
   fontFamily: "'JetBrains Mono', ui-monospace, SFMono-Regular, monospace",
@@ -118,7 +104,7 @@ renderer.code = function(token) {
     };
     
     // Fallback style converted to inline CSS for the pre tag
-    const inlineStyle = "margin:0;padding:1rem 1.25rem;font-size:13px;line-height:1.5;font-family:'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;background:transparent;";
+    const inlineStyle = "margin:0;padding:0.5rem 1.5rem 0.5rem 1.25rem;font-size:13px;line-height:1.5;font-family:'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;background:transparent;";
     
     highlightedContent = `<pre style="${inlineStyle}"><code class="code-element outline-none block min-h-[20px] whitespace-pre [font-variant-ligatures:none] font-mono" contenteditable="plaintext-only">${escapeHtml(code)}</code></pre>`;
   } else {
@@ -139,7 +125,7 @@ renderer.code = function(token) {
       // Inject contenteditable into the code tag after generation
       highlightedContent = highlightedContent.replace('<code', '<code contenteditable="plaintext-only"');
     } catch {
-      const inlineStyle = "margin:0;padding:1rem 1.25rem;font-size:13px;line-height:1.5;font-family:'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;background:transparent;";
+      const inlineStyle = "margin:0;padding:0.5rem 1.5rem 0.5rem 1.25rem;font-size:13px;line-height:1.5;font-family:'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;background:transparent;";
       const escapeHtml = (unsafe: string) => unsafe.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
       highlightedContent = `<pre style="${inlineStyle}"><code class="code-element outline-none block min-h-[20px] whitespace-pre [font-variant-ligatures:none] font-mono" contenteditable="plaintext-only">${escapeHtml(code)}</code></pre>`;
     }
@@ -169,6 +155,29 @@ renderer.code = function(token) {
   </div>
 </div>
 `;
+};
+
+renderer.table = function(token: import('marked').Tokens.Table) {
+  let html = marked.Renderer.prototype.table.call(this, token);
+  html = html.replace('<table>', '<table class="border-hidden m-0 w-full">');
+  return `\n<div class="overflow-x-auto w-full table-wrapper my-8 rounded-xl border border-[var(--border)]">\n${html}\n</div>\n`;
+};
+
+renderer.listitem = function(token: import('marked').Tokens.ListItem) {
+  let html = marked.Renderer.prototype.listitem.call(this, token);
+  if (token.task) {
+    html = html.replace(/^<li>/, '<li class="task-list-item" style="list-style-type: none;">');
+    html = html.replace(/<input([^>]*?)type="checkbox"([^>]*?)>/, '<input$1type="checkbox"$2 style="margin-right: 0.5rem; margin-top: 0.25rem;">');
+  }
+  return html;
+};
+
+renderer.list = function(token: import('marked').Tokens.List) {
+  let html = marked.Renderer.prototype.list.call(this, token);
+  if (token.items.some(item => item.task)) {
+    html = html.replace(/^<ul([^>]*)>/, '<ul$1 class="contains-task-list" style="list-style-type: none; padding-left: 0;">');
+  }
+  return html;
 };
 
 const parseMarkdown = (text: string) => {
@@ -402,10 +411,28 @@ export const EditorArea = ({
 
     service.use(gfm as import('turndown').Plugin);
 
+    service.addRule('caretMarker', {
+      filter: function (node) {
+        return node.nodeType === 1 && node.nodeName === 'SPAN' && (node as HTMLElement).id === 'caret-marker';
+      },
+      replacement: function () {
+        return CARET_MARKER;
+      }
+    });
+
+    service.addRule('emptyTableFix', {
+      filter: function (node) {
+        return node.nodeName === 'TABLE' && (node as HTMLTableElement).rows.length === 0;
+      },
+      replacement: function () {
+        return '';
+      }
+    });
+
     service.addRule('tableRows', {
       filter: function (node) {
         return (node.nodeName === 'P' || node.nodeName === 'DIV') && 
-               /^\s*\|(.*)\|\s*$/.test(node.textContent || '');
+               /^\s*\|([\s\S]*)\|\s*$/.test(node.textContent || '');
       },
       replacement: function (content) {
         return content + '\n';
@@ -473,7 +500,7 @@ export const EditorArea = ({
     service.addRule('preserveBr', {
       filter: 'br',
       replacement: function () {
-        return '<br>';
+        return '\n';
       }
     });
 
@@ -582,6 +609,13 @@ export const EditorArea = ({
           return '\n\n$$' + annotation.textContent + '$$\n\n';
         }
         return content;
+      }
+    });
+
+    service.addRule('hr', {
+      filter: 'hr',
+      replacement: function () {
+        return '\n\n---\n\n';
       }
     });
 
@@ -869,7 +903,9 @@ export const EditorArea = ({
         const sel = window.getSelection();
         if (sel && sel.rangeCount > 0 && previewRef.current.contains(sel.anchorNode)) {
              const range = sel.getRangeAt(0);
-             const markerNode = document.createTextNode(CARET_MARKER);
+             const markerNode = document.createElement('span');
+             markerNode.id = 'caret-marker';
+             markerNode.textContent = '\u200B';
              range.insertNode(markerNode);
              // Move caret after the marker so subsequent character insertions don't get messed up if we had to return early, though we don't return early here
              
@@ -897,7 +933,7 @@ export const EditorArea = ({
                    }
                    
                    const preEl = document.createElement('pre');
-                   preEl.style.cssText = "margin:0;padding:1rem 1.25rem;font-size:13px;line-height:1.5;font-family:'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;background:transparent;";
+                   preEl.style.cssText = "margin:0;padding:0.5rem 1.5rem 0.5rem 1.25rem;font-size:13px;line-height:1.5;font-family:'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;background:transparent;";
                    
                    const codeEl = document.createElement('code');
                    codeEl.className = "code-element outline-none block min-h-[20px] whitespace-pre [font-variant-ligatures:none] font-mono";
@@ -912,6 +948,13 @@ export const EditorArea = ({
              const htmlWithMarker = previewRef.current.innerHTML;
              let mdWithMarker = turndownService.turndown(htmlWithMarker);
              
+             // Fix table newlines: Turndown adds \n\n between DIVs, which breaks markdown tables.
+             // We collapse \n\n between table rows to just \n
+             mdWithMarker = mdWithMarker.replace(/(\|[^\n]*\|\s*)\n\n+(?=\|[^\n]*\|)/g, '$1\n');
+
+             // Fix horizontal rule typing: if '---' is entered, ensure it's on its own line so marked parses it as HR
+             mdWithMarker = mdWithMarker.replace(new RegExp(`^(\\s*---)\\s*(${CARET_MARKER})$`, 'gm'), '$1\n$2');
+
              // Fix caret inside table separator: move caret to the end of the previous line (header) to allow table parsing
              const tableSepRegex = new RegExp(`^[ \\t]*\\|?[-: \\t]*${CARET_MARKER}[-: \\t]*\\|?[ \\t]*$`, 'm');
              if (tableSepRegex.test(mdWithMarker)) {
@@ -923,17 +966,25 @@ export const EditorArea = ({
              const afterPipeRegex = new RegExp(`(\\n[ \\t]*\\|[-: \\t]*)(${CARET_MARKER})([-: \\t]+\\|[ \\t]*\\n)`, 'g');
              mdWithMarker = mdWithMarker.replace(afterPipeRegex, '$1$3$2');
              
-             const newHtml = parseMarkdown(mdWithMarker);
+             let newHtml = parseMarkdown(mdWithMarker);
+             newHtml = newHtml.replace(CARET_MARKER, '<span id="caret-marker"></span>');
+             newHtml = newHtml.replace(/<([a-z0-9]+)(?: [^>]*)?>\s*<span id="caret-marker"><\/span>\s*<\/\1>/gi, (match) => match.replace('<span id="caret-marker"></span>', '<br><span id="caret-marker"></span>'));
              previewRef.current.innerHTML = newHtml;
              
-             const markerResult = findAndRemoveMarker(previewRef.current);
-             if (markerResult) {
-                 const { foundNode, offset } = markerResult;
+             const markerEl = previewRef.current.querySelector('#caret-marker');
+             if (markerEl) {
                  const newRange = document.createRange();
-                 newRange.setStart(foundNode, offset);
+                 // To prevent jumping, find a valid text node if possible, or just set before marker
+                 if (markerEl.previousSibling && markerEl.previousSibling.nodeType === Node.TEXT_NODE) {
+                     const textNode = markerEl.previousSibling as Text;
+                     newRange.setStart(textNode, textNode.length);
+                 } else {
+                     newRange.setStartBefore(markerEl);
+                 }
                  newRange.collapse(true);
                  sel.removeAllRanges();
                  sel.addRange(newRange);
+                 markerEl.remove();
              }
              
              // Restore true scroll targeting
@@ -1169,7 +1220,11 @@ export const EditorArea = ({
             textNodeToDelete = node;
           }
         } else if (node?.nodeType === Node.ELEMENT_NODE) {
-          targetToDelete = node.childNodes[offset - 1];
+          if (offset === 0) {
+            targetToDelete = node.previousSibling;
+          } else {
+            targetToDelete = node.childNodes[offset - 1];
+          }
         }
 
         if (targetToDelete && targetToDelete.nodeType === Node.ELEMENT_NODE) {
@@ -1223,7 +1278,9 @@ export const EditorArea = ({
         let markerInserted = false;
         if (sel && sel.rangeCount > 0 && previewRef.current.contains(sel.anchorNode)) {
             const range = sel.getRangeAt(0);
-            const markerNode = document.createTextNode(CARET_MARKER);
+            const markerNode = document.createElement('span');
+            markerNode.id = 'caret-marker';
+            markerNode.textContent = '\u200B';
             range.insertNode(markerNode);
             markerInserted = true;
         }
@@ -1234,18 +1291,25 @@ export const EditorArea = ({
         mdWithMarker = mdWithMarker.replace(new RegExp(`([^\\n]+)\\n([ \\t]*\\|?[-: \\t]*)(${CARET_MARKER})([-: \\t]*\\|?[ \\t]*(\\n|$))`, 'g'), `$1${CARET_MARKER}\n$2$4`);
         mdWithMarker = mdWithMarker.replace(new RegExp(`(\\n[ \\t]*\\|[-: \\t]*)(${CARET_MARKER})([-: \\t]+\\|[ \\t]*\\n)`, 'g'), '$1$3$2');
              
-        const html = parseMarkdown(mdWithMarker);
+        let html = parseMarkdown(mdWithMarker);
+        html = html.replace(CARET_MARKER, '<span id="caret-marker"></span>');
+        html = html.replace(/<([a-z0-9]+)(?: [^>]*)?>\s*<span id="caret-marker"><\/span>\s*<\/\1>/gi, (match) => match.replace('<span id="caret-marker"></span>', '<br><span id="caret-marker"></span>'));
         previewRef.current.innerHTML = html;
         
         if (markerInserted) {
-            const markerResult = findAndRemoveMarker(previewRef.current);
-            if (markerResult && sel) {
-                const { foundNode, offset } = markerResult;
-                const newRange = document.createRange();
-                newRange.setStart(foundNode, offset);
-                newRange.collapse(true);
-                sel.removeAllRanges();
-                sel.addRange(newRange);
+            const markerEl = previewRef.current.querySelector('#caret-marker');
+            if (markerEl && sel) {
+                 const newRange = document.createRange();
+                 if (markerEl.previousSibling && markerEl.previousSibling.nodeType === Node.TEXT_NODE) {
+                     const textNode = markerEl.previousSibling as Text;
+                     newRange.setStart(textNode, textNode.length);
+                 } else {
+                     newRange.setStartBefore(markerEl);
+                 }
+                 newRange.collapse(true);
+                 sel.removeAllRanges();
+                 sel.addRange(newRange);
+                 markerEl.remove();
             }
         }
         flushPreviewEdit();
@@ -1334,7 +1398,11 @@ export const EditorArea = ({
               textNodeToDelete = node;
             }
           } else if (node?.nodeType === Node.ELEMENT_NODE) {
-            targetToDelete = node.childNodes[offset - 1];
+            if (offset === 0) {
+              targetToDelete = node.previousSibling;
+            } else {
+              targetToDelete = node.childNodes[offset - 1];
+            }
           }
 
           if (targetToDelete && targetToDelete.nodeType === Node.ELEMENT_NODE) {
@@ -1425,7 +1493,7 @@ export const EditorArea = ({
                      .replace(/&/g, '&amp;')
                      .replace(/</g, '&lt;')
                      .replace(/>/g, '&gt;');
-                  const codeHtml = `<pre style="margin:0;padding:1rem 1.25rem;font-size:13px;line-height:1.5;font-family:'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;background:transparent;"><code class="code-element outline-none block min-h-[20px] whitespace-pre [font-variant-ligatures:none] font-mono" contenteditable="plaintext-only">${codeContent}</code></pre>`;
+                  const codeHtml = `<pre style="margin:0;padding:0.5rem 1.5rem 0.5rem 1.25rem;font-size:13px;line-height:1.5;font-family:'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;background:transparent;"><code class="code-element outline-none block min-h-[20px] whitespace-pre [font-variant-ligatures:none] font-mono" contenteditable="plaintext-only">${codeContent}</code></pre>`;
                   finalHtml += `<div class="code-block-wrapper border border-[#e5e7eb] dark:border-[#374151] rounded-md my-4 overflow-hidden not-prose shadow-sm max-w-full relative" contenteditable="false"><div class="bg-[#f8f9fa] dark:bg-[#1f2937] border-b border-[#e5e7eb] dark:border-[#374151] px-4 py-2 flex justify-between items-center text-[13px]"><div class="font-semibold text-[#6366f1] dark:text-[#818cf8] language-label flex items-center">${part.language}</div><div class="flex items-center gap-4"><button class="flex items-center gap-1 text-[#6366f1] dark:text-[#818cf8] hover:opacity-80 transition-opacity bg-transparent border-none cursor-pointer"><span class="text-xs">»</span> Open</button><button class="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-opacity bg-transparent border-none cursor-pointer copy-btn"><span class="copy-text">Copy</span></button><button class="flex items-center gap-1.5 text-slate-400 hover:text-red-500 transition-opacity bg-transparent border-none cursor-pointer delete-btn" title="Delete code block"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg></button></div></div><div class="bg-[#f4f7f9] dark:bg-[#0d1117] overflow-x-auto overflow-y-auto max-h-[500px] w-full max-w-full code-container whitespace-pre font-mono m-0 text-slate-800 dark:text-slate-200">${codeHtml}</div></div>`;
               } else {
                   const paragraphs = part.content.split(/\r?\n\r?\n/);

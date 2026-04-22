@@ -64,8 +64,35 @@ export const FloatingToolbar = ({
   const [replaceQuery, setReplaceQuery] = useState("");
   const searchInputRef = useRef<HTMLInputElement>(null);
   const savedRangeRef = useRef<Range | null>(null);
+  const [activeFormats, setActiveFormats] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    const handleSelectionChange = () => {
+      if (document.activeElement === textareaRef.current || textareaRef.current?.contains(document.activeElement)) {
+        try {
+          setActiveFormats({
+            bold: document.queryCommandState('bold'),
+            italic: document.queryCommandState('italic'),
+            underline: document.queryCommandState('underline'),
+            strikethrough: document.queryCommandState('strikeThrough'),
+            subscript: document.queryCommandState('subscript'),
+            superscript: document.queryCommandState('superscript'),
+          });
+        } catch {
+           // ignore errors in unsupported browsers
+        }
+      }
+    };
+    document.addEventListener('selectionchange', handleSelectionChange);
+    return () => document.removeEventListener('selectionchange', handleSelectionChange);
+  }, [textareaRef]);
 
   const [matchCount, setMatchCount] = useState(0);
+
+  const handleApplyFormatting = (prefix: string, suffix?: string, toggle?: boolean) => {
+    restoreSelection();
+    applyFormatting(prefix, suffix, toggle);
+  };
 
   useEffect(() => {
     if (!searchQuery || !textareaRef.current) {
@@ -342,7 +369,7 @@ export const FloatingToolbar = ({
   };
 
   const handleAddBookmark = () => {
-    ensureFocus();
+    restoreSelection();
     const id = `mark-${Date.now()}`;
     document.execCommand('insertHTML', false, `<span class="bookmark-marker" data-bookmark-id="${id}" style="display:inline-block; border-radius:4px; margin:0 2px; cursor:pointer;" title="Bookmark" contenteditable="false">&#128278;</span>&#8203;`);
     if (textareaRef.current) {
@@ -430,7 +457,7 @@ export const FloatingToolbar = ({
         >
           <div className="flex items-center gap-0.5 pr-1 border-r border-border">
             <Button
-          onMouseDown={(e) => e.preventDefault()}
+          onPointerDown={(e) => e.preventDefault()}
           variant="ghost"
               size="icon"
           onClick={() => setIsSelecting(!isSelecting)}
@@ -448,7 +475,7 @@ export const FloatingToolbar = ({
 
           <div className="flex items-center gap-0.5 px-1 border-r border-border">
             <Button
-          onMouseDown={(e) => e.preventDefault()}
+          onPointerDown={(e) => e.preventDefault()}
           variant="ghost"
               size="icon"
           onClick={() => moveCursor('left')}
@@ -458,7 +485,7 @@ export const FloatingToolbar = ({
               <ArrowLeft className="w-4 h-4" />
             </Button>
             <Button
-          onMouseDown={(e) => e.preventDefault()}
+          onPointerDown={(e) => e.preventDefault()}
           variant="ghost"
               size="icon"
           onClick={() => moveCursor('word-left')}
@@ -471,7 +498,7 @@ export const FloatingToolbar = ({
               </div>
             </Button>
             <Button
-          onMouseDown={(e) => e.preventDefault()}
+          onPointerDown={(e) => e.preventDefault()}
           variant="ghost"
               size="icon"
           onClick={() => moveCursor('up')}
@@ -481,7 +508,7 @@ export const FloatingToolbar = ({
               <ArrowUp className="w-4 h-4" />
             </Button>
             <Button
-          onMouseDown={(e) => e.preventDefault()}
+          onPointerDown={(e) => e.preventDefault()}
           variant="ghost"
               size="icon"
           onClick={() => moveCursor('down')}
@@ -491,7 +518,7 @@ export const FloatingToolbar = ({
               <ArrowDown className="w-4 h-4" />
             </Button>
             <Button
-          onMouseDown={(e) => e.preventDefault()}
+          onPointerDown={(e) => e.preventDefault()}
           variant="ghost"
               size="icon"
           onClick={() => moveCursor('word-right')}
@@ -504,7 +531,7 @@ export const FloatingToolbar = ({
               </div>
             </Button>
             <Button
-          onMouseDown={(e) => e.preventDefault()}
+          onPointerDown={(e) => e.preventDefault()}
           variant="ghost"
               size="icon"
           onClick={() => moveCursor('right')}
@@ -517,7 +544,7 @@ export const FloatingToolbar = ({
 
           <div className="flex items-center gap-0.5 px-1 border-r border-border">
             <Button
-          onMouseDown={(e) => e.preventDefault()}
+          onPointerDown={(e) => e.preventDefault()}
           variant="ghost"
               size="sm"
           onClick={handleSelectAll}
@@ -527,7 +554,7 @@ export const FloatingToolbar = ({
               All
             </Button>
             <Button
-          onMouseDown={(e) => e.preventDefault()}
+          onPointerDown={(e) => e.preventDefault()}
           variant="ghost"
               size="icon"
           onClick={handleCut}
@@ -537,7 +564,7 @@ export const FloatingToolbar = ({
               <Scissors className="w-4 h-4" />
             </Button>
             <Button
-          onMouseDown={(e) => e.preventDefault()}
+          onPointerDown={(e) => e.preventDefault()}
           variant="ghost"
               size="icon"
           onClick={handleCopy}
@@ -547,7 +574,7 @@ export const FloatingToolbar = ({
               <Copy className="w-4 h-4" />
             </Button>
             <Button
-          onMouseDown={(e) => e.preventDefault()}
+          onPointerDown={(e) => e.preventDefault()}
           variant="ghost"
               size="icon"
           onClick={handlePaste}
@@ -560,7 +587,7 @@ export const FloatingToolbar = ({
 
           <div className="flex items-center gap-0.5 pl-1">
             <Button
-          onMouseDown={(e) => e.preventDefault()}
+          onPointerDown={(e) => e.preventDefault()}
           variant="ghost"
               size="icon"
           onClick={() => {
@@ -674,7 +701,7 @@ export const FloatingToolbar = ({
             {/* Selection Mode Toggle */}
             <div className="flex items-center gap-0.5 pr-1 border-r border-border">
               <Button
-                onMouseDown={(e) => e.preventDefault()}
+                onPointerDown={(e) => e.preventDefault()}
                 variant="ghost"
                 size="icon"
                 onClick={() => {
@@ -695,7 +722,7 @@ export const FloatingToolbar = ({
                 <MousePointer2 className="w-4 h-4" />
               </Button>
               <Button
-                onMouseDown={(e) => e.preventDefault()}
+                onPointerDown={(e) => e.preventDefault()}
                 variant="ghost"
                 size="icon"
                 onClick={() => setIsSearchOpen(true)}
@@ -747,10 +774,10 @@ export const FloatingToolbar = ({
       {/* Text Style Group */}
       <div className="flex items-center gap-0.5 px-1 border-r border-border">
         <Button
-          onMouseDown={(e) => e.preventDefault()}
+          onPointerDown={(e) => e.preventDefault()}
           variant="ghost"
           size="icon"
-          onClick={() => applyFormatting('<div align="left">\n\n', '\n\n</div>')}
+          onClick={() => handleApplyFormatting('<div align="left">\n\n', '\n\n</div>')}
           className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg shrink-0"
           title="Align Left"
           aria-label="Align Left"
@@ -758,10 +785,10 @@ export const FloatingToolbar = ({
           <AlignLeft className="w-4 h-4" />
         </Button>
         <Button
-          onMouseDown={(e) => e.preventDefault()}
+          onPointerDown={(e) => e.preventDefault()}
           variant="ghost"
           size="icon"
-          onClick={() => applyFormatting('<div align="center">\n\n', '\n\n</div>')}
+          onClick={() => handleApplyFormatting('<div align="center">\n\n', '\n\n</div>')}
           className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg shrink-0"
           title="Align Center"
           aria-label="Align Center"
@@ -769,10 +796,10 @@ export const FloatingToolbar = ({
           <AlignCenter className="w-4 h-4" />
         </Button>
         <Button
-          onMouseDown={(e) => e.preventDefault()}
+          onPointerDown={(e) => e.preventDefault()}
           variant="ghost"
           size="icon"
-          onClick={() => applyFormatting('<div align="right">\n\n', '\n\n</div>')}
+          onClick={() => handleApplyFormatting('<div align="right">\n\n', '\n\n</div>')}
           className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg shrink-0"
           title="Align Right"
           aria-label="Align Right"
@@ -780,67 +807,85 @@ export const FloatingToolbar = ({
           <AlignRight className="w-4 h-4" />
         </Button>
         <Button
-          onMouseDown={(e) => e.preventDefault()}
+          onPointerDown={(e) => e.preventDefault()}
           variant="ghost"
           size="icon"
-          onClick={() => applyFormatting("**", "**")}
-          className="h-8 w-8 text-blue-500 hover:text-blue-600 dark:text-blue-400 hover:bg-blue-500/10 rounded-lg shrink-0"
+          onClick={() => handleApplyFormatting("**", "**")}
+          className={cn(
+            "h-8 w-8 text-blue-500 hover:text-blue-600 dark:text-blue-400 hover:bg-blue-500/10 rounded-lg shrink-0",
+            activeFormats.bold && "bg-blue-500/20 dark:bg-blue-500/30"
+          )}
           title="Bold"
         >
           <Bold className="w-4 h-4" />
         </Button>
         <Button
-          onMouseDown={(e) => e.preventDefault()}
+          onPointerDown={(e) => e.preventDefault()}
           variant="ghost"
           size="icon"
-          onClick={() => applyFormatting("*", "*")}
-          className="h-8 w-8 text-amber-500 hover:text-amber-600 dark:text-amber-400 hover:bg-amber-500/10 rounded-lg shrink-0"
+          onClick={() => handleApplyFormatting("*", "*")}
+          className={cn(
+            "h-8 w-8 text-amber-500 hover:text-amber-600 dark:text-amber-400 hover:bg-amber-500/10 rounded-lg shrink-0",
+             activeFormats.italic && "bg-amber-500/20 dark:bg-amber-500/30"
+          )}
           title="Italic"
         >
           <Italic className="w-4 h-4" />
         </Button>
         <Button
-          onMouseDown={(e) => e.preventDefault()}
+          onPointerDown={(e) => e.preventDefault()}
           variant="ghost"
           size="icon"
-          onClick={() => applyFormatting("<u>", "</u>")}
-          className="h-8 w-8 text-emerald-500 hover:text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 rounded-lg shrink-0"
+          onClick={() => handleApplyFormatting("<u>", "</u>")}
+          className={cn(
+            "h-8 w-8 text-emerald-500 hover:text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 rounded-lg shrink-0",
+            activeFormats.underline && "bg-emerald-500/20 dark:bg-emerald-500/30"
+          )}
           title="Underline"
         >
           <Underline className="w-4 h-4" />
         </Button>
         <Button
-          onMouseDown={(e) => e.preventDefault()}
+          onPointerDown={(e) => e.preventDefault()}
           variant="ghost"
           size="icon"
-          onClick={() => applyFormatting("~~", "~~")}
-          className="h-8 w-8 text-rose-500 hover:text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 rounded-lg shrink-0"
+          onClick={() => handleApplyFormatting("~~", "~~")}
+          className={cn(
+            "h-8 w-8 text-rose-500 hover:text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 rounded-lg shrink-0",
+            activeFormats.strikethrough && "bg-rose-500/20 dark:bg-rose-500/30"
+          )}
           title="Strikethrough"
         >
           <Strikethrough className="w-4 h-4" />
         </Button>
         <Button
-          onMouseDown={(e) => e.preventDefault()}
+          onPointerDown={(e) => e.preventDefault()}
           variant="ghost"
           size="icon"
-          onClick={() => applyFormatting("<sub>", "</sub>")}
-          className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg shrink-0"
+          onClick={() => handleApplyFormatting("<sub>", "</sub>")}
+          className={cn(
+            "h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg shrink-0",
+            activeFormats.subscript && "bg-muted text-foreground"
+          )}
           title="Subscript"
         >
           <Subscript className="w-4 h-4" />
         </Button>
         <Button
-          onMouseDown={(e) => e.preventDefault()}
+          onPointerDown={(e) => e.preventDefault()}
           variant="ghost"
           size="icon"
-          onClick={() => applyFormatting("<sup>", "</sup>")}
-          className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg shrink-0"
+          onClick={() => handleApplyFormatting("<sup>", "</sup>")}
+          className={cn(
+            "h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg shrink-0",
+            activeFormats.superscript && "bg-muted text-foreground"
+          )}
           title="Superscript"
         >
           <Superscript className="w-4 h-4" />
         </Button>
         <Button
-          onMouseDown={(e) => e.preventDefault()}
+          onPointerDown={(e) => e.preventDefault()}
           variant={isEraserMode ? "default" : "ghost"}
           size="icon"
           onClick={() => {
@@ -865,7 +910,7 @@ export const FloatingToolbar = ({
       {/* Bookmark Group */}
       <div className="flex items-center gap-0.5 px-1 border-r border-border">
         <Button
-          onMouseDown={(e) => e.preventDefault()}
+          onPointerDown={(e) => e.preventDefault()}
           variant="ghost"
           size="icon"
           onClick={() => jumpToMark('prev')}
@@ -877,7 +922,7 @@ export const FloatingToolbar = ({
         <Button
           variant="ghost"
           size="icon"
-          onMouseDown={(e) => e.preventDefault()}
+          onPointerDown={(e) => e.preventDefault()}
           onClick={handleAddBookmark}
           className="h-8 w-8 text-yellow-600 hover:text-yellow-700 dark:text-yellow-400 hover:bg-yellow-500/10 rounded-lg shrink-0"
           title="Add Bookmark"
@@ -885,7 +930,7 @@ export const FloatingToolbar = ({
           <Bookmark className="w-4 h-4 text-yellow-500 fill-yellow-500/20" />
         </Button>
         <Button
-          onMouseDown={(e) => e.preventDefault()}
+          onPointerDown={(e) => e.preventDefault()}
           variant="ghost"
           size="icon"
           onClick={() => jumpToMark('next')}
@@ -899,37 +944,37 @@ export const FloatingToolbar = ({
       {/* Block Elements Group */}
       <div className="flex items-center gap-0.5 px-1 border-r border-border">
         <Button
-          onMouseDown={(e) => e.preventDefault()}
+          onPointerDown={(e) => e.preventDefault()}
           variant="ghost"
           size="icon"
-          onClick={() => applyFormatting("\n> ", "")}
+          onClick={() => handleApplyFormatting("\n> ", "")}
           className="h-8 w-8 text-indigo-500 hover:text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500/10 rounded-lg shrink-0"
           title="Quote"
         >
           <Quote className="w-4 h-4" />
         </Button>
         <Button
-          onMouseDown={(e) => e.preventDefault()}
+          onPointerDown={(e) => e.preventDefault()}
           variant="ghost"
           size="icon"
-          onClick={() => applyFormatting("`", "`")}
+          onClick={() => handleApplyFormatting("`", "`")}
           className="h-8 w-8 text-pink-500 hover:text-pink-600 dark:text-pink-400 hover:bg-pink-500/10 rounded-lg shrink-0"
           title="Inline Code"
         >
           <Code className="w-4 h-4" />
         </Button>
         <Button
-          onMouseDown={(e) => e.preventDefault()}
+          onPointerDown={(e) => e.preventDefault()}
           variant="ghost"
           size="icon"
-          onClick={() => applyFormatting("```\n")}
+          onClick={() => handleApplyFormatting("```\n")}
           className="h-8 w-8 text-pink-600 hover:text-pink-700 dark:text-pink-300 hover:bg-pink-500/10 rounded-lg shrink-0"
           title="Code Block"
         >
           <Terminal className="w-4 h-4" />
         </Button>
         <Button
-          onMouseDown={(e) => e.preventDefault()}
+          onPointerDown={(e) => e.preventDefault()}
           variant="ghost"
           size="icon"
           onClick={onInsertLinkClick}
@@ -939,7 +984,7 @@ export const FloatingToolbar = ({
           <Link className="w-4 h-4" />
         </Button>
         <Button
-          onMouseDown={(e) => e.preventDefault()}
+          onPointerDown={(e) => e.preventDefault()}
           variant="ghost"
           size="icon"
           onClick={onInsertImageClick}
@@ -953,50 +998,50 @@ export const FloatingToolbar = ({
       {/* Lists & Layout Group */}
       <div className="flex items-center gap-0.5 px-1 border-r border-border">
         <Button
-          onMouseDown={(e) => e.preventDefault()}
+          onPointerDown={(e) => e.preventDefault()}
           variant="ghost"
           size="icon"
-          onClick={() => applyFormatting("\n- ", "")}
+          onClick={() => handleApplyFormatting("\n- ", "")}
           className="h-8 w-8 text-orange-500 hover:text-orange-600 dark:text-orange-400 hover:bg-orange-500/10 rounded-lg shrink-0"
           title="Bullet List"
         >
           <List className="w-4 h-4" />
         </Button>
         <Button
-          onMouseDown={(e) => e.preventDefault()}
+          onPointerDown={(e) => e.preventDefault()}
           variant="ghost"
           size="icon"
-          onClick={() => applyFormatting("\n1. ", "")}
+          onClick={() => handleApplyFormatting("\n1. ", "")}
           className="h-8 w-8 text-orange-500 hover:text-orange-600 dark:text-orange-400 hover:bg-orange-500/10 rounded-lg shrink-0"
           title="Numbered List"
         >
           <ListOrdered className="w-4 h-4" />
         </Button>
         <Button
-          onMouseDown={(e) => e.preventDefault()}
+          onPointerDown={(e) => e.preventDefault()}
           variant="ghost"
           size="icon"
-          onClick={() => applyFormatting("\n- [ ] ", "")}
+          onClick={() => handleApplyFormatting("\n- [ ] ", "")}
           className="h-8 w-8 text-orange-500 hover:text-orange-600 dark:text-orange-400 hover:bg-orange-500/10 rounded-lg shrink-0"
           title="Task List"
         >
           <ListTodo className="w-4 h-4" />
         </Button>
         <Button
-          onMouseDown={(e) => e.preventDefault()}
+          onPointerDown={(e) => e.preventDefault()}
           variant="ghost"
           size="icon"
-          onClick={() => applyFormatting("\n---\n", "")}
+          onClick={() => handleApplyFormatting("\n---\n", "")}
           className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg shrink-0"
           title="Divider"
         >
           <Minus className="w-4 h-4" />
         </Button>
         <Button
-          onMouseDown={(e) => e.preventDefault()}
+          onPointerDown={(e) => e.preventDefault()}
           variant="ghost"
           size="icon"
-          onClick={() => applyFormatting("\n| Header | Header |\n|--------|--------|\n| Cell   | Cell   |\n", "")}
+          onClick={() => handleApplyFormatting("\n| Header | Header |\n|--------|--------|\n| Cell   | Cell   |\n", "")}
           className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg shrink-0"
           title="Table"
         >
@@ -1007,30 +1052,30 @@ export const FloatingToolbar = ({
       {/* Headings Group */}
       <div className="flex items-center gap-0.5 pl-1 border-r border-border pr-1">
         <Button
-          onMouseDown={(e) => e.preventDefault()}
+          onPointerDown={(e) => e.preventDefault()}
           variant="ghost"
           size="icon"
-          onClick={() => applyFormatting("\n# ", "")}
+          onClick={() => handleApplyFormatting("\n# ", "")}
           className="h-8 w-8 text-violet-500 hover:text-violet-600 dark:text-violet-400 hover:bg-violet-500/10 rounded-lg shrink-0"
           title="Heading 1"
         >
           <Heading1 className="w-4 h-4" />
         </Button>
         <Button
-          onMouseDown={(e) => e.preventDefault()}
+          onPointerDown={(e) => e.preventDefault()}
           variant="ghost"
           size="icon"
-          onClick={() => applyFormatting("\n## ", "")}
+          onClick={() => handleApplyFormatting("\n## ", "")}
           className="h-8 w-8 text-violet-500 hover:text-violet-600 dark:text-violet-400 hover:bg-violet-500/10 rounded-lg shrink-0"
           title="Heading 2"
         >
           <Heading2 className="w-4 h-4" />
         </Button>
         <Button
-          onMouseDown={(e) => e.preventDefault()}
+          onPointerDown={(e) => e.preventDefault()}
           variant="ghost"
           size="icon"
-          onClick={() => applyFormatting("\n### ", "")}
+          onClick={() => handleApplyFormatting("\n### ", "")}
           className="h-8 w-8 text-violet-500 hover:text-violet-600 dark:text-violet-400 hover:bg-violet-500/10 rounded-lg shrink-0"
           title="Heading 3"
         >
@@ -1041,7 +1086,7 @@ export const FloatingToolbar = ({
       {/* Symbol & Magic Group */}
       <div className="flex items-center gap-0.5 pl-1">
         <Button
-          onMouseDown={(e) => e.preventDefault()}
+          onPointerDown={(e) => e.preventDefault()}
           variant="ghost"
           size="icon"
           onClick={() => setIsAutoMarkdownEnabled(!isAutoMarkdownEnabled)}
@@ -1056,7 +1101,7 @@ export const FloatingToolbar = ({
           <Wand2 className="w-4 h-4" />
         </Button>
         <Button
-          onMouseDown={(e) => e.preventDefault()}
+          onPointerDown={(e) => e.preventDefault()}
           variant="ghost"
           size="icon"
           onClick={() => {
