@@ -92,7 +92,7 @@ export function Sidebar({
       
       {/* Sidebar */}
       <div className={cn(
-        "fixed md:static inset-y-0 left-0 z-50 w-72 border-r border-border bg-sidebar flex flex-col h-full shrink-0 transition-all duration-300 ease-in-out",
+        "fixed md:static inset-y-0 left-0 z-50 w-72 border-r border-border bg-sidebar flex flex-col h-full shrink-0 transition-all duration-300 ease-in-out print:hidden",
         isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0 md:w-0 md:border-none md:overflow-hidden"
       )}>
         <div className="p-5 border-b border-border flex items-center justify-between bg-sidebar">

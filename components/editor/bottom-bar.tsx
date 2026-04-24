@@ -63,7 +63,7 @@ export const BottomBar = ({
 }: BottomBarProps) => {
 
   return (
-    <div className="absolute bottom-4 sm:bottom-8 left-0 right-0 z-20 px-2 sm:px-4 flex justify-center pointer-events-none">
+    <div className="absolute bottom-4 sm:bottom-8 left-0 right-0 z-20 px-2 sm:px-4 flex justify-center pointer-events-none print:hidden">
       <div 
         className="relative pointer-events-auto max-w-full flex flex-col items-center" 
         ref={symbolMenuRef}

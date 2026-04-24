@@ -85,15 +85,15 @@ const CUSTOM_STYLE = {
 
 renderer.code = function(token) {
   const code = token.text;
-  const rawLang = (token.lang || '').match(/\S*/)?.[0]?.toLowerCase() || 'text';
+  const rawLang = (token.lang || '').match(/\S*/)?.[0]?.toLowerCase() || '';
   
   const langAliases: Record<string, string> = { text: 'text', plaintext: 'text', txt: 'text', raw: 'text' };
   const lang = langAliases[rawLang] || rawLang;
   
-  const displayLang = (lang === 'text' || !lang) ? 'Text' : lang.charAt(0).toUpperCase() + lang.slice(1);
+  const displayLang = !lang ? 'Code' : lang === 'text' ? 'Text' : lang.charAt(0).toUpperCase() + lang.slice(1);
 
   let highlightedContent = '';
-  if (lang === 'text') {
+  if (!lang || lang === 'text') {
     const escapeHtml = (unsafe: string) => {
       return unsafe
         .replace(/&/g, "&amp;")
@@ -529,10 +529,11 @@ export const EditorArea = ({
       }
     });
 
-    service.addRule('alignDiv', {
+    service.addRule('alignTag', {
       filter: function (node) {
-        return node.nodeType === 1 && node.nodeName === 'DIV' && 
-               ((node as HTMLElement).getAttribute('align') !== null || (node as HTMLElement).style.textAlign !== '');
+        if (node.nodeType !== 1) return false;
+        const isBlock = ['P', 'DIV', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6'].includes(node.nodeName);
+        return isBlock && ((node as HTMLElement).getAttribute('align') !== null || !!(node as HTMLElement).style.textAlign);
       },
       replacement: function (content, node) {
         const align = (node as HTMLElement).getAttribute('align') || (node as HTMLElement).style.textAlign;
@@ -739,27 +740,17 @@ export const EditorArea = ({
     }
     hoveredImage.alt = alt;
     hoveredImage.title = alt; // Use alt as caption title
+    
+    // Remove individual display/margin styles for alignment, rely on parent wrapper
+    hoveredImage.style.display = '';
+    hoveredImage.style.marginLeft = '';
+    hoveredImage.style.marginRight = '';
     /* eslint-enable react-hooks/immutability */
 
-    if (align === 'left') {
-      hoveredImage.style.display = 'block';
-      hoveredImage.style.marginLeft = '0';
-      hoveredImage.style.marginRight = 'auto';
-    } else if (align === 'right') {
-      hoveredImage.style.display = 'block';
-      hoveredImage.style.marginLeft = 'auto';
-      hoveredImage.style.marginRight = '0';
-    } else {
-      hoveredImage.style.display = 'block';
-      hoveredImage.style.marginLeft = 'auto';
-      hoveredImage.style.marginRight = 'auto';
-    }
-    
-    // Clear wrapper alignment if any exists from previous versions
-    const wrapper = hoveredImage.parentElement;
-    if (wrapper) {
-      wrapper.style.textAlign = '';
-      wrapper.style.justifyContent = '';
+    // Use standard block alignment on the parent wrapper P or DIV
+    const blockWrapper = hoveredImage.closest('p, div');
+    if (blockWrapper) {
+      (blockWrapper as HTMLElement).style.textAlign = align;
     }
     
     flushPreviewEdit();
@@ -1479,7 +1470,9 @@ export const EditorArea = ({
               if (match.index > lastIndex) {
                   parts.push({ type: 'text', content: remaining.slice(lastIndex, match.index) });
               }
-              parts.push({ type: 'code', language: match[1] || 'text', content: match[2] });
+              const rawLang = match[1] || '';
+              const displayLang = !rawLang ? 'Code' : rawLang === 'text' ? 'Text' : rawLang.charAt(0).toUpperCase() + rawLang.slice(1);
+              parts.push({ type: 'code', language: displayLang, content: match[2] });
               lastIndex = regex.lastIndex;
           }
           if (lastIndex < remaining.length) {
@@ -1572,7 +1565,7 @@ export const EditorArea = ({
         onClick={handleCursorMove}
         onPaste={handlePaste}
         className={cn(
-          "prose prose-slate dark:prose-invert w-full min-w-0 max-w-full overflow-x-hidden break-words pb-[40vh] text-lg prose-code:text-slate-800 dark:prose-code:text-slate-200 prose-code:bg-slate-100 dark:prose-code:bg-slate-800/80 prose-code:border prose-code:border-slate-200 dark:prose-code:border-slate-700 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md prose-code:font-mono prose-code:text-[0.85em] prose-code:font-medium prose-code:shadow-[0_1px_2px_rgba(0,0,0,0.05)] prose-code:before:content-none prose-code:after:content-none prose-pre:p-0 prose-pre:bg-transparent prose-img:rounded-xl prose-table:border-collapse prose-table:w-full prose-table:m-0 prose-th:border prose-th:border-border prose-th:p-3 prose-th:bg-muted/50 prose-th:font-semibold prose-td:border prose-td:border-border prose-td:p-3 outline-none focus:ring-0 min-h-[500px]",
+          "prose prose-slate dark:prose-invert w-full min-w-0 max-w-full overflow-x-hidden break-words pb-[40vh] print:pb-0 text-lg prose-code:text-slate-800 dark:prose-code:text-slate-200 prose-code:bg-slate-100 dark:prose-code:bg-slate-800/80 prose-code:border prose-code:border-slate-200 dark:prose-code:border-slate-700 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md prose-code:font-mono prose-code:text-[0.85em] prose-code:font-medium prose-code:shadow-[0_1px_2px_rgba(0,0,0,0.05)] prose-code:before:content-none prose-code:after:content-none prose-pre:p-0 prose-pre:bg-transparent prose-img:rounded-xl prose-table:border-collapse prose-table:w-full prose-table:m-0 prose-th:border prose-th:border-border prose-th:p-3 prose-th:bg-muted/50 prose-th:font-semibold prose-td:border prose-td:border-border prose-td:p-3 outline-none focus:ring-0 min-h-[500px] print:min-h-0 print:prose-pre:break-inside-avoid print:prose-table:break-inside-avoid print:prose-img:break-inside-avoid print:prose-p:break-inside-avoid print:prose-code:break-inside-avoid print:prose-headings:break-after-avoid",
           isEraserMode && "cursor-[url('data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"%23f43f5e\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21\"/><path d=\"M22 21H7\"/><path d=\"m5 11 9 9\"/></svg>'),_crosshair]"
         )}
         role="textbox"
@@ -1585,7 +1578,7 @@ export const EditorArea = ({
              <div 
                key={`col-${i}`}
                contentEditable={false}
-               className={cn("absolute -top-3 h-3 hover:bg-slate-500/20 cursor-s-resize z-20 group transition-colors", selectedColIndex === i && "bg-slate-500/20")}
+               className={cn("absolute -top-3 h-3 hover:bg-slate-500/20 cursor-s-resize z-20 group transition-colors print:hidden", selectedColIndex === i && "bg-slate-500/20")}
                style={{ left: cr.left, width: cr.width, top: tableRect.top - 12 }}
                onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
                onClick={(e) => { e.preventDefault(); e.stopPropagation(); setSelectedColIndex(i); setSelectedRowIndex(null); }}
@@ -1595,7 +1588,7 @@ export const EditorArea = ({
            ))}
            {selectedColIndex !== null && colRects[selectedColIndex] && (
              <div 
-                className="absolute bg-blue-500/10 pointer-events-none z-10 border-x border-blue-500/30"
+                className="absolute bg-blue-500/10 pointer-events-none z-10 border-x border-blue-500/30 print:hidden"
                 style={{ top: tableRect.top, left: colRects[selectedColIndex].left, width: colRects[selectedColIndex].width, height: tableRect.height }}
              />
            )}
@@ -1603,7 +1596,7 @@ export const EditorArea = ({
              <div 
                key={`row-${i}`}
                contentEditable={false}
-               className={cn("absolute -left-3 w-3 hover:bg-slate-500/20 cursor-e-resize z-20 group transition-colors flex items-center", selectedRowIndex === i && "bg-slate-500/20")}
+               className={cn("absolute -left-3 w-3 hover:bg-slate-500/20 cursor-e-resize z-20 group transition-colors flex items-center print:hidden", selectedRowIndex === i && "bg-slate-500/20")}
                style={{ top: rr.top, height: rr.height, left: tableRect.left - 12 }}
                onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
                onClick={(e) => { e.preventDefault(); e.stopPropagation(); setSelectedRowIndex(i); setSelectedColIndex(null); }}
@@ -1613,7 +1606,7 @@ export const EditorArea = ({
            ))}
            {selectedRowIndex !== null && rowRects[selectedRowIndex] && (
              <div 
-                className="absolute bg-blue-500/10 pointer-events-none z-10 border-y border-blue-500/30"
+                className="absolute bg-blue-500/10 pointer-events-none z-10 border-y border-blue-500/30 print:hidden"
                 style={{ left: tableRect.left, top: rowRects[selectedRowIndex].top, height: rowRects[selectedRowIndex].height, width: tableRect.width }}
              />
            )}
@@ -1622,7 +1615,7 @@ export const EditorArea = ({
       {!isViewMode && activeTableRow && activeTableRowRect && !selectedColIndex && !selectedRowIndex && (
         <>
           <div 
-            className="table-floating-toolbar absolute z-[1] flex items-center justify-center gap-0.5 bg-background border border-border rounded-md shadow-[0_2px_8px_rgba(0,0,0,0.08)] pointer-events-auto px-0.5 py-0.5"
+            className="table-floating-toolbar absolute z-[1] flex items-center justify-center gap-0.5 bg-background border border-border rounded-md shadow-[0_2px_8px_rgba(0,0,0,0.08)] pointer-events-auto px-0.5 py-0.5 print:hidden"
             style={{ 
               top: activeTableRowRect.top, 
               left: activeTableRowRect.left,
@@ -1638,7 +1631,7 @@ export const EditorArea = ({
             </button>
           </div>
           <div 
-            className="table-floating-toolbar absolute z-[1] flex items-center justify-center bg-background border border-border rounded-md shadow-[0_2px_8px_rgba(0,0,0,0.08)] pointer-events-auto px-0.5 py-0.5"
+            className="table-floating-toolbar absolute z-[1] flex items-center justify-center bg-background border border-border rounded-md shadow-[0_2px_8px_rgba(0,0,0,0.08)] pointer-events-auto px-0.5 py-0.5 print:hidden"
             style={{ 
               top: activeTableRowRect.top, 
               left: activeTableRowRect.left + activeTableRowRect.width,
@@ -1768,7 +1761,7 @@ export const EditorArea = ({
       {!isViewMode && hoveredImage && imageRect && (
         <>
           <div 
-            className="absolute z-40 border-2 border-indigo-500 pointer-events-none"
+            className="absolute z-40 border-2 border-indigo-500 pointer-events-none print:hidden"
             style={{
               top: imageRect.top,
               left: imageRect.left,
@@ -1777,27 +1770,27 @@ export const EditorArea = ({
             }}
           />
           <div
-            className="absolute z-50 w-3 h-3 bg-white border-2 border-indigo-500 cursor-nwse-resize rounded-sm"
+            className="absolute z-50 w-3 h-3 bg-white border-2 border-indigo-500 cursor-nwse-resize rounded-sm print:hidden"
             style={{ top: imageRect.top - 6, left: imageRect.left - 6 }}
             onMouseDown={(e) => handleImageResizeStart(e, 'nw')}
           />
           <div
-            className="absolute z-50 w-3 h-3 bg-white border-2 border-indigo-500 cursor-nesw-resize rounded-sm"
+            className="absolute z-50 w-3 h-3 bg-white border-2 border-indigo-500 cursor-nesw-resize rounded-sm print:hidden"
             style={{ top: imageRect.top - 6, left: imageRect.left + imageRect.width - 6 }}
             onMouseDown={(e) => handleImageResizeStart(e, 'ne')}
           />
           <div
-            className="absolute z-50 w-3 h-3 bg-white border-2 border-indigo-500 cursor-nesw-resize rounded-sm"
+            className="absolute z-50 w-3 h-3 bg-white border-2 border-indigo-500 cursor-nesw-resize rounded-sm print:hidden"
             style={{ top: imageRect.top + imageRect.height - 6, left: imageRect.left - 6 }}
             onMouseDown={(e) => handleImageResizeStart(e, 'sw')}
           />
           <div
-            className="absolute z-50 w-3 h-3 bg-white border-2 border-indigo-500 cursor-nwse-resize rounded-sm"
+            className="absolute z-50 w-3 h-3 bg-white border-2 border-indigo-500 cursor-nwse-resize rounded-sm print:hidden"
             style={{ top: imageRect.top + imageRect.height - 6, left: imageRect.left + imageRect.width - 6 }}
             onMouseDown={(e) => handleImageResizeStart(e, 'se')}
           />
           <div 
-            className="image-floating-toolbar absolute z-50 flex items-center justify-center"
+            className="image-floating-toolbar absolute z-50 flex items-center justify-center print:hidden"
             style={{ 
               top: imageRect.top - 36, 
               left: imageRect.left,
@@ -1812,7 +1805,7 @@ export const EditorArea = ({
             </button>
           </div>
           <div 
-            className="image-floating-toolbar absolute z-50 flex items-center justify-center gap-1"
+            className="image-floating-toolbar absolute z-50 flex items-center justify-center gap-1 print:hidden"
             style={{ 
               top: imageRect.top - 36, 
               left: imageRect.left + 36,
@@ -1831,7 +1824,7 @@ export const EditorArea = ({
       
       {!isViewMode && hoveredLink && linkRect && (
         <div 
-          className="link-floating-toolbar absolute z-50 flex items-center justify-center gap-1"
+          className="link-floating-toolbar absolute z-50 flex items-center justify-center gap-1 print:hidden"
           style={{ 
             top: linkRect.top - 36, 
             left: linkRect.left,

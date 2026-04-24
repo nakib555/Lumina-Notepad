@@ -449,7 +449,7 @@ export default function App() {
           initial={{ opacity: 0 }}
           animate={{ opacity: showIntro ? 0 : 1 }}
           transition={{ duration: 0.8, delay: 0.2 }}
-          className="flex h-full w-full bg-background overflow-hidden relative"
+          className="flex h-full w-full bg-background overflow-hidden relative print:h-auto print:overflow-visible"
         >
           <AutoUpdater />
           <Sidebar 

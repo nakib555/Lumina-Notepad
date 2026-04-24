@@ -260,7 +260,7 @@ export function Editor({
 
   return (
     <div className={cn(
-      "flex-1 flex flex-col h-full overflow-hidden bg-background relative",
+      "flex-1 flex flex-col h-full overflow-hidden bg-background relative print:h-auto print:overflow-visible",
       fontFamily === "serif" ? "font-serif" : fontFamily === "mono" ? "font-mono" : "font-sans"
     )}>
       {/* Toolbar */}
@@ -286,8 +286,8 @@ export function Editor({
       />
 
       {/* Editor Area */}
-      <div className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar print:overflow-visible flex">
-        <div className="flex-1 w-full min-w-0 max-w-full px-8 pt-10 pb-24 md:px-12 md:pt-16 md:pb-32 flex flex-col gap-8 min-h-full">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar print:overflow-visible print:bg-white print:text-black flex">
+        <div className="flex-1 w-full min-w-0 max-w-full px-8 pt-10 pb-24 md:px-12 md:pt-16 md:pb-32 print:p-0 flex flex-col gap-8 min-h-full">
           <div className="space-y-6 shrink-0">
             <input
               type="text"
@@ -296,7 +296,7 @@ export function Editor({
               placeholder="Note Title"
               autoComplete="off"
               readOnly={isViewMode}
-              className={cn("w-full text-4xl md:text-5xl font-bold text-foreground placeholder:text-muted-foreground/30 border-none outline-none bg-transparent tracking-tight", isViewMode && "cursor-default")}
+              className={cn("w-full text-4xl md:text-5xl font-bold text-foreground placeholder:text-muted-foreground/30 border-none outline-none bg-transparent tracking-tight print:text-black", isViewMode && "cursor-default")}
             />
             
             {/* Tag Management */}

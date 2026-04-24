@@ -1,3 +1,2 @@
 const { marked } = require('marked');
-let html = marked.parse("Line 1\n\n%%%%__CARET__%%%%");
-console.log(html);
+console.log(marked.parse('<div align="center">\n\n![img](url)\n\n</div>'));

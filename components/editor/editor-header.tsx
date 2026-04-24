@@ -48,7 +48,7 @@ export const EditorHeader = ({
   setIsViewMode
 }: EditorHeaderProps) => {
   return (
-    <header className="h-14 border-b border-border flex items-center justify-between px-2 sm:px-4 shrink-0 bg-background/80 backdrop-blur-md z-10">
+    <header className="h-14 border-b border-border flex items-center justify-between px-2 sm:px-4 shrink-0 bg-background/80 backdrop-blur-md z-10 print:hidden">
       <div className="flex items-center gap-1 sm:gap-2 py-1 shrink-0">
         <Button 
           variant="ghost" 

@@ -323,3 +323,22 @@
 .katex {
   font-size: 1.1em;
 }
+
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 20mm;
+  }
+
+  html, body, #root {
+    overflow: visible !important;
+    height: auto !important;
+  }
+
+  body {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    font-size: 12pt;
+  }
+}
+
