@@ -184,7 +184,10 @@ renderer.list = function(token: import('marked').Tokens.List) {
 };
 
 const parseMarkdown = (text: string) => {
-  return marked.parse(text, { renderer, breaks: true, gfm: true }) as string;
+  // Strip zero-width characters that cause KaTeX console warnings
+  // \u200B: Zero-width space, \u2061: Function application
+  const cleanText = text.replace(/[\u200B\u2061]/g, '');
+  return marked.parse(cleanText, { renderer, breaks: true, gfm: true }) as string;
 };
 
   export interface EditorAreaRef {
@@ -502,8 +505,43 @@ export const EditorArea = ({
 
     service.addRule('preserveBr', {
       filter: 'br',
-      replacement: function () {
+      replacement: function (_content, node) {
+        let parent = node.parentNode;
+        while (parent) {
+          if (parent.nodeName === 'TD' || parent.nodeName === 'TH') {
+            return '<br>';
+          }
+          if (parent.nodeName === 'PRE') {
+            return '\n';
+          }
+          parent = parent.parentNode;
+        }
         return '\n';
+      }
+    });
+
+    service.addRule('tableBlocks', {
+      filter: function (node) {
+        if (!['P', 'DIV', 'UL', 'OL', 'LI', 'BLOCKQUOTE'].includes(node.nodeName)) return false;
+        let parent = node.parentNode;
+        while (parent) {
+          if (parent.nodeName === 'TD' || parent.nodeName === 'TH') {
+            return true;
+          }
+          parent = parent.parentNode;
+        }
+        return false;
+      },
+      replacement: function (content, node) {
+        if (!content.trim()) return '';
+        // If it's a list item, add a bullet
+        let prefix = '';
+        if (node.nodeName === 'LI') {
+          prefix = '• ';
+        }
+        
+        // Return content with a <br> if it's not the last child
+        return prefix + content + (node.nextSibling ? '<br>' : '');
       }
     });
 
@@ -1584,7 +1622,7 @@ export const EditorArea = ({
              <div 
                key={`col-${i}`}
                contentEditable={false}
-               className={cn("absolute -top-3 h-3 hover:bg-slate-500/20 cursor-s-resize z-20 group transition-colors print:hidden", selectedColIndex === i && "bg-slate-500/20")}
+               className={cn("absolute -top-3 h-3 cursor-s-resize z-20 group transition-colors print:hidden")}
                style={{ left: cr.left, width: cr.width, top: tableRect.top - 12 }}
                onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
                onClick={(e) => { e.preventDefault(); e.stopPropagation(); setSelectedColIndex(i); setSelectedRowIndex(null); }}
@@ -1602,7 +1640,7 @@ export const EditorArea = ({
              <div 
                key={`row-${i}`}
                contentEditable={false}
-               className={cn("absolute -left-3 w-3 hover:bg-slate-500/20 cursor-e-resize z-20 group transition-colors flex items-center print:hidden", selectedRowIndex === i && "bg-slate-500/20")}
+               className={cn("absolute -left-3 w-3 cursor-e-resize z-20 group transition-colors flex items-center print:hidden")}
                style={{ top: rr.top, height: rr.height, left: tableRect.left - 12 }}
                onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
                onClick={(e) => { e.preventDefault(); e.stopPropagation(); setSelectedRowIndex(i); setSelectedColIndex(null); }}

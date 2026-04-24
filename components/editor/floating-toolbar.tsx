@@ -35,6 +35,66 @@ interface FloatingToolbarProps {
   setShowSymbolMenu: (show: boolean) => void;
 }
 
+const getSearchRanges = (container: HTMLElement, query: string): Range[] => {
+  if (!query) return [];
+  const ranges: Range[] = [];
+  const lowerQuery = query.toLowerCase();
+  
+  const textNodes: { node: Text; start: number; end: number }[] = [];
+  let content = '';
+  
+  const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT, null);
+  
+  let node;
+  while ((node = walker.nextNode())) {
+    if (node.nodeType === Node.TEXT_NODE) {
+      const text = node.nodeValue || '';
+      if (text) {
+        const start = content.length;
+        content += text;
+        textNodes.push({ node: node as Text, start, end: content.length });
+      }
+    } else if (node.nodeType === Node.ELEMENT_NODE) {
+      const el = node as HTMLElement;
+      if (el.tagName === 'BR' || el.tagName === 'P' || el.tagName === 'DIV' || el.tagName === 'LI') {
+          if (content.length > 0 && !content.endsWith('\n') && !content.endsWith(' ')) {
+              content += '\n';
+          }
+      }
+    }
+  }
+
+  const searchStr = lowerQuery;
+
+  let matchOp = content.toLowerCase().indexOf(searchStr, 0);
+  while (matchOp !== -1) {
+    const matchStart = matchOp;
+    const matchEnd = matchOp + searchStr.length;
+    
+    const startNodeItem = textNodes.find(n => matchStart >= n.start && matchStart < n.end);
+    let endNodeItem = textNodes.find(n => matchEnd > n.start && matchEnd <= n.end);
+    
+    if (!endNodeItem) {
+        endNodeItem = textNodes.find(n => matchEnd >= n.start && matchEnd <= n.end);
+    }
+
+    if (startNodeItem && endNodeItem) {
+      try {
+        const range = document.createRange();
+        range.setStart(startNodeItem.node, matchStart - startNodeItem.start);
+        range.setEnd(endNodeItem.node, matchEnd - endNodeItem.start);
+        ranges.push(range);
+      } catch {
+        // ignore invalid ranges
+      }
+    }
+    
+    matchOp = content.toLowerCase().indexOf(searchStr, matchOp + searchStr.length);
+  }
+  
+  return ranges;
+};
+
 export const FloatingToolbar = ({
   toolbarRef,
   isDragging,
@@ -95,74 +155,168 @@ export const FloatingToolbar = ({
   };
 
   useEffect(() => {
-    if (!searchQuery || !textareaRef.current) {
-      setMatchCount(0);
-      return;
+    if (isSearchOpen) {
+      document.body.classList.add('search-is-active');
+    } else {
+      document.body.classList.remove('search-is-active');
     }
-    const text = textareaRef.current.innerText || "";
-    // Escape regex characters
-    const escapedQuery = searchQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const matches = text.match(new RegExp(escapedQuery, 'gi'));
-    setMatchCount(matches ? matches.length : 0);
-  }, [searchQuery, textareaRef]);
+  }, [isSearchOpen]);
+
+  useEffect(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+
+    const computeHighlights = () => {
+      if (!searchQuery) {
+        setMatchCount(0);
+        if (typeof CSS !== 'undefined' && 'highlights' in CSS) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (CSS as any).highlights.delete('search-results');
+        }
+        return;
+      }
+      
+      const text = el.innerText || "";
+      const escapedQuery = searchQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const matches = text.match(new RegExp(escapedQuery, 'gi'));
+      setMatchCount(matches ? matches.length : 0);
+      
+      if (isSearchOpen && typeof CSS !== 'undefined' && 'highlights' in CSS) {
+        try {
+          const ranges = getSearchRanges(el, searchQuery);
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const highlight = new (window as any).Highlight(...ranges);
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (CSS as any).highlights.set('search-results', highlight);
+        } catch {
+          // ignore if Highlights API throws
+        }
+      } else if (typeof CSS !== 'undefined' && 'highlights' in CSS) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (CSS as any).highlights.delete('search-results');
+      }
+    };
+
+    // Run initially
+    computeHighlights();
+    
+    // Listen to changes
+    el.addEventListener('input', computeHighlights);
+    
+    return () => {
+      el.removeEventListener('input', computeHighlights);
+      if (typeof CSS !== 'undefined' && 'highlights' in CSS) {
+        // Cleanup happens on effect disposal or search closed
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (CSS as any).highlights.delete('search-results');
+      }
+    };
+  }, [searchQuery, textareaRef, isSearchOpen]);
 
   const handleSearch = (forward: boolean = true) => {
-    if (!searchQuery) return;
+    if (!searchQuery || !textareaRef.current) return;
     ensureFocus();
     
-    // aString, aCaseSensitive, aBackwards, aWrapAround, aWholeWord, aSearchInFrames, aShowDialog
-    const found = window.find(searchQuery, false, !forward, true, false, false, false);
+    const ranges = getSearchRanges(textareaRef.current, searchQuery);
+    if (ranges.length === 0) {
+      toast.error("Text not found in editor");
+      return;
+    }
+
+    const sel = window.getSelection();
+    let currentActiveIdx = -1;
     
-    if (found) {
-      scrollToSelection(true);
+    if (sel && sel.rangeCount > 0) {
+      const selRange = sel.getRangeAt(0);
+      for (let i = 0; i < ranges.length; i++) {
+        const cmp = ranges[i].compareBoundaryPoints(Range.START_TO_START, selRange);
+        if (cmp === 0) {
+          currentActiveIdx = i;
+          break;
+        }
+      }
+    }
+
+    let nextIdx = 0;
+    if (currentActiveIdx !== -1) {
+      nextIdx = forward ? (currentActiveIdx + 1) : (currentActiveIdx - 1);
+      if (nextIdx >= ranges.length) nextIdx = 0;
+      if (nextIdx < 0) nextIdx = ranges.length - 1;
     } else {
-      toast.error("Text not found");
+        if (sel && sel.rangeCount > 0) {
+            const selRange = sel.getRangeAt(0);
+            if (forward) {
+                const closestNext = ranges.find(r => r.compareBoundaryPoints(Range.START_TO_START, selRange) > 0);
+                nextIdx = closestNext ? ranges.indexOf(closestNext) : 0;
+            } else {
+                const beforeRanges = ranges.filter(r => r.compareBoundaryPoints(Range.START_TO_START, selRange) < 0);
+                nextIdx = beforeRanges.length > 0 ? ranges.indexOf(beforeRanges[beforeRanges.length - 1]) : ranges.length - 1;
+            }
+        }
+    }
+
+    const targetRange = ranges[nextIdx];
+    
+    if (sel) {
+      sel.removeAllRanges();
+      sel.addRange(targetRange);
+      setTimeout(() => scrollToSelection(true), 10);
     }
   };
 
   const handleReplace = () => {
-    if (!searchQuery) return;
+    if (!searchQuery || !textareaRef.current) return;
     ensureFocus();
-    const selection = window.getSelection();
+    const sel = window.getSelection();
     
-    // If we have something selected that matches the query, replace it
-    if (selection && !selection.isCollapsed && selection.toString().toLowerCase() === searchQuery.toLowerCase()) {
-      document.execCommand('insertText', false, replaceQuery);
-      // Automatically find next
-      handleSearch(true);
-    } else {
-      // Otherwise just start by finding the first available match
-      handleSearch(true);
+    if (sel && sel.rangeCount > 0) {
+      const selRange = sel.getRangeAt(0);
+      const ranges = getSearchRanges(textareaRef.current, searchQuery);
+      let isMatch = false;
+      for (const range of ranges) {
+          if (range.compareBoundaryPoints(Range.START_TO_START, selRange) === 0 &&
+              range.compareBoundaryPoints(Range.END_TO_END, selRange) === 0) {
+              isMatch = true;
+              break;
+          }
+      }
+      
+      if (isMatch) {
+          document.execCommand('insertText', false, replaceQuery);
+          handleSearch(true);
+          return;
+      }
     }
+    
+    handleSearch(true);
   };
 
   const handleReplaceAll = () => {
-    if (!searchQuery) return;
+    if (!searchQuery || !textareaRef.current) return;
     ensureFocus();
     
-    const selection = window.getSelection();
-    if (selection && textareaRef.current) {
-      // Move to top to ensure we replace everything from the beginning
-      selection.collapse(textareaRef.current, 0);
-    }
-    
     let count = 0;
-    const maxSafeguard = 5000;
-    // Walk through and replace (wrapAround=false so it stops at bottom)
-    while (window.find(searchQuery, false, false, false, false, false, false) && count < maxSafeguard) {
-      const selText = window.getSelection()?.toString();
-      if (selText && selText.toLowerCase() === searchQuery.toLowerCase()) {
+    const maxLoops = 5000;
+    const sel = window.getSelection();
+    
+    while (count < maxLoops) {
+      const ranges = getSearchRanges(textareaRef.current, searchQuery);
+      if (ranges.length === 0) break;
+      
+      if (sel) {
+        sel.removeAllRanges();
+        sel.addRange(ranges[0]);
         document.execCommand('insertText', false, replaceQuery);
         count++;
       } else {
-        break; // Fail-safe
+        break;
       }
     }
     
     if (count > 0) {
       toast.success(`Replaced ${count} occurrences`);
     } else {
-      toast.error("Text not found");
+      toast.error("Text not found in editor");
     }
   };
 
@@ -213,11 +367,11 @@ export const FloatingToolbar = ({
     
     if (rect.top === 0 && rect.bottom === 0) return;
     
-    const scrollContainer = document.querySelector('.custom-scrollbar');
+    const scrollContainer = textareaRef.current?.closest('.overflow-y-auto') as HTMLElement;
     if (scrollContainer) {
       const containerRect = scrollContainer.getBoundingClientRect();
       if (forceCenter || rect.top < containerRect.top || rect.bottom > containerRect.bottom) {
-        const cursorY = rect.top - containerRect.top;
+        const cursorY = rect.top + (rect.height / 2) - containerRect.top;
         const targetY = containerRect.height / 2;
         scrollContainer.scrollBy({
           top: cursorY - targetY,

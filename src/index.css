@@ -282,6 +282,16 @@
   vertical-align: baseline;
 }
 
+::highlight(search-results) {
+  background-color: rgb(250 204 21 / 0.4); /* Tailwind yellow-400 equivalent at 40% opacity */
+  color: inherit;
+  border-radius: 2px;
+}
+
+body.search-is-active *::selection {
+  background-color: transparent;
+  color: inherit;
+}
 
 /* Custom Scrollbar */
 .custom-scrollbar::-webkit-scrollbar {

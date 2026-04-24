@@ -192,26 +192,27 @@ export function useNotes() {
   };
 
   const deleteFolder = (id: string) => {
-    setFolders(prev => {
-      // Find all nested folders to delete
-      const getNestedFolderIds = (parentId: string): string[] => {
-        const children = prev.filter(f => f.parentId === parentId);
-        return [
-          parentId,
-          ...children.flatMap(child => getNestedFolderIds(child.id))
-        ];
-      };
-      
-      const idsToDelete = new Set(getNestedFolderIds(id));
-      
-      // Also update notes in these folders to be at root (or move to parent?)
-      // Actually, standard behavior is often just move them to root, or delete them.
-      // Let's move them to root for safety.
-      setNotes(notesPrev => notesPrev.map(n => 
-        n.folderId && idsToDelete.has(n.folderId) ? { ...n, folderId: undefined } : n
-      ));
+    // Delete the folder and all its contents (nested folders and notes)
+    const getNestedFolderIds = (parentId: string): string[] => {
+      const children = folders.filter(f => f.parentId === parentId);
+      return [
+        parentId,
+        ...children.flatMap(child => getNestedFolderIds(child.id))
+      ];
+    };
+    
+    const idsToDelete = new Set(getNestedFolderIds(id));
 
-      return prev.filter(f => !idsToDelete.has(f.id));
+    setFolders(prev => prev.filter(f => !idsToDelete.has(f.id)));
+    
+    setNotes(prev => {
+      const filtered = prev.filter(n => !(n.folderId && idsToDelete.has(n.folderId)));
+      if (activeNoteId && !filtered.some(n => n.id === activeNoteId)) {
+        setTimeout(() => {
+          setActiveNoteId(filtered.length > 0 ? filtered[0].id : null);
+        }, 0);
+      }
+      return filtered;
     });
   };
 

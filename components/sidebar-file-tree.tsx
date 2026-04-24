@@ -69,6 +69,20 @@ export function SidebarFileTree({
   const [editFolderName, setEditFolderName] = useState("");
   const [isDndLocked, setIsDndLocked] = useState(true);
 
+  // Folder Delete State
+  const [folderToDelete, setFolderToDelete] = useState<{id: string, name: string} | null>(null);
+
+  const openDeleteFolderDialog = (folder: CommonFolder) => {
+    setFolderToDelete({ id: folder.id, name: folder.name });
+  };
+
+  const handleDeleteFolderConfirm = () => {
+    if (folderToDelete) {
+      onDeleteFolder(folderToDelete.id);
+    }
+    setFolderToDelete(null);
+  };
+
   const handleCreateFolderSubmit = () => {
     if (newFolderName.trim()) {
       onCreateFolder(newFolderName.trim(), newFolderParentId);
@@ -609,7 +623,7 @@ export function SidebarFileTree({
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={(e) => {
                   e.stopPropagation();
-                  onDeleteFolder(folder.id);
+                  openDeleteFolderDialog(folder);
                 }} className="text-destructive">
                   <Trash2 className="w-4 h-4 mr-2" /> Delete Folder
                 </DropdownMenuItem>
@@ -811,6 +825,28 @@ export function SidebarFileTree({
             </Button>
             <Button type="button" onClick={handleRenameFolderSubmit}>
               Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Folder Delete Dialog */}
+      <Dialog open={!!folderToDelete} onOpenChange={(open) => !open && setFolderToDelete(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete Folder</DialogTitle>
+          </DialogHeader>
+          <div className="py-4 text-sm text-foreground">
+            Are you sure you want to delete the folder <strong>{folderToDelete?.name}</strong>?
+            <br />
+            <span className="text-destructive font-medium">All nested folders and notes will be deleted as well.</span>
+          </div>
+          <DialogFooter className="sm:justify-end">
+            <Button type="button" variant="ghost" onClick={() => setFolderToDelete(null)}>
+              Cancel
+            </Button>
+            <Button type="button" variant="destructive" onClick={handleDeleteFolderConfirm}>
+              Delete
             </Button>
           </DialogFooter>
         </DialogContent>
