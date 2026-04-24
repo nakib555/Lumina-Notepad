@@ -496,12 +496,12 @@ export function SidebarFileTree({
       onDragLeave={!isDndLocked ? handleDragLeave : undefined}
       onDrop={(e) => !isDndLocked && handleDrop(e, note.id, 'note')}
       className={cn(
-        "group flex items-center justify-between py-1.5 px-2 rounded-lg transition-all duration-200 border-none select-none mx-1 my-0.5",
-        isDndLocked ? "cursor-pointer" : "cursor-grab active:cursor-grabbing hover:scale-[0.99]",
+        "group flex items-center justify-between py-2 px-2 transition-all duration-200 select-none border-b border-border/40 last:border-0",
+        isDndLocked ? "cursor-pointer" : "cursor-grab active:cursor-grabbing hover:bg-muted/30",
         getDragStyle(note.id),
         activeNoteId === note.id 
           ? "bg-primary/10 text-primary font-medium" 
-          : "hover:bg-muted/80 text-muted-foreground"
+          : "hover:bg-muted/40 text-muted-foreground odd:bg-muted/10 even:bg-transparent"
       )}
       style={{ paddingLeft: `${ level * 12 + 28 }px` }} // Aligns nicely past the Chevron and Folder icon
       onClick={() => onSelectNote(note.id)}
@@ -551,8 +551,9 @@ export function SidebarFileTree({
           onDragLeave={!isDndLocked ? handleDragLeave : undefined}
           onDrop={(e) => !isDndLocked && handleDrop(e, folder.id, 'folder')}
           className={cn(
-             "group flex items-center justify-between py-1.5 px-2 rounded-lg hover:bg-muted/80 transition-all duration-200 select-none mx-1",
-             isDndLocked ? "cursor-pointer" : "cursor-grab active:cursor-grabbing hover:scale-[0.99]",
+             "group flex items-center justify-between py-2 px-2 transition-all duration-200 select-none border-b border-border/40",
+             isDndLocked ? "cursor-pointer" : "cursor-grab active:cursor-grabbing hover:bg-muted/30",
+             "hover:bg-muted/40 text-muted-foreground odd:bg-muted/10 even:bg-transparent",
              getDragStyle(folder.id, true)
           )}
           style={{ paddingLeft: `${ level * 12 + 8 }px` }}
@@ -687,12 +688,11 @@ export function SidebarFileTree({
         onDragLeave={!isDndLocked ? handleDragLeave : undefined}
         onDrop={(e) => !isDndLocked && handleDrop(e, 'root', 'root')}
       >
-        <div className="sticky top-0 z-20 flex items-center justify-between px-3 py-1.5 mb-2 -mt-2 bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60 -mx-2 rounded-t-md border-b border-border/30">
+        <div className="sticky top-0 z-20 flex items-center justify-center px-3 py-1.5 mb-2 -mt-2 bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60 -mx-2 rounded-t-md border-b border-border/30 relative">
           <div className="flex items-center gap-2">
-            <div className="w-1 h-3 rounded-full bg-gradient-to-b from-primary/80 to-primary/30" aria-hidden="true" />
-            <span className="text-[11px] font-bold text-foreground/70 uppercase tracking-widest">Explorer</span>
+            <span className="text-[11px] font-bold text-foreground/70 uppercase tracking-widest text-center">Documents</span>
           </div>
-          <div className="flex items-center gap-0.5">
+          <div className="absolute right-3 flex items-center gap-0.5">
             <Button
               variant="ghost"
               size="icon"
