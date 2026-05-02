@@ -377,5 +377,17 @@ body.search-is-active *::selection {
   .prose h1 {
     text-align: center !important;
   }
+
+  .sketch-container {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    overflow: visible !important;
+    background: white !important;
+  }
+  
+  .sketch-container svg {
+    max-width: 100% !important;
+    height: auto !important;
+  }
 }
 

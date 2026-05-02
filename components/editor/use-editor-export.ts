@@ -61,13 +61,20 @@ export const useEditorExport = (note: Note | null) => {
                 p, ul, ol { margin-top: 0; margin-bottom: 1em; white-space: pre-wrap; }
                 ul, ol { padding-left: 1.5em; }
                 li { margin-bottom: 0.25em; }
-                img { 
+                img, .sketch-container { 
                   max-width: 100%; 
                   height: auto; 
                   border-radius: 8px; 
                   break-inside: avoid;
                   page-break-inside: avoid;
                   margin: 1.5em 0;
+                }
+                .sketch-container {
+                   background: white !important;
+                }
+                .sketch-container svg {
+                   max-width: 100% !important;
+                   height: auto !important;
                 }
                 pre { 
                   background: var(--color-bg-muted); 

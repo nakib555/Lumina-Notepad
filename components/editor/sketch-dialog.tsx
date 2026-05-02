@@ -157,8 +157,9 @@ export function SketchDialog({ isOpen, onClose, onSave, initialStateString }: Sk
       });
       
       svg.setAttribute("width", "100%");
-      svg.setAttribute("height", "auto");
+      svg.removeAttribute("height"); /* Remove the explicit height so it scales with viewBox */
       svg.style.maxWidth = "100%";
+      svg.style.height = "auto";
       svg.style.display = "block";
       
       const svgString = svg.outerHTML;

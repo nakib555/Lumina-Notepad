@@ -210,7 +210,7 @@ export function Editor({
       }
       
       const stateAttr = pendingSketchState ? ` data-excalidraw='${pendingSketchState.replace(/'/g, "&apos;")}'` : '';
-      const payload = `<div class="sketch-container my-4 inline-block w-full max-w-full overflow-hidden flex justify-center items-center p-4 bg-white dark:bg-zinc-100 rounded-xl border border-border/50 shadow-sm" contenteditable="false"${stateAttr}>${pendingSketchSvg}&#8203;</div><p>&#8203;</p>`;
+      const payload = `<div class="sketch-container my-4 inline-block w-full max-w-full overflow-hidden print:overflow-visible print:break-inside-avoid flex justify-center items-center p-4 bg-white dark:bg-zinc-100/50 rounded-xl border border-border/50" contenteditable="false"${stateAttr}>${pendingSketchSvg}&#8203;</div><p>&#8203;</p>`;
       document.execCommand('insertHTML', false, payload);
       
       if (editorAreaRef.current) {
