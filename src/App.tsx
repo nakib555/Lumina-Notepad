@@ -35,11 +35,10 @@ export default function App() {
     isLoaded
   } = useNotes();
 
-  const [showSplash, setShowSplash] = useState(true);
-
   const [hasSeenIntro, setHasSeenIntro] = useState(() => {
     return localStorage.getItem('lumina-has-seen-intro') === 'true';
   });
+  const [showSplash, setShowSplash] = useState(true);
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
     if (typeof window !== 'undefined') {

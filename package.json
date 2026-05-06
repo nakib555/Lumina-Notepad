@@ -6,7 +6,8 @@
     "dev": "vite",
     "build": "cross-env NODE_OPTIONS=--max_old_space_size=500 vite build",
     "preview": "vite preview",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "postinstall": "patch-package"
   },
   "dependencies": {
     "@base-ui/react": "^1.3.0",

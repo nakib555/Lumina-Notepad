@@ -1,46 +1,72 @@
-import { motion } from "motion/react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { motion, AnimatePresence } from "motion/react";
 
 export function SplashScreen({ onComplete }: { onComplete: () => void }) {
+  const [isVisible, setIsVisible] = useState(true);
+
   useEffect(() => {
     const timer = setTimeout(() => {
-      onComplete();
-    }, 2000);
+      setIsVisible(false);
+      setTimeout(onComplete, 1200); // 0.4s logo exit + 0.8s background exit
+    }, 2800); 
+
     return () => clearTimeout(timer);
   }, [onComplete]);
 
   return (
-    <motion.div
-      initial={{ opacity: 1 }}
-      exit={{ opacity: 0, scale: 1.05, filter: "blur(4px)" }}
-      transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-      className="fixed inset-0 z-[200] flex flex-col justify-center items-center bg-background"
-    >
-      <motion.div
-        initial={{ scale: 0.8, opacity: 0, y: 10 }}
-        animate={{ scale: 1, opacity: 1, y: 0 }}
-        transition={{ duration: 0.8, ease: "easeOut" }}
-        className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6"
-      >
-        <motion.div 
-          initial={{ rotate: -15, scale: 0.5 }}
-          animate={{ rotate: 0, scale: 1 }}
-          transition={{ duration: 1, type: "spring", bounce: 0.5 }}
-          className="w-16 h-16 sm:w-20 sm:h-20 rounded-3xl bg-primary flex items-center justify-center shadow-2xl shadow-primary/30"
+    <AnimatePresence>
+      {isVisible && (
+        <motion.div
+          initial={{ opacity: 1 }}
+          exit={{ opacity: 0, transition: { duration: 0.8, delay: 0.4, ease: "easeInOut" } }}
+          className="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-background overflow-hidden"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-8 h-8 sm:w-10 sm:h-10 text-primary-foreground">
-            <path d="M7 5v14h10" />
-          </svg>
+          {/* Background Ambient Glow */}
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.5 }}
+            animate={{ opacity: 0.15, scale: 1 }}
+            exit={{ opacity: 0, scale: 1.2, transition: { duration: 0.4 } }}
+            transition={{ duration: 1.5, ease: "easeOut" }}
+            className="absolute shrink-0 w-[500px] h-[500px] rounded-full bg-primary/30 blur-[100px]"
+          />
+
+          <motion.div
+            initial={{ scale: 0.8, opacity: 0, filter: "blur(10px)" }}
+            animate={{ scale: 1, opacity: 1, filter: "blur(0px)" }}
+            exit={{ scale: 1.1, opacity: 0, filter: "blur(10px)", transition: { duration: 0.4, ease: "easeIn" } }}
+            transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }} 
+            className="relative flex flex-col items-center z-10"
+          >
+            <motion.div 
+              initial={{ y: 20 }}
+              animate={{ y: 0 }}
+              transition={{ duration: 1, ease: "easeOut", delay: 0.2 }}
+              className="relative w-24 h-24 mb-6 shadow-2xl shadow-primary/20 rounded-[24px] overflow-hidden"
+            >
+              <img src="/logo.svg" alt="Lumina Logo" className="w-full h-full object-cover" />
+            </motion.div>
+            
+            <motion.div className="flex flex-col items-center overflow-hidden">
+              <motion.h1 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4, duration: 0.8, ease: "easeOut" }}
+                className="text-4xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/60"
+              >
+                Lumina
+              </motion.h1>
+              
+              <motion.div
+                initial={{ width: 0, opacity: 0 }}
+                animate={{ width: "40px", opacity: 1 }}
+                transition={{ delay: 0.8, duration: 0.8, ease: "easeInOut" }}
+                className="h-1 bg-primary/50 mt-4 rounded-full"
+              />
+            </motion.div>
+          </motion.div>
         </motion.div>
-        <motion.h1 
-          initial={{ opacity: 0, x: -10 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.8, delay: 0.2, ease: "easeOut" }}
-          className="text-4xl sm:text-5xl font-bold tracking-tight text-foreground"
-        >
-          Lumina
-        </motion.h1>
-      </motion.div>
-    </motion.div>
+      )}
+    </AnimatePresence>
   );
 }
+

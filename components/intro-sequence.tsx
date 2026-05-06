@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Feather, Sparkles, Keyboard } from "lucide-react";
 import { Button } from "./ui/button";
@@ -24,6 +24,33 @@ const INTRO_SLIDES = [
   }
 ];
 
+const slideVariants = {
+  enter: { opacity: 0, x: 40 },
+  center: { 
+    opacity: 1, 
+    x: 0, 
+    transition: { 
+      duration: 0.6, 
+      ease: [0.16, 1, 0.3, 1], 
+      staggerChildren: 0.15,
+      delayChildren: 0.1 
+    } 
+  },
+  exit: { 
+    opacity: 0, x: -40, 
+    transition: { duration: 0.4, ease: [0.7, 0, 0.84, 0] } 
+  }
+};
+
+const itemVariants = {
+  enter: { opacity: 0, y: 30, filter: "blur(5px)" },
+  center: { 
+    opacity: 1, y: 0, filter: "blur(0px)", 
+    transition: { duration: 0.8, ease: [0.16, 1, 0.3, 1] } 
+  },
+  exit: { opacity: 0, y: -10, transition: { duration: 0.2 } }
+};
+
 export function IntroSequence({ onComplete }: { onComplete: () => void }) {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isVisible, setIsVisible] = useState(true);
@@ -42,57 +69,61 @@ export function IntroSequence({ onComplete }: { onComplete: () => void }) {
       {isVisible && (
         <motion.div
           initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0, transition: { duration: 0.5 } }}
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-background/95 backdrop-blur-sm"
+          animate={{ opacity: 1, transition: { duration: 0.6 } }}
+          exit={{ opacity: 0, transition: { duration: 0.5, ease: "easeInOut" } }}
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-background/80 backdrop-blur-xl overflow-hidden"
         >
-          <div className="relative w-full max-w-lg p-6 sm:p-12 overflow-hidden">
+          {/* Subtle background glows */}
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 0.5 }}
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-primary/5 blur-[100px] pointer-events-none"
+          />
+
+          <div className="relative w-full max-w-lg p-6 sm:p-12 z-10">
             <AnimatePresence mode="wait">
               <motion.div
                 key={currentSlide}
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                transition={{ duration: 0.3, ease: "easeOut" }}
+                variants={slideVariants}
+                initial="enter"
+                animate="center"
+                exit="exit"
                 className="flex flex-col items-center text-center text-foreground"
               >
-                <div className="mb-8 p-4 rounded-full bg-accent text-accent-foreground">
+                <motion.div variants={itemVariants} className="mb-8 p-4 rounded-full bg-primary/10 text-primary ring-1 ring-primary/20 shadow-xl shadow-primary/5">
                   {(() => {
                     const Icon = INTRO_SLIDES[currentSlide].icon;
-                    return <Icon className="w-8 h-8 text-primary" strokeWidth={1.5} />;
+                    return <Icon className="w-10 h-10" strokeWidth={1.5} />;
                   })()}
-                </div>
+                </motion.div>
                 
-                <h2 className="text-2xl sm:text-3xl font-semibold mb-4 tracking-tight">
+                <motion.h2 variants={itemVariants} className="text-3xl sm:text-4xl font-bold mb-5 tracking-tight bg-clip-text text-transparent bg-gradient-to-br from-foreground to-foreground/60">
                   {INTRO_SLIDES[currentSlide].title}
-                </h2>
+                </motion.h2>
                 
-                <p className="text-muted-foreground text-lg mb-10 leading-relaxed text-balance max-w-md">
+                <motion.p variants={itemVariants} className="text-muted-foreground text-lg mb-12 leading-relaxed text-balance max-w-md">
                   {INTRO_SLIDES[currentSlide].desc}
-                </p>
+                </motion.p>
 
-                <div className="flex flex-col items-center w-full gap-4">
+                <motion.div variants={itemVariants} className="flex flex-col items-center w-full gap-6">
                   <Button 
                     size="lg" 
                     onClick={handleNext}
-                    className="w-full sm:w-auto min-w-[160px]"
+                    className="w-full sm:w-auto min-w-[200px] h-12 text-md shadow-lg shadow-primary/20 transition-all hover:scale-105 active:scale-95"
                   >
                     {INTRO_SLIDES[currentSlide].button}
                   </Button>
                   
-                  <div className="flex items-center gap-2 mt-4">
+                  <div className="flex items-center gap-3">
                     {INTRO_SLIDES.map((_, i) => (
                       <motion.div
                         key={i}
-                        className={`w-2 h-2 rounded-full ${i === currentSlide ? "bg-primary" : "bg-primary/20"}`}
-                        animate={{ 
-                          scale: i === currentSlide ? 1.2 : 1,
-                          opacity: i === currentSlide ? 1 : 0.5
-                        }}
+                        className={`h-1.5 rounded-full transition-all duration-500 ${i === currentSlide ? "bg-primary w-6" : "bg-primary/20 w-1.5"}`}
+                        layout
                       />
                     ))}
                   </div>
-                </div>
+                </motion.div>
               </motion.div>
             </AnimatePresence>
           </div>
