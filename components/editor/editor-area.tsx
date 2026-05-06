@@ -87,8 +87,8 @@ marked.use(markedKatex({ throwOnError: false, nonStandard: true }));
 const renderer = new marked.Renderer();
 
 const CUSTOM_STYLE = {
-  margin: 0,
-  padding: '0.25rem 1rem',
+  margin: '-50px 0',
+  padding: '0.5rem 1.5rem 0.5rem 1.25rem',
   fontSize: '14px',
   lineHeight: '1.5',
   fontFamily: "'JetBrains Mono', ui-monospace, SFMono-Regular, monospace",
@@ -119,7 +119,7 @@ renderer.code = function(token) {
     };
     
     // Fallback style converted to inline CSS for the pre tag
-    const inlineStyle = "margin:0;padding:0.25rem 1rem;font-size: 14px;line-height:1.5;font-family:'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;background:transparent;";
+    const inlineStyle = "margin:0;margin-top: -50px;margin-bottom: -50px;padding:0.5rem 1.5rem 0.5rem 1.25rem;font-size: 14px;line-height:1.5;font-family:'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;background:transparent;";
     
     highlightedContent = `<pre style="${inlineStyle}"><code class="code-element outline-none block min-h-[20px] whitespace-pre print:whitespace-pre-wrap [font-variant-ligatures:none] font-mono" contenteditable="plaintext-only">${escapeHtml(code)}</code></pre>`;
   } else {
@@ -141,7 +141,7 @@ renderer.code = function(token) {
       // Inject contenteditable into the code tag after generation
       highlightedContent = highlightedContent.replace('<code', '<code contenteditable="plaintext-only"');
     } catch {
-      const inlineStyle = "margin:0;padding:0.25rem 1rem;font-size: 14px;line-height:1.5;font-family:'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;background:transparent;";
+      const inlineStyle = "margin:0;margin-top: -50px;margin-bottom: -50px;padding:0.5rem 1.5rem 0.5rem 1.25rem;font-size: 14px;line-height:1.5;font-family:'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;background:transparent;";
       const escapeHtml = (unsafe: string) => unsafe.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
       highlightedContent = `<pre style="${inlineStyle}"><code class="code-element outline-none block min-h-[20px] whitespace-pre print:whitespace-pre-wrap [font-variant-ligatures:none] font-mono" contenteditable="plaintext-only">${escapeHtml(code)}</code></pre>`;
     }
@@ -1057,7 +1057,7 @@ export const EditorArea = ({
                    }
                    
                    const preEl = document.createElement('pre');
-                   preEl.style.cssText = "margin:0;padding:0.25rem 1rem;font-size: 14px;line-height:1.5;font-family:'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;background:transparent;";
+                   preEl.style.cssText = "margin:0;margin-top: -50px;margin-bottom: -50px;padding:0.5rem 1.5rem 0.5rem 1.25rem;font-size: 14px;line-height:1.5;font-family:'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;background:transparent;";
                    
                    const codeEl = document.createElement('code');
                    codeEl.className = "code-element outline-none block min-h-[20px] whitespace-pre print:whitespace-pre-wrap [font-variant-ligatures:none] font-mono";
@@ -1688,7 +1688,7 @@ export const EditorArea = ({
                      .replace(/&/g, '&amp;')
                      .replace(/</g, '&lt;')
                      .replace(/>/g, '&gt;');
-                  const codeHtml = `<pre style="margin:0;padding:0.25rem 1rem;font-size: 14px;line-height:1.5;font-family:'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;background:transparent;"><code class="code-element outline-none block min-h-[20px] whitespace-pre print:whitespace-pre-wrap [font-variant-ligatures:none] font-mono" contenteditable="plaintext-only">${codeContent}</code></pre>`;
+                  const codeHtml = `<pre style="margin:0;margin-top: -50px;margin-bottom: -50px;padding:0.5rem 1.5rem 0.5rem 1.25rem;font-size: 14px;line-height:1.5;font-family:'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;background:transparent;"><code class="code-element outline-none block min-h-[20px] whitespace-pre print:whitespace-pre-wrap [font-variant-ligatures:none] font-mono" contenteditable="plaintext-only">${codeContent}</code></pre>`;
                   finalHtml += `<div class="code-block-wrapper border border-[#e5e7eb] dark:border-[#374151] rounded-md my-4 overflow-hidden not-prose shadow-sm max-w-full relative" contenteditable="false"><div class="bg-[#f8f9fa] dark:bg-[#1f2937] border-b border-[#e5e7eb] dark:border-[#374151] px-4 py-2 flex justify-between items-center text-[13px]"><div class="font-semibold text-[#6366f1] dark:text-[#818cf8] language-label flex items-center">${part.language}</div><div class="flex items-center gap-4"><button class="flex items-center gap-1 text-[#6366f1] dark:text-[#818cf8] hover:opacity-80 transition-opacity bg-transparent border-none cursor-pointer"><span class="text-xs">»</span> Open</button><button class="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-opacity bg-transparent border-none cursor-pointer copy-btn"><span class="copy-text">Copy</span></button><button class="flex items-center gap-1.5 text-slate-400 hover:text-red-500 transition-opacity bg-transparent border-none cursor-pointer delete-btn" title="Delete code block"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg></button></div></div><div class="bg-[#f4f7f9] dark:bg-[#0d1117] overflow-x-auto overflow-y-hidden w-full max-w-full code-container whitespace-pre print:whitespace-pre-wrap font-mono m-0 text-slate-800 dark:text-slate-200">${codeHtml}</div></div>`;
               } else {
                   const paragraphs = part.content.split(/\r?\n\r?\n/);
