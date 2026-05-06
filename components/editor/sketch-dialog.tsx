@@ -175,7 +175,7 @@ export function SketchDialog({ isOpen, onClose, onSave, initialStateString }: Sk
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()} disablePointerDismissal>
       <DialogContent 
         showCloseButton={false}
         className={cn(

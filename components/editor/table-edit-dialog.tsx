@@ -51,14 +51,16 @@ export const TableEditDialog = ({ isOpen, onClose, table, onConfirm }: TableEdit
       
       const wrapper = table.closest('.overflow-x-auto');
       let currentCurveLevel = 0;
-      if (wrapper && wrapper.classList.contains('rounded-table')) {
+      if (wrapper) {
         const classes = Array.from(wrapper.classList);
         const curveClass = classes.find(c => c.startsWith('rounded-') && c !== 'rounded-table');
-        const levelIndex = CURVE_LEVELS.findIndex(l => l.class === curveClass);
-        if (levelIndex !== -1) {
-          currentCurveLevel = levelIndex;
-        } else {
-          currentCurveLevel = 4;
+        if (curveClass) {
+          const levelIndex = CURVE_LEVELS.findIndex(l => l.class === curveClass);
+          if (levelIndex !== -1) {
+            currentCurveLevel = levelIndex;
+          } else {
+            currentCurveLevel = 4;
+          }
         }
       }
       setCurveLevel(currentCurveLevel);
@@ -314,15 +316,16 @@ export const TableEditDialog = ({ isOpen, onClose, table, onConfirm }: TableEdit
               </div>
               Table Settings
             </DialogTitle>
-            <DialogDescription className="pt-1">
+            <DialogDescription className="pt-1 text-xs sm:text-sm truncate">
               Customize your table dimensions and appearance.
             </DialogDescription>
           </DialogHeader>
         </div>
 
-        <div className="px-6 pt-4 bg-background flex flex-col md:flex-row gap-6 overflow-y-auto flex-1 custom-scrollbar">
-          <div className="w-full md:w-1/2 flex flex-col order-2 md:order-1">
-            <Tabs defaultValue="dimensions" className="w-full pb-2 flex-1">
+        <div className="px-4 sm:px-6 pt-2 bg-background flex flex-col md:flex-row gap-0 md:gap-6 overflow-y-auto flex-1 custom-scrollbar">
+          <div className="w-full md:w-1/2 order-2 md:order-1 pt-2 md:pt-0">
+            <Tabs defaultValue="dimensions" className="w-full pb-2">
+
               <TabsList className="grid w-full grid-cols-2 mb-4">
                 <TabsTrigger value="dimensions" className="flex items-center gap-2">
                   <LayoutGrid className="w-4 h-4" />
@@ -422,9 +425,9 @@ export const TableEditDialog = ({ isOpen, onClose, table, onConfirm }: TableEdit
             </Tabs>
           </div>
 
-          <div className="w-full md:w-1/2 pb-6 order-1 md:order-2">
+          <div className="w-full md:w-1/2 order-1 md:order-2">
             {/* Preview */}
-            <div className="space-y-3 h-full flex flex-col">
+            <div className="space-y-3">
               <div className="flex items-center justify-between h-9">
                 <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap mr-2 flex items-center gap-2">
                   Preview
@@ -479,11 +482,11 @@ export const TableEditDialog = ({ isOpen, onClose, table, onConfirm }: TableEdit
                    </div>
                 )}
               </div>
-              <div className="border border-border/50 rounded-xl p-4 bg-muted/20 overflow-hidden relative group flex flex-col">
+              <div className="border border-border/50 rounded-xl p-4 bg-muted/20 overflow-hidden relative group">
                 <div className="absolute inset-0 bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] dark:bg-[radial-gradient(#374151_1px,transparent_1px)] [background-size:16px_16px] opacity-40 pointer-events-none" onClick={() => setSelectedCell(null)}></div>
                 
-                <div className={`relative z-10 bg-background/80 backdrop-blur-md shadow-sm overflow-x-auto overflow-y-auto max-h-[164px] w-full custom-scrollbar ${isRounded ? `rounded-table ${previewCurveClass} border border-border` : ''}`}>
-                  <table id="table-settings-preview" className={`w-full border-collapse ${isRounded ? 'border-0' : 'border border-border/50'}`}>
+                <div className={`relative z-10 bg-background/80 backdrop-blur-md shadow-sm overflow-x-auto overflow-y-auto max-h-[164px] w-full custom-scrollbar ${isRounded ? `overflow-hidden rounded-table ${previewCurveClass} border border-border` : ''}`}>
+                  <table id="table-settings-preview" className={`w-full border-collapse ${isRounded ? 'border-hidden' : 'border border-border/50'}`}>
                     <thead className="relative z-20">
                       <tr>
                         {Array.from({ length: previewCols }).map((_, i) => (

@@ -3,7 +3,7 @@
 @import "tw-animate-css";
 @plugin "@tailwindcss/typography";
 
-@custom-variant dark (&:is(.dark *));
+@custom-variant dark (&:is(.dark *, .dracula *, .nord *));
 
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;

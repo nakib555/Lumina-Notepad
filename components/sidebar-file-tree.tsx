@@ -596,12 +596,12 @@ export function SidebarFileTree({
     >
       <div className="flex items-center justify-between overflow-hidden w-full pointer-events-none">
         <div className="flex items-center gap-2 overflow-hidden w-full">
-          <span className="text-muted-foreground shrink-0 w-3.5 h-3.5 flex items-center justify-center transition-transform group-hover:scale-110">
-              <FileText className={cn("w-3.5 h-3.5 transition-colors", activeNoteId === note.id ? "text-primary drop-shadow-[0_0_4px_rgba(var(--primary),0.3)]" : "text-foreground/40 group-hover:text-foreground/70")} />
+          <span className="text-foreground opacity-60 shrink-0 w-3.5 h-3.5 flex items-center justify-center transition-transform group-hover:scale-110">
+              <FileText className={cn("w-3.5 h-3.5 transition-colors", activeNoteId === note.id ? "text-primary drop-shadow-[0_0_4px_rgba(var(--primary),0.3)]" : "text-foreground opacity-60 group-hover:opacity-100")} />
           </span>
           <span className={cn(
             "text-sm truncate mr-2 transition-colors",
-            activeNoteId === note.id ? "text-primary font-medium" : "font-medium text-foreground/80 group-hover:text-foreground"
+            activeNoteId === note.id ? "text-primary font-medium" : "font-medium text-foreground opacity-70 group-hover:opacity-100"
           )}>
             {note.title || "Untitled Note"}
           </span>
@@ -609,7 +609,7 @@ export function SidebarFileTree({
         <Button
           variant="ghost"
           size="icon"
-          className="opacity-0 group-hover:opacity-100 h-6 w-6 shrink-0 text-muted-foreground hover:text-destructive transition-all pointer-events-auto"
+          className="h-6 w-6 shrink-0 text-foreground opacity-50 hover:opacity-100 hover:text-destructive transition-all pointer-events-auto"
           onClick={(e) => {
             e.stopPropagation();
             openDeleteNoteDialog(note);
@@ -655,16 +655,16 @@ export function SidebarFileTree({
           onClick={() => toggleFolder(folder.id)}
         >
           <div className="flex items-center gap-2 overflow-hidden w-full pointer-events-none">
-            <span className="text-muted-foreground/70 shrink-0 transition-transform group-hover:text-foreground">
+            <span className="text-foreground opacity-60 shrink-0 transition-transform group-hover:opacity-100">
               {isExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
             </span>
             <Folder className="w-4 h-4 text-primary/80 shrink-0" />
-            <span className="text-sm font-medium text-foreground/90 truncate mr-2 w-full group-hover:text-foreground transition-colors">
+            <span className="text-sm font-medium text-foreground opacity-70 truncate mr-2 w-full group-hover:opacity-100 transition-colors">
               {folder.name}
             </span>
           </div>
 
-          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className="flex items-center gap-1 transition-opacity opacity-50 hover:opacity-100 text-foreground">
             <DropdownMenu>
               <DropdownMenuTrigger className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "h-6 w-6")} onClick={(e) => e.stopPropagation()}>
                 <MoreHorizontal className="w-3 h-3" />
@@ -786,7 +786,7 @@ export function SidebarFileTree({
         <div className="sticky top-0 z-20 flex items-center justify-between px-3 py-1.5 mb-2 -mt-2 bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60 -mx-2 rounded-t-md border-b border-border/30">
           <div className="flex items-center gap-2">
             <div className="w-1 h-3 rounded-full bg-gradient-to-b from-primary/80 to-primary/30" aria-hidden="true" />
-            <span className="text-[11px] font-bold text-foreground/70 uppercase tracking-widest">Explorer</span>
+            <span className="text-[11px] font-bold text-foreground opacity-70 uppercase tracking-widest">Explorer</span>
           </div>
           <div className="flex items-center gap-0.5">
             <Button
