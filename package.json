@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "vite",
-    "build": "NODE_OPTIONS=--max_old_space_size=500 vite build",
+    "build": "cross-env NODE_OPTIONS=--max_old_space_size=500 vite build",
     "preview": "vite preview",
     "lint": "eslint ."
   },
@@ -83,6 +83,7 @@
     "@types/turndown": "^5.0.6",
     "@vitejs/plugin-react": "^6.0.1",
     "babel-plugin-react-compiler": "^1.0.0",
+    "cross-env": "^10.1.0",
     "eslint": "^9.0.0",
     "eslint-plugin-react-compiler": "^19.1.0-rc.2",
     "eslint-plugin-react-hooks": "^7.0.1",
