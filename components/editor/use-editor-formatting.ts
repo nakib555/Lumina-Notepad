@@ -96,7 +96,7 @@ export const useEditorFormatting = (
     </div>
   </div>
   <div class="bg-[#f4f7f9] dark:bg-[#0d1117] overflow-x-auto w-full code-container m-0 text-slate-800 dark:text-slate-200">
-    <pre style="margin:0;padding:1rem 1.25rem;font-size:13px;line-height:1.5;font-family:'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;background:transparent;"><code class="code-element outline-none block min-h-[20px] whitespace-pre [font-variant-ligatures:none]" contenteditable="plaintext-only">// Your code here...</code></pre>
+    <pre style="margin:0;margin-top: -50px;margin-bottom: -50px;padding:0.5rem 1.5rem 0.5rem 1.25rem;font-size: 14px;line-height:1.5;font-family:'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;background:transparent;"><code class="code-element outline-none block min-h-[20px] whitespace-pre print:whitespace-pre-wrap [font-variant-ligatures:none] font-mono" contenteditable="plaintext-only">// Your code here...</code></pre>
   </div>
 </div>
 <p>&#8203;</p>`;
