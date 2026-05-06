@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, lazy, Suspense } from "react";
 import { useNotes } from "@/hooks/use-notes";
-import { motion } from "motion/react";
+import { motion, AnimatePresence } from "motion/react";
 import { Loader2 } from "lucide-react";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { AutoUpdater } from "@/components/auto-updater";
@@ -8,6 +8,8 @@ import { App as CapacitorApp } from "@capacitor/app";
 import { StatusBar, Style } from "@capacitor/status-bar";
 import { Capacitor } from "@capacitor/core";
 import { toast } from "sonner";
+import { IntroSequence } from "@/components/intro-sequence";
+import { SplashScreen } from "@/components/splash-screen";
 
 const Editor = lazy(() => import("@/components/editor").then(m => ({ default: m.Editor })));
 const CommandPalette = lazy(() => import("@/components/command-palette").then(m => ({ default: m.CommandPalette })));
@@ -32,6 +34,12 @@ export default function App() {
     reorderFolder,
     isLoaded
   } = useNotes();
+
+  const [showSplash, setShowSplash] = useState(true);
+
+  const [hasSeenIntro, setHasSeenIntro] = useState(() => {
+    return localStorage.getItem('lumina-has-seen-intro') === 'true';
+  });
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -249,12 +257,24 @@ export default function App() {
   return (
     <ErrorBoundary>
       {isLoaded && (
-        <motion.div 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.8, delay: 0.2 }}
-          className="flex h-[100dvh] w-full bg-background overflow-hidden relative print:h-auto print:overflow-visible"
-        >
+        <>
+          <AnimatePresence mode="wait">
+            {showSplash ? (
+              <SplashScreen key="splash" onComplete={() => setShowSplash(false)} />
+            ) : !hasSeenIntro ? (
+              <IntroSequence key="intro" onComplete={() => {
+                setHasSeenIntro(true);
+                localStorage.setItem('lumina-has-seen-intro', 'true');
+              }} />
+            ) : null}
+          </AnimatePresence>
+          
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.8, delay: 0.2 }}
+            className="flex h-[100dvh] w-full bg-background overflow-hidden relative print:h-auto print:overflow-visible"
+          >
           <AutoUpdater />
           <Suspense fallback={<div className="w-80 h-full border-r border-border shrink-0 bg-background" />}>
             <Sidebar 
@@ -300,6 +320,7 @@ export default function App() {
             />
           </Suspense>
         </motion.div>
+        </>
       )}
     </ErrorBoundary>
   );
