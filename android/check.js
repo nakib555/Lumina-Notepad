@@ -1,1 +1,0 @@
-fetch('https://goog-65o.pages.dev/updates/download?file=Lumina Notepad.apk').then(r => { console.log(r.status, r.headers.get('content-type')); return r.text(); }).then(t => console.log(t.substring(0, 100)))

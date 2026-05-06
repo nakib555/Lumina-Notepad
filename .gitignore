@@ -1,4 +1,7 @@
 node_modules/
+dist/
+android/
+ios/
 .next/
 coverage/
 .DS_Store

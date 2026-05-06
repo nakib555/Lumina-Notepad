@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, lazy, Suspense } from "react";
 import { useNotes } from "@/hooks/use-notes";
-import { AnimatePresence, motion } from "motion/react";
-import { Feather, Layers, ArrowRight, Edit3, ImageIcon, Eye, Loader2 } from "lucide-react";
+import { motion } from "motion/react";
+import { Loader2 } from "lucide-react";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { AutoUpdater } from "@/components/auto-updater";
 import { App as CapacitorApp } from "@capacitor/app";
@@ -13,38 +13,7 @@ const Editor = lazy(() => import("@/components/editor").then(m => ({ default: m.
 const CommandPalette = lazy(() => import("@/components/command-palette").then(m => ({ default: m.CommandPalette })));
 const Sidebar = lazy(() => import("@/components/sidebar").then(m => ({ default: m.Sidebar })));
 
-const INTRO_SLIDES = [
-  {
-    icon: Feather,
-    title: "Write with clarity",
-    desc: "A distraction-free markdown environment designed to help you focus on what matters most\\u2014your thoughts.",
-    button: "Next"
-  },
-  {
-    icon: Edit3,
-    title: "Rich Formatting Tools",
-    desc: "Use the bottom floating toolbar for instant Markdown styles, or invoke robust Smart Tables and mathematical formulas.",
-    button: "Next"
-  },
-  {
-    icon: ImageIcon,
-    title: "Media & Code Options",
-    desc: "Seamlessly insert images that automatically resize, plus insert logic-driven syntax highlighted code blocks for your programming needs.",
-    button: "Next"
-  },
-  {
-    icon: Layers,
-    title: "Organize effortlessly",
-    desc: "Use context tags to keep your notes perfectly organized without any manual work.",
-    button: "Next"
-  },
-  {
-    icon: Eye,
-    title: "View Mode & Exports",
-    desc: "Toggle Read-Only View mode to safely review your notes lock-in, and securely export them as PDF, Markdown, or Plain Text files.",
-    button: "Get Started"
-  }
-];
+
 
 export default function App() {
   const {

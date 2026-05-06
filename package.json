@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "NODE_OPTIONS=--max_old_space_size=500 vite build",
     "preview": "vite preview",
     "lint": "eslint ."
   },
