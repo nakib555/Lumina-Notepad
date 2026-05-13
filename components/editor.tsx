@@ -62,6 +62,28 @@ export function Editor({
   const [isEraserMode, setIsEraserMode] = useState(false);
   const savedRangeRef = useRef<Range | null>(null);
 
+  const [isNoteTransitioning, setIsNoteTransitioning] = useState(false);
+  const [displayNoteId, setDisplayNoteId] = useState(note?.id);
+  const [showLoading, setShowLoading] = useState(false);
+
+  useEffect(() => {
+    if (note?.id !== displayNoteId) {
+      setIsNoteTransitioning(true);
+      const fadeOutTimer = setTimeout(() => {
+        setShowLoading(true);
+        setDisplayNoteId(note?.id);
+        const fadeInTimer = setTimeout(() => {
+          setShowLoading(false);
+          setIsNoteTransitioning(false);
+        }, 150); // Show loading spinner for a short moment
+      }, 200); // Wait for fade out
+      
+      return () => {
+        clearTimeout(fadeOutTimer);
+      };
+    }
+  }, [note?.id, displayNoteId]);
+
   const {
     history,
     historyIndex,
@@ -397,22 +419,31 @@ export function Editor({
           )}
           
           <div 
-            className={cn("flex-1 mt-2 transition-all", pendingSketchSvg && !showSketchConfirm && "cursor-crosshair ring-2 ring-primary/50 ring-offset-2 rounded-xl border border-primary border-dashed p-2 bg-primary/5")}
+            className={cn("flex-1 mt-2 transition-all duration-200", 
+              isNoteTransitioning ? "opacity-0 scale-[0.98]" : "opacity-100 scale-100",
+              pendingSketchSvg && !showSketchConfirm && "cursor-crosshair ring-2 ring-primary/50 ring-offset-2 rounded-xl border border-primary border-dashed p-2 bg-primary/5")}
             onMouseUp={pendingSketchSvg && !showSketchConfirm ? handleEditorClickForSketch : undefined}
           >
-            <EditorArea 
-              editorAreaRef={editorAreaRef}
-              content={note.content}
-              theme={theme}
-              handleContentChange={handleContentChange}
-              handleDrop={handleDrop}
-              handleDragOver={handleDragOver}
-              noteId={note.id}
-              textareaRef={textareaRef}
-              isAutoMarkdownEnabled={isAutoMarkdownEnabled}
-              isViewMode={isViewMode}
-              isEraserMode={isEraserMode}
-            />
+            {showLoading ? (
+              <div className="w-full h-full min-h-[500px] flex flex-col items-center justify-center text-muted-foreground animate-in fade-in zoom-in-95 duration-200">
+                <Loader2 className="w-8 h-8 animate-spin text-primary mb-4" />
+                <span className="text-sm font-medium">Preparing space...</span>
+              </div>
+            ) : (
+              <EditorArea 
+                editorAreaRef={editorAreaRef}
+                content={note.content}
+                theme={theme}
+                handleContentChange={handleContentChange}
+                handleDrop={handleDrop}
+                handleDragOver={handleDragOver}
+                noteId={note.id}
+                textareaRef={textareaRef}
+                isAutoMarkdownEnabled={isAutoMarkdownEnabled}
+                isViewMode={isViewMode}
+                isEraserMode={isEraserMode}
+              />
+            )}
           </div>
         </div>
       </div>

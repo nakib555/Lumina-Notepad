@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
+import { Preferences } from '@capacitor/preferences';
 
 export interface Folder {
   id: string;
@@ -31,82 +32,83 @@ export interface Note {
   date?: string; // YYYY-MM-DD for daily notes
 }
 
+const defaultNotes: Note[] = [{
+  id: uuidv4(),
+  title: 'Welcome to Lumina Notes',
+  content: 'Start typing here...\n\nYour notes are automatically saved and synced to your device.',
+  tags: ['getting-started'],
+  updatedAt: Date.now(),
+}];
+
 export function useNotes() {
-  const [folders, setFolders] = useState<Folder[]>(() => {
-    if (typeof window !== 'undefined') {
-      const savedFolders = localStorage.getItem('lumina-folders');
-      if (savedFolders) {
-        try {
-          return JSON.parse(savedFolders);
-        } catch (e) {
-          console.error('Failed to parse folders', e);
-        }
-      }
-    }
-    return [];
-  });
-
-  const [notes, setNotes] = useState<Note[]>(() => {
-    if (typeof window !== 'undefined') {
-      const savedNotes = localStorage.getItem('lumina-notes');
-      if (savedNotes) {
-        try {
-          const parsed = JSON.parse(savedNotes);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            return parsed;
-          }
-        } catch (e) {
-          console.error('Failed to parse notes', e);
-        }
-      }
-    }
-    return [{
-      id: uuidv4(),
-      title: 'Welcome to Lumina Notes',
-      content: 'Start typing here...\n\nYour notes are automatically saved to your browser.',
-      tags: ['getting-started'],
-      updatedAt: Date.now(),
-    }];
-  });
-
-  const [activeNoteId, setActiveNoteId] = useState<string | null>(() => {
-    if (typeof window !== 'undefined') {
-      const savedNotes = localStorage.getItem('lumina-notes');
-      if (savedNotes) {
-        try {
-          const parsed = JSON.parse(savedNotes);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            return parsed[0].id;
-          }
-        } catch (e) {
-          console.error('Failed to parse notes', e);
-        }
-      }
-    }
-    return notes.length > 0 ? notes[0].id : null;
-  });
-
+  const [folders, setFolders] = useState<Folder[]>([]);
+  const [notes, setNotes] = useState<Note[]>(defaultNotes);
+  const [activeNoteId, setActiveNoteId] = useState<string | null>(notes[0].id);
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setIsLoaded(true);
+    const loadData = async () => {
+      if (typeof window === 'undefined') {
+        setIsLoaded(true);
+        return;
+      }
+      
+      try {
+        const foldersItem = await Preferences.get({ key: 'lumina-folders' });
+        if (foldersItem.value) {
+          setFolders(JSON.parse(foldersItem.value));
+        }
+
+        const notesItem = await Preferences.get({ key: 'lumina-notes' });
+        let loadedNotes = [];
+        if (notesItem.value) {
+          const parsed = JSON.parse(notesItem.value);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            loadedNotes = parsed;
+            setNotes(parsed);
+          }
+        }
+
+        const activeItem = await Preferences.get({ key: 'lumina-active-note' });
+        if (activeItem.value) {
+          setActiveNoteId(activeItem.value);
+        } else if (loadedNotes.length > 0) {
+          setActiveNoteId(loadedNotes[0].id);
+        }
+      } catch (e) {
+        console.error('Failed to parse data from preferences', e);
+        // Fallback to localstorage just in case it's an initial migration
+        try {
+          const lsNotes = localStorage.getItem('lumina-notes');
+          if (lsNotes) setNotes(JSON.parse(lsNotes));
+          const lsFolders = localStorage.getItem('lumina-folders');
+          if (lsFolders) setFolders(JSON.parse(lsFolders));
+        } catch (e2) {}
+      } finally {
+        setIsLoaded(true);
+      }
+    };
+    
+    loadData();
   }, []);
 
   useEffect(() => {
-    if (isLoaded) {
-      const timeoutId = setTimeout(() => {
+    if (isLoaded && typeof window !== 'undefined') {
+      const timeoutId = setTimeout(async () => {
         try {
-          localStorage.setItem('lumina-notes', JSON.stringify(notes));
-          localStorage.setItem('lumina-folders', JSON.stringify(folders));
+          await Preferences.set({ key: 'lumina-notes', value: JSON.stringify(notes) });
+          await Preferences.set({ key: 'lumina-folders', value: JSON.stringify(folders) });
+          if (activeNoteId) {
+            await Preferences.set({ key: 'lumina-active-note', value: activeNoteId });
+          }
         } catch (e) {
-          console.error("Failed to save state to localStorage", e);
+          console.error("Failed to save state to preferences", e);
         }
       }, 500);
       
       return () => clearTimeout(timeoutId);
     }
-  }, [notes, folders, isLoaded]);
+  }, [notes, folders, activeNoteId, isLoaded]);
 
   const activeNote = notes.find(n => n.id === activeNoteId) || null;
 

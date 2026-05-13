@@ -266,6 +266,11 @@
   }
 }
 
+.prose > * {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 50px;
+}
+
 .prose u {
   text-decoration: underline;
 }

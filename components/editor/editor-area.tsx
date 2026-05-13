@@ -1097,6 +1097,21 @@ export const EditorArea = ({
              
              const markerEl = previewRef.current.querySelector('#caret-marker');
              if (markerEl) {
+                 // Ensure the marker is in view for horizontal scrolling containers like tables
+                 let scrollContainer = markerEl.parentElement;
+                 while (scrollContainer && scrollContainer !== previewRef.current) {
+                     if (scrollContainer.scrollWidth > scrollContainer.clientWidth) {
+                         const containerRect = scrollContainer.getBoundingClientRect();
+                         const markerRect = markerEl.getBoundingClientRect();
+                         if (markerRect.right > containerRect.right) {
+                             scrollContainer.scrollLeft += (markerRect.right - containerRect.right) + 40;
+                         } else if (markerRect.left < containerRect.left) {
+                             scrollContainer.scrollLeft -= (containerRect.left - markerRect.left) + 40;
+                         }
+                     }
+                     scrollContainer = scrollContainer.parentElement;
+                 }
+
                  const newRange = document.createRange();
                  const parent = markerEl.parentNode;
                  
