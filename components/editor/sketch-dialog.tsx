@@ -1,13 +1,17 @@
-import { useState, useRef, useEffect } from "react";
-import { Excalidraw, exportToSvg, loadLibraryFromBlob } from "@excalidraw/excalidraw";
-import "@excalidraw/excalidraw/index.css";
+import { useState, useRef, useEffect, lazy, Suspense } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Loader2, PenTool, Maximize2, Minimize2, Check, X, Library, Download, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-// Set the path to load excalidraw assets (fonts) to fix the TypeError: Failed to fetch
+// Excalidraw CSS
+import "@excalidraw/excalidraw/index.css";
+
+// Lazy load the Excalidraw component
+const ExcalidrawComponent = lazy(() => import("@excalidraw/excalidraw").then(module => ({ default: module.Excalidraw })));
+
+// Set the path to load excalidraw assets (fonts)
 if (typeof window !== "undefined") {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (window as any).EXCALIDRAW_ASSET_PATH = "https://unpkg.com/@excalidraw/excalidraw@0.18.1/dist/prod/";
@@ -110,6 +114,7 @@ export function SketchDialog({ isOpen, onClose, onSave, initialStateString }: Sk
     if (!excalidrawAPIRef.current) return;
     setInstallingLibraryId(library.id);
     try {
+      const { loadLibraryFromBlob } = await import("@excalidraw/excalidraw");
       const res = await fetch(`https://libraries.excalidraw.com/libraries/${library.source}`);
       if (!res.ok) throw new Error("Failed to download library");
       const blob = await res.blob();
@@ -137,6 +142,7 @@ export function SketchDialog({ isOpen, onClose, onSave, initialStateString }: Sk
     setIsExporting(true);
     
     try {
+      const { exportToSvg } = await import("@excalidraw/excalidraw");
       const elements = excalidrawAPIRef.current.getSceneElements();
       const appState = excalidrawAPIRef.current.getAppState();
       
@@ -245,22 +251,24 @@ export function SketchDialog({ isOpen, onClose, onSave, initialStateString }: Sk
           <div className="absolute inset-0 z-0 bg-grid-black/[0.02]" />
           <div className="absolute inset-0 z-10 w-full h-full">
             {isOpen && (
-              <Excalidraw
-                initialData={initialStateString ? JSON.parse(initialStateString) : undefined}
-                excalidrawAPI={(api) => { excalidrawAPIRef.current = api; }}
-                theme="light"
-                UIOptions={{
-                  canvasActions: {
-                    changeViewBackgroundColor: true,
-                    clearCanvas: true,
-                    loadScene: false,
-                    export: false,
-                    saveToActiveFile: false,
-                    saveAsImage: false,
-                    toggleTheme: true,
-                  }
-                }}
-              />
+              <Suspense fallback={<div className="w-full h-full flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-muted-foreground" /></div>}>
+                <ExcalidrawComponent
+                  initialData={initialStateString ? JSON.parse(initialStateString) : undefined}
+                  excalidrawAPI={(api) => { excalidrawAPIRef.current = api; }}
+                  theme="light"
+                  UIOptions={{
+                    canvasActions: {
+                      changeViewBackgroundColor: true,
+                      clearCanvas: true,
+                      loadScene: false,
+                      export: false,
+                      saveToActiveFile: false,
+                      saveAsImage: false,
+                      toggleTheme: true,
+                    }
+                  }}
+                />
+              </Suspense>
             )}
           </div>
           

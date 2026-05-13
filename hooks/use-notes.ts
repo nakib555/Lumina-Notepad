@@ -95,8 +95,16 @@ export function useNotes() {
 
   useEffect(() => {
     if (isLoaded) {
-      localStorage.setItem('lumina-notes', JSON.stringify(notes));
-      localStorage.setItem('lumina-folders', JSON.stringify(folders));
+      const timeoutId = setTimeout(() => {
+        try {
+          localStorage.setItem('lumina-notes', JSON.stringify(notes));
+          localStorage.setItem('lumina-folders', JSON.stringify(folders));
+        } catch (e) {
+          console.error("Failed to save state to localStorage", e);
+        }
+      }, 500);
+      
+      return () => clearTimeout(timeoutId);
     }
   }, [notes, folders, isLoaded]);
 

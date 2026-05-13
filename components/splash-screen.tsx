@@ -5,12 +5,16 @@ export function SplashScreen({ onComplete }: { onComplete: () => void }) {
   const [isVisible, setIsVisible] = useState(true);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
+    let innerTimer: ReturnType<typeof setTimeout>;
+    const outerTimer = setTimeout(() => {
       setIsVisible(false);
-      setTimeout(onComplete, 1200); // 0.4s logo exit + 0.8s background exit
+      innerTimer = setTimeout(onComplete, 1200); // 0.4s logo exit + 0.8s background exit
     }, 2800); 
 
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(outerTimer);
+      if (innerTimer) clearTimeout(innerTimer);
+    };
   }, [onComplete]);
 
   return (

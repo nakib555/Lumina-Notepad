@@ -40,6 +40,16 @@ export default function App() {
   });
   const [showSplash, setShowSplash] = useState(true);
 
+  // Memoize handlers to prevent effect re-runs inside splash/intro
+  const handleSplashComplete = useCallback(() => {
+    setShowSplash(false);
+  }, []);
+
+  const handleIntroComplete = useCallback(() => {
+    setHasSeenIntro(true);
+    localStorage.setItem('lumina-has-seen-intro', 'true');
+  }, []);
+
   const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
     if (typeof window !== 'undefined') {
       return window.matchMedia('(min-width: 768px)').matches;
@@ -259,12 +269,9 @@ export default function App() {
         <>
           <AnimatePresence mode="wait">
             {showSplash ? (
-              <SplashScreen key="splash" onComplete={() => setShowSplash(false)} />
+              <SplashScreen key="splash" onComplete={handleSplashComplete} />
             ) : !hasSeenIntro ? (
-              <IntroSequence key="intro" onComplete={() => {
-                setHasSeenIntro(true);
-                localStorage.setItem('lumina-has-seen-intro', 'true');
-              }} />
+              <IntroSequence key="intro" onComplete={handleIntroComplete} />
             ) : null}
           </AnimatePresence>
           <AnimatePresence>

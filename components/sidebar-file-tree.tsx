@@ -154,9 +154,10 @@ export function SidebarFileTree({
   };
 
   const filteredNotes = useMemo(() => {
+    const q = searchQuery.toLowerCase();
     return notes.filter(note => {
-      const matchesSearch = note.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                           note.content.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesSearch = !q || note.title.toLowerCase().includes(q) || 
+                           note.content.toLowerCase().includes(q);
       const matchesTags = selectedTags.length === 0 || selectedTags.every(tag => note.tags?.includes(tag));
       return matchesSearch && matchesTags;
     });
