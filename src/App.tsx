@@ -11,9 +11,9 @@ import { toast } from "sonner";
 import { IntroSequence } from "@/components/intro-sequence";
 import { SplashScreen } from "@/components/splash-screen";
 
-const Editor = lazy(() => import("@/components/editor").then(m => ({ default: m.Editor })));
-const CommandPalette = lazy(() => import("@/components/command-palette").then(m => ({ default: m.CommandPalette })));
-const Sidebar = lazy(() => import("@/components/sidebar").then(m => ({ default: m.Sidebar })));
+const Editor = lazy(() => import("@/components/editor.tsx").then(m => ({ default: m.Editor })));
+const CommandPalette = lazy(() => import("@/components/command-palette.tsx").then(m => ({ default: m.CommandPalette })));
+const Sidebar = lazy(() => import("@/components/sidebar.tsx").then(m => ({ default: m.Sidebar })));
 
 
 
@@ -267,13 +267,14 @@ export default function App() {
               }} />
             ) : null}
           </AnimatePresence>
-          
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.8, delay: 0.2 }}
-            className="flex h-[100dvh] w-full bg-background overflow-hidden relative print:h-auto print:overflow-visible"
-          >
+          <AnimatePresence>
+            {(!showSplash && hasSeenIntro) && (
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.8 }}
+                className="flex h-[100dvh] w-full bg-background overflow-hidden relative print:h-auto print:overflow-visible"
+              >
           <AutoUpdater />
           <Suspense fallback={<div className="w-80 h-full border-r border-border shrink-0 bg-background" />}>
             <Sidebar 
@@ -318,7 +319,9 @@ export default function App() {
               onThemeChange={setTheme}
             />
           </Suspense>
-        </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </>
       )}
     </ErrorBoundary>
