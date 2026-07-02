@@ -52,17 +52,14 @@ export default defineConfig({
       }
     })
   ],
+  esbuild: {
+    drop: ['console', 'debugger'],
+  },
   build: {
     target: 'esnext',
     cssCodeSplit: true,
-    chunkSizeWarningLimit: 5000,
-    minify: 'terser',
-    terserOptions: {
-      compress: {
-        drop_console: true,
-        drop_debugger: true
-      }
-    },
+    chunkSizeWarningLimit: 10000,
+    minify: 'esbuild',
     rollupOptions: {
       output: {
         manualChunks(id) {

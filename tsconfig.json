@@ -19,8 +19,7 @@
     "types": ["vite/client", "vite-plugin-pwa/client"],
     "paths": {
       "@/*": ["./*"]
-    },
-    "types": ["vite/client"]
+    }
   },
   "include": ["src", "**/*.ts", "**/*.tsx"],
   "exclude": ["node_modules"]
