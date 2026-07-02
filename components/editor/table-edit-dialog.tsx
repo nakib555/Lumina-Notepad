@@ -553,7 +553,7 @@ export const TableEditDialog = ({ isOpen, onClose, table, onConfirm }: TableEdit
                             contentEditable={!isKeyboardLocked}
                             suppressContentEditableWarning
                             onBlur={(e) => handleCellTextChange(-1, i, e.currentTarget.innerHTML)}
-                            dangerouslySetInnerHTML={{ __html: tableData.headers[i] ?? `Header ${i + 1}` }}
+                            dangerouslySetInnerHTML={{ __html: tableData.headers[i] || '<br>' }}
                           />
                         ))}
                       </tr>
@@ -601,7 +601,7 @@ export const TableEditDialog = ({ isOpen, onClose, table, onConfirm }: TableEdit
                               contentEditable={!isKeyboardLocked}
                               suppressContentEditableWarning
                               onBlur={(e) => handleCellTextChange(r, c, e.currentTarget.innerHTML)}
-                              dangerouslySetInnerHTML={{ __html: tableData.rows[r]?.[c] ?? '' }}
+                              dangerouslySetInnerHTML={{ __html: tableData.rows[r]?.[c] || '<br>' }}
                             />
                           ))}
                         </tr>

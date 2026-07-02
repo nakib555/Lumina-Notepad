@@ -416,3 +416,10 @@ body.search-is-active *::selection {
   }
 }
 
+/* Ensure empty table cells have a minimum height and don't collapse */
+td:empty::before, th:empty::before {
+  content: "\200B";
+  display: inline-block;
+}
+
+

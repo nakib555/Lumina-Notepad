@@ -213,6 +213,10 @@ const parseMarkdown = (text: string) => {
   // Natively in Chromium/Firefox empty <p></p> collapses to 0 height, making trailing newlines disappear visually.
   // We insert a <br> inside empty paragraphs so they render visually exactly as a newline.
   finalHtml = finalHtml.replace(/<p><\/p>/g, '<p><br></p>');
+
+  // Ensure empty table cells have a <br> inside so they do not collapse in height and are clickable/editable
+  finalHtml = finalHtml.replace(/<td([^>]*)>\s*<\/td>/gi, '<td$1><br></td>');
+  finalHtml = finalHtml.replace(/<th([^>]*)>\s*<\/th>/gi, '<th$1><br></th>');
   
   // To ensure the cursor can always explicitly leave a completely trailing contenteditable="false" block (like CodeBlock or Table)
   // We forcibly append an editable empty paragraph at the very end if the html does not end with one.
