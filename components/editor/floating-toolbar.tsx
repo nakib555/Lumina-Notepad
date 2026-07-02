@@ -3,7 +3,7 @@ import {
   Bold, Italic, Underline, Strikethrough, Subscript, Superscript, 
   Quote, Code, Terminal, Link, Image, Minus, Table, List, ListOrdered, ListTodo, PenTool,
   Heading1, Heading2, Heading3, Sigma, MousePointer2, ArrowLeft, ArrowRight, ArrowUp, ArrowDown, Scissors, Copy, ClipboardPaste, X, Eraser,
-  AlignLeft, AlignCenter, AlignRight, Wand2, Bookmark, ChevronLeft, ChevronRight, Search, ChevronDown, ChevronUp, CornerDownRight
+  AlignLeft, AlignCenter, AlignRight, Wand2, Bookmark, ChevronLeft, ChevronRight, Search, ChevronDown, ChevronUp, CornerDownRight, Sparkles
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -34,6 +34,7 @@ interface FloatingToolbarProps {
   setIsAutoMarkdownEnabled: (enabled: boolean) => void;
   showSymbolMenu: boolean;
   setShowSymbolMenu: (show: boolean) => void;
+  onOpenAiAssistant?: () => void;
 }
 
 const getSearchRanges = (container: HTMLElement, query: string): Range[] => {
@@ -117,7 +118,8 @@ export const FloatingToolbar = ({
   isAutoMarkdownEnabled,
   setIsAutoMarkdownEnabled,
   showSymbolMenu,
-  setShowSymbolMenu
+  setShowSymbolMenu,
+  onOpenAiAssistant
 }: FloatingToolbarProps) => {
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [isSelecting, setIsSelecting] = useState(false);
@@ -1279,6 +1281,16 @@ export const FloatingToolbar = ({
 
       {/* Symbol & Magic Group */}
       <div className="flex items-center gap-0.5 pl-1">
+        <Button
+          onPointerDown={(e) => e.preventDefault()}
+          variant="ghost"
+          size="icon"
+          onClick={onOpenAiAssistant}
+          className="h-8 w-8 text-violet-500 hover:text-violet-600 dark:text-violet-400 hover:bg-violet-500/10 rounded-lg shrink-0"
+          title="AI Assistant (Gemini)"
+        >
+          <Sparkles className="w-4 h-4 text-violet-500 dark:text-violet-400 fill-violet-500/20" />
+        </Button>
         <Button
           onPointerDown={(e) => e.preventDefault()}
           variant="ghost"

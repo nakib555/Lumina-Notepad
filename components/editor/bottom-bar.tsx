@@ -40,6 +40,7 @@ interface BottomBarProps {
   onInsertSketchClick?: () => void;
   isAutoMarkdownEnabled: boolean;
   setIsAutoMarkdownEnabled: (enabled: boolean) => void;
+  onOpenAiAssistant?: () => void;
 }
 
 export const BottomBar = ({
@@ -69,7 +70,8 @@ export const BottomBar = ({
   onInsertLinkClick,
   onInsertSketchClick,
   isAutoMarkdownEnabled,
-  setIsAutoMarkdownEnabled
+  setIsAutoMarkdownEnabled,
+  onOpenAiAssistant
 }: BottomBarProps) => {
 
   return (
@@ -159,6 +161,7 @@ export const BottomBar = ({
           setIsAutoMarkdownEnabled={setIsAutoMarkdownEnabled}
           showSymbolMenu={showSymbolMenu}
           setShowSymbolMenu={setShowSymbolMenu}
+          onOpenAiAssistant={onOpenAiAssistant}
         />
       </div>
     </div>

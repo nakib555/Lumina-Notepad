@@ -1,5 +1,7 @@
 import { useState, useRef, useEffect, useCallback, Suspense, lazy } from "react";
 import TextareaAutosize from 'react-textarea-autosize';
+import { marked } from "marked";
+import { AiAssistantDialog } from "./editor/ai-assistant-dialog";
 import { Note } from "@/hooks/use-notes";
 import { EditorHeader } from "./editor/editor-header";
 import { BottomBar } from "./editor/bottom-bar";
@@ -68,6 +70,9 @@ export function Editor({
   const [isViewMode, setIsViewMode] = useState(false);
   const [isEraserMode, setIsEraserMode] = useState(false);
   const savedRangeRef = useRef<Range | null>(null);
+
+  const [showAiDialog, setShowAiDialog] = useState(false);
+  const [selectedAiText, setSelectedAiText] = useState("");
 
   const [isNoteTransitioning, setIsNoteTransitioning] = useState(false);
   const [displayNoteId, setDisplayNoteId] = useState(note?.id);
@@ -218,6 +223,40 @@ export function Editor({
     if (stateString) setPendingSketchState(stateString);
     savedRangeRef.current = null;
     toast.info("Click anywhere in the editor to place your sketch.", { duration: 4000 });
+  };
+
+  const handleOpenAiAssistant = () => {
+    const selection = window.getSelection();
+    let text = "";
+    if (selection && selection.rangeCount > 0) {
+      text = selection.toString();
+      savedRangeRef.current = selection.getRangeAt(0).cloneRange();
+    } else {
+      savedRangeRef.current = null;
+    }
+    setSelectedAiText(text);
+    setShowAiDialog(true);
+  };
+
+  const handleAiInsertText = (newText: string) => {
+    if (textareaRef.current) {
+      textareaRef.current.focus();
+      if (savedRangeRef.current) {
+        const selection = window.getSelection();
+        selection?.removeAllRanges();
+        selection?.addRange(savedRangeRef.current);
+      }
+      try {
+        const parsedHtml = marked.parse(newText) as string;
+        document.execCommand('insertHTML', false, parsedHtml);
+        if (editorAreaRef.current) {
+          editorAreaRef.current.flushPreviewEdit();
+        }
+      } catch (err) {
+        console.error("Failed to parse or insert AI text as HTML", err);
+        document.execCommand('insertText', false, newText);
+      }
+    }
   };
 
   const handleEditorClickForSketch = () => {
@@ -487,6 +526,7 @@ export function Editor({
             textareaRef={textareaRef}
             isAutoMarkdownEnabled={isAutoMarkdownEnabled}
             setIsAutoMarkdownEnabled={setIsAutoMarkdownEnabled}
+            onOpenAiAssistant={handleOpenAiAssistant}
             onInsertImageClick={() => {
               const selection = window.getSelection();
               if (selection && selection.rangeCount > 0) {
@@ -600,6 +640,14 @@ export function Editor({
           </div>
         </DialogContent>
       </Dialog>
+
+      <AiAssistantDialog 
+        isOpen={showAiDialog}
+        onClose={() => setShowAiDialog(false)}
+        selectedText={selectedAiText}
+        noteContext={note.content}
+        onInsertText={handleAiInsertText}
+      />
     </div>
   );
 }
