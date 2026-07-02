@@ -1,8 +1,12 @@
 name = "luminanotepad"
 compatibility_date = "2026-04-09"
 
+[build]
+cache = true
+
 [assets]
 directory = "./dist"
+not_found_handling = "single-page-application"
 
 [vars]
 # Add any environment variables here

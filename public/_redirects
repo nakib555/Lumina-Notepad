@@ -1,1 +1,1 @@
-/* /index.html 200
+# Single Page Application routing is handled in wrangler.toml with not_found_handling = "single-page-application"
