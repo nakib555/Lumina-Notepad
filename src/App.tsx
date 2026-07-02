@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, lazy, Suspense } from "react";
 import { useNotes } from "@/hooks/use-notes";
 import { motion, AnimatePresence } from "motion/react";
-import { Loader2 } from "lucide-react";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { AutoUpdater } from "@/components/auto-updater";
 import { App as CapacitorApp } from "@capacitor/app";
@@ -10,6 +9,8 @@ import { Capacitor } from "@capacitor/core";
 import { toast } from "sonner";
 import { IntroSequence } from "@/components/intro-sequence";
 import { SplashScreen } from "@/components/splash-screen";
+import { SidebarSkeleton, EditorSkeleton } from "@/components/ui/skeleton-loaders";
+import { cn } from "@/lib/utils";
 
 const Editor = lazy(() => import("@/components/editor.tsx").then(m => ({ default: m.Editor })));
 const CommandPalette = lazy(() => import("@/components/command-palette.tsx").then(m => ({ default: m.CommandPalette })));
@@ -50,14 +51,19 @@ export default function App() {
     localStorage.setItem('lumina-has-seen-intro', 'true');
   }, []);
 
-  const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return window.matchMedia('(min-width: 768px)').matches;
-    }
-    return true;
-  });
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [theme, setTheme] = useState<string>(() => localStorage.getItem('lumina-theme') || 'light');
   const [fontFamily, setFontFamily] = useState<string>(() => localStorage.getItem('lumina-font') || 'sans');
+  const [baseFontSize, setBaseFontSize] = useState<string>(() => localStorage.getItem('lumina-base-font-size') || 'text-base');
+  const [powerSaver, setPowerSaver] = useState<boolean>(() => localStorage.getItem('lumina-power-saver') === 'true');
+
+  useEffect(() => {
+    localStorage.setItem('lumina-base-font-size', baseFontSize);
+  }, [baseFontSize]);
+
+  useEffect(() => {
+    localStorage.setItem('lumina-power-saver', powerSaver.toString());
+  }, [powerSaver]);
 
   useEffect(() => {
     localStorage.setItem('lumina-theme', theme);
@@ -83,21 +89,7 @@ export default function App() {
     root.classList.add(`font-${fontFamily}`);
   }, [fontFamily]);
 
-  // Handle initial screen size and resize events
-  useEffect(() => {
-    const mediaQuery = window.matchMedia('(min-width: 768px)');
-    
-    const handleMediaQueryChange = (e: MediaQueryListEvent | MediaQueryList) => {
-      setIsSidebarOpen(e.matches);
-    };
-    
-    // Listen for changes
-    mediaQuery.addEventListener('change', handleMediaQueryChange);
 
-    return () => {
-      mediaQuery.removeEventListener('change', handleMediaQueryChange);
-    };
-  }, []);
 
   // Double tap back button to exit app (Android/Capacitor)
   useEffect(() => {
@@ -277,13 +269,13 @@ export default function App() {
           <AnimatePresence>
             {(!showSplash && hasSeenIntro) && (
               <motion.div 
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.8 }}
-                className="flex h-[100dvh] w-full bg-background overflow-hidden relative print:h-auto print:overflow-visible"
+                initial={{ opacity: 0, scale: 0.98 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+                className="flex h-[100dvh] w-full bg-background overflow-hidden relative print:block print:h-auto print:overflow-visible print:bg-white"
               >
           <AutoUpdater />
-          <Suspense fallback={<div className="w-80 h-full border-r border-border shrink-0 bg-background" />}>
+          <Suspense fallback={<SidebarSkeleton className={cn(isSidebarOpen ? "translate-x-0 w-72" : "-translate-x-full md:translate-x-0 md:w-0 md:border-none md:overflow-hidden")} />}>
             <Sidebar 
               notes={notes}
               folders={folders}
@@ -300,9 +292,13 @@ export default function App() {
               onClose={() => setIsSidebarOpen(false)}
               theme={theme}
               onThemeChange={setTheme}
+              powerSaver={powerSaver}
+              onPowerSaverChange={setPowerSaver}
+              baseFontSize={baseFontSize}
+              onBaseFontSizeChange={setBaseFontSize}
             />
           </Suspense>
-          <Suspense fallback={<div className="flex-1 flex items-center justify-center bg-background"><Loader2 className="w-8 h-8 animate-spin text-muted-foreground/30" /></div>}>
+          <Suspense fallback={<EditorSkeleton />}>
             <Editor
               note={activeNote}
               notes={notes}
@@ -316,6 +312,9 @@ export default function App() {
               theme={theme}
               fontFamily={fontFamily}
               onFontFamilyChange={setFontFamily}
+              baseFontSize={baseFontSize}
+              onBaseFontSizeChange={setBaseFontSize}
+              powerSaver={powerSaver}
             />
           </Suspense>
           <Suspense fallback={null}>

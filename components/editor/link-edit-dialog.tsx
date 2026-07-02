@@ -17,7 +17,6 @@ export function LinkEditDialog({ isOpen, onClose, onConfirm, initialText = '' }:
 
   useEffect(() => {
     if (isOpen) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setUrl('');
        
       setText(initialText);

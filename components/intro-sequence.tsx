@@ -24,7 +24,8 @@ const INTRO_SLIDES = [
   }
 ];
 
-const slideVariants = {
+import { Variants } from "motion/react";
+const slideVariants: Variants = {
   enter: { opacity: 0, x: 40 },
   center: { 
     opacity: 1, 
@@ -42,7 +43,7 @@ const slideVariants = {
   }
 };
 
-const itemVariants = {
+const itemVariants: Variants = {
   enter: { opacity: 0, y: 30, filter: "blur(5px)" },
   center: { 
     opacity: 1, y: 0, filter: "blur(0px)", 

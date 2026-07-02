@@ -17,7 +17,6 @@ export function SmartFolderDialog({ isOpen, onClose, onSave, existingFolder }: S
   useEffect(() => {
     if (isOpen) {
       if (existingFolder) {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
         setName(existingFolder.name);
         setRules(existingFolder.rules);
       } else {

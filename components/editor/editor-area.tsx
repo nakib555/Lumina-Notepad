@@ -87,7 +87,7 @@ marked.use(markedKatex({ throwOnError: false, nonStandard: true }));
 const renderer = new marked.Renderer();
 
 const CUSTOM_STYLE = {
-  margin: '-50px 0',
+  margin: '0',
   padding: '0.5rem 1.5rem 0.5rem 1.25rem',
   fontSize: '14px',
   lineHeight: '1.5',
@@ -119,7 +119,7 @@ renderer.code = function(token) {
     };
     
     // Fallback style converted to inline CSS for the pre tag
-    const inlineStyle = "margin:0;margin-top: -50px;margin-bottom: -50px;padding:0.5rem 1.5rem 0.5rem 1.25rem;font-size: 14px;line-height:1.5;font-family:'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;background:transparent;";
+    const inlineStyle = "margin:0;padding:0.5rem 1.5rem 0.5rem 1.25rem;font-size: 14px;line-height:1.5;font-family:'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;background:transparent;";
     
     highlightedContent = `<pre style="${inlineStyle}"><code class="code-element outline-none block min-h-[20px] whitespace-pre print:whitespace-pre-wrap [font-variant-ligatures:none] font-mono" contenteditable="plaintext-only">${escapeHtml(code)}</code></pre>`;
   } else {
@@ -141,7 +141,7 @@ renderer.code = function(token) {
       // Inject contenteditable into the code tag after generation
       highlightedContent = highlightedContent.replace('<code', '<code contenteditable="plaintext-only"');
     } catch {
-      const inlineStyle = "margin:0;margin-top: -50px;margin-bottom: -50px;padding:0.5rem 1.5rem 0.5rem 1.25rem;font-size: 14px;line-height:1.5;font-family:'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;background:transparent;";
+      const inlineStyle = "margin:0;padding:0.5rem 1.5rem 0.5rem 1.25rem;font-size: 14px;line-height:1.5;font-family:'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;background:transparent;";
       const escapeHtml = (unsafe: string) => unsafe.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
       highlightedContent = `<pre style="${inlineStyle}"><code class="code-element outline-none block min-h-[20px] whitespace-pre print:whitespace-pre-wrap [font-variant-ligatures:none] font-mono" contenteditable="plaintext-only">${escapeHtml(code)}</code></pre>`;
     }
@@ -154,9 +154,6 @@ renderer.code = function(token) {
       ${displayLang}
     </div>
     <div class="flex items-center gap-4">
-      <button class="flex items-center gap-1 text-[#6366f1] dark:text-[#818cf8] hover:opacity-80 transition-opacity bg-transparent border-none cursor-pointer">
-        <span class="text-xs">»</span> Open
-      </button>
       <button class="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-opacity bg-transparent border-none cursor-pointer copy-btn" onclick="navigator.clipboard.writeText(this.closest('.code-block-wrapper').querySelector('.code-element').textContent); const span = this.querySelector('.copy-text'); span.textContent='Copied'; setTimeout(() => span.textContent='Copy', 2000);">
         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
         <span class="copy-text">Copy</span>
@@ -242,6 +239,8 @@ interface EditorAreaProps {
   isAutoMarkdownEnabled?: boolean;
   isViewMode?: boolean;
   isEraserMode?: boolean;
+  powerSaver?: boolean;
+  baseFontSize?: string;
 }
 
 export const EditorArea = ({
@@ -254,7 +253,9 @@ export const EditorArea = ({
   textareaRef,
   isAutoMarkdownEnabled,
   isViewMode,
-  isEraserMode
+  isEraserMode,
+  powerSaver,
+  baseFontSize,
 }: EditorAreaProps) => {
   const previewRef = useRef<HTMLDivElement>(null);
   const isComposing = useRef(false);
@@ -284,7 +285,6 @@ export const EditorArea = ({
 
 
   // Sync previewRef with textareaRef if provided
-  /* eslint-disable react-hooks/immutability */
   useEffect(() => {
     if (textareaRef && previewRef.current) {
       if (typeof textareaRef === 'function') {
@@ -297,7 +297,6 @@ export const EditorArea = ({
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  /* eslint-enable react-hooks/immutability */
 
   const updateTableRect = useCallback((table: HTMLTableElement) => {
     if (!previewRef.current || !previewRef.current.parentElement) return;
@@ -381,9 +380,16 @@ export const EditorArea = ({
   }, []);
 
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastMouseMoveTime = useRef<number>(0);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
+      if (powerSaver) {
+        const now = Date.now();
+        if (now - lastMouseMoveTime.current < 200) return;
+        lastMouseMoveTime.current = now;
+      }
+
       if (isTableEditDialogOpen || isImageEditDialogOpen || isSketchEditDialogOpen) return;
       if (!previewRef.current) return;
       
@@ -458,10 +464,10 @@ export const EditorArea = ({
       window.removeEventListener('mousemove', handleMouseMove);
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
-  }, [hoveredTable, updateTableRect, isTableEditDialogOpen, hoveredImage, updateImageRect, isImageEditDialogOpen, hoveredSketch, updateSketchRect, isSketchEditDialogOpen, hoveredLink, updateLinkRect]);
+  }, [hoveredTable, updateTableRect, isTableEditDialogOpen, hoveredImage, updateImageRect, isImageEditDialogOpen, hoveredSketch, updateSketchRect, isSketchEditDialogOpen, hoveredLink, updateLinkRect, powerSaver]);
 
   useEffect(() => {
-    if (!hoveredTable) return;
+    if (!hoveredTable || powerSaver) return;
     
     const observer = new ResizeObserver(() => {
       window.requestAnimationFrame(() => {
@@ -471,10 +477,10 @@ export const EditorArea = ({
     
     observer.observe(hoveredTable);
     return () => observer.disconnect();
-  }, [hoveredTable, updateTableRect]);
+  }, [hoveredTable, updateTableRect, powerSaver]);
 
   useEffect(() => {
-    if (!hoveredImage) return;
+    if (!hoveredImage || powerSaver) return;
     
     const observer = new ResizeObserver(() => {
       window.requestAnimationFrame(() => {
@@ -484,10 +490,10 @@ export const EditorArea = ({
     
     observer.observe(hoveredImage);
     return () => observer.disconnect();
-  }, [hoveredImage, updateImageRect]);
+  }, [hoveredImage, updateImageRect, powerSaver]);
 
   useEffect(() => {
-    if (!hoveredSketch) return;
+    if (!hoveredSketch || powerSaver) return;
     
     const observer = new ResizeObserver(() => {
       window.requestAnimationFrame(() => {
@@ -497,7 +503,7 @@ export const EditorArea = ({
     
     observer.observe(hoveredSketch);
     return () => observer.disconnect();
-  }, [hoveredSketch, updateSketchRect]);
+  }, [hoveredSketch, updateSketchRect, powerSaver]);
 
   // Initialize turndown service once
   const turndownService = React.useMemo(() => {
@@ -575,10 +581,13 @@ export const EditorArea = ({
           for (let i = 0; i < el.childNodes.length; i++) {
             const child = el.childNodes[i];
             if (child.nodeType === Node.TEXT_NODE) {
-              text += child.textContent || '';
+              // Ignore \u200B if it's placed by our marker inside the text node
+              text += (child.textContent || '').replace(/\u200B/g, '');
             } else if (child.nodeType === Node.ELEMENT_NODE) {
               const elName = child.nodeName.toUpperCase();
-              if (elName === 'BR') {
+              if (elName === 'SPAN' && (child as HTMLElement).id === 'caret-marker') {
+                text += CARET_MARKER;
+              } else if (elName === 'BR') {
                 text += '\n';
               } else if (elName === 'DIV' || elName === 'P') {
                 if (text && !text.endsWith('\n')) {
@@ -860,7 +869,6 @@ export const EditorArea = ({
   const handleImageEditConfirm = useCallback((newSrc: string, width: string, height: string, alt: string, align: 'left'|'center'|'right') => {
     if (!hoveredImage) return;
     
-    /* eslint-disable react-hooks/immutability */
     hoveredImage.src = newSrc;
     if (width) {
       hoveredImage.style.width = width;
@@ -884,7 +892,6 @@ export const EditorArea = ({
       hoveredImage.style.marginLeft = '0';
       hoveredImage.style.marginRight = 'auto';
     }
-    /* eslint-enable react-hooks/immutability */
 
     flushPreviewEdit();
   }, [hoveredImage, flushPreviewEdit]);
@@ -894,9 +901,17 @@ export const EditorArea = ({
   const handleTableEditConfirm = useCallback((targetRows: number, targetCols: number, curveClass: string, tableData?: { headers: string[], rows: string[][], alignments?: string[] }) => {
     if (!hoveredTable) return;
 
-    const tbody = hoveredTable.querySelector('tbody');
-    const thead = hoveredTable.querySelector('thead');
-    if (!tbody || !thead) return;
+    let thead = hoveredTable.querySelector('thead');
+    let tbody = hoveredTable.querySelector('tbody');
+    
+    if (!thead) {
+      thead = document.createElement('thead');
+      hoveredTable.insertBefore(thead, hoveredTable.firstChild);
+    }
+    if (!tbody) {
+      tbody = document.createElement('tbody');
+      hoveredTable.appendChild(tbody);
+    }
 
     if (tableData) {
       // Rebuild the entire table contents safely using the provided structural data
@@ -919,7 +934,7 @@ export const EditorArea = ({
         const tr = document.createElement('tr');
         rowData.forEach((cellHtml, i) => {
           const td = document.createElement('td');
-          td.innerHTML = cellHtml || 'Cell';
+          td.innerHTML = cellHtml || '';
           if (tableData.alignments?.[i]) {
             td.setAttribute('align', tableData.alignments[i]);
             td.style.textAlign = tableData.alignments[i];
@@ -950,7 +965,7 @@ export const EditorArea = ({
         bodyRows.forEach(row => {
           for (let i = 0; i < diff; i++) {
             const td = document.createElement('td');
-            td.textContent = 'Cell';
+            td.textContent = '';
             row.appendChild(td);
           }
         });
@@ -982,7 +997,7 @@ export const EditorArea = ({
           const tr = document.createElement('tr');
           for (let j = 0; j < targetCols; j++) {
             const td = document.createElement('td');
-            td.textContent = 'Cell';
+            td.textContent = '';
             tr.appendChild(td);
           }
           tbody.appendChild(tr);
@@ -1082,12 +1097,12 @@ export const EditorArea = ({
              // Fix caret inside table separator: move caret to the end of the previous line (header) to allow table parsing
              const tableSepRegex = new RegExp(`^[ \\t]*\\|?[-: \\t]*${CARET_MARKER}[-: \\t]*\\|?[ \\t]*$`, 'm');
              if (tableSepRegex.test(mdWithMarker)) {
-                 const replaceRegex = new RegExp(`([^\\n]+)\\n([ \\t]*\\|?[-: \\t]*)(${CARET_MARKER})([-: \\t]*\\|?[ \\t]*(\\n|$))`, 'g');
+                 const replaceRegex = new RegExp(`([^\\n]+)\\n([ \\t\\|-]*[-:][ \\t\\|-]*)(${CARET_MARKER})([ \\t\\|-]*(\\n|$))`, 'g');
                  mdWithMarker = mdWithMarker.replace(replaceRegex, `$1${CARET_MARKER}\n$2$4`);
              }
 
              // Also fix if caret is placed exactly after pipes in header/separator line in a way that breaks regex
-             const afterPipeRegex = new RegExp(`(\\n[ \\t]*\\|[-: \\t]*)(${CARET_MARKER})([-: \\t]+\\|[ \\t]*\\n)`, 'g');
+             const afterPipeRegex = new RegExp(`(\\n[ \\t\\|-]*[-:][ \\t\\|-]*)(${CARET_MARKER})([ \\t\\|-]*\\n)`, 'g');
              mdWithMarker = mdWithMarker.replace(afterPipeRegex, '$1$3$2');
              
              let newHtml = parseMarkdown(mdWithMarker);
@@ -1095,6 +1110,16 @@ export const EditorArea = ({
              newHtml = newHtml.replace(/<([a-z0-9]+)(?: [^>]*)?>\s*<span id="caret-marker"><\/span>\s*<\/\1>/gi, (match) => match.replace('<span id="caret-marker"></span>', '<br><span id="caret-marker"></span>'));
              previewRef.current.innerHTML = newHtml;
              
+             // Restore true scroll targeting FIRST so it doesn't overwrite our tracking
+             parseState.scrollContainers.forEach(({ el, top, left }) => {
+                 if (el === window) {
+                     window.scrollTo(left, top);
+                 } else {
+                     (el as HTMLElement).scrollTop = top;
+                     (el as HTMLElement).scrollLeft = left;
+                 }
+             });
+
              const markerEl = previewRef.current.querySelector('#caret-marker');
              if (markerEl) {
                  // Ensure the marker is in view for horizontal scrolling containers like tables
@@ -1131,16 +1156,6 @@ export const EditorArea = ({
                  sel.addRange(newRange);
              }
              
-             // Restore true scroll targeting
-             parseState.scrollContainers.forEach(({ el, top, left }) => {
-                 if (el === window) {
-                     window.scrollTo(left, top);
-                 } else {
-                     (el as HTMLElement).scrollTop = top;
-                     (el as HTMLElement).scrollLeft = left;
-                 }
-             });
-             
              const finalHtml = previewRef.current.innerHTML;
              const finalMarkdown = turndownService.turndown(finalHtml);
              lastProcessedContent.current = finalMarkdown;
@@ -1150,8 +1165,8 @@ export const EditorArea = ({
       }
 
       flushPreviewEdit();
-    }, 150);
-  }, [flushPreviewEdit, isAutoMarkdownEnabled, turndownService, handleContentChange]);
+    }, powerSaver ? 800 : 150);
+  }, [flushPreviewEdit, isAutoMarkdownEnabled, turndownService, handleContentChange, powerSaver]);
 
   // Cleanup timeout on unmount
   useEffect(() => {
@@ -1183,7 +1198,7 @@ export const EditorArea = ({
           const currentParent: HTMLElement | null = current.parentElement;
           if (!currentParent) break;
 
-          if (/^(STRONG|B|EM|I|U|S|DEL|STRIKE|CODE|MARK|A|SPAN)$/i.test(tag)) {
+          if (/^(STRONG|B|EM|I|U|S|DEL|STRIKE|CODE|MARK|A|SPAN|SUB|SUP)$/i.test(tag)) {
             while (current.firstChild) {
               currentParent.insertBefore(current.firstChild, current);
             }
@@ -1432,8 +1447,8 @@ export const EditorArea = ({
         const htmlWithMarker = previewRef.current.innerHTML;
         let mdWithMarker = turndownService.turndown(htmlWithMarker);
         
-        mdWithMarker = mdWithMarker.replace(new RegExp(`([^\\n]+)\\n([ \\t]*\\|?[-: \\t]*)(${CARET_MARKER})([-: \\t]*\\|?[ \\t]*(\\n|$))`, 'g'), `$1${CARET_MARKER}\n$2$4`);
-        mdWithMarker = mdWithMarker.replace(new RegExp(`(\\n[ \\t]*\\|[-: \\t]*)(${CARET_MARKER})([-: \\t]+\\|[ \\t]*\\n)`, 'g'), '$1$3$2');
+        mdWithMarker = mdWithMarker.replace(new RegExp(`([^\\n]+)\\n([ \\t\\|-]*[-:][ \\t\\|-]*)(${CARET_MARKER})([ \\t\\|-]*(\\n|$))`, 'g'), `$1${CARET_MARKER}\n$2$4`);
+        mdWithMarker = mdWithMarker.replace(new RegExp(`(\\n[ \\t\\|-]*[-:][ \\t\\|-]*)(${CARET_MARKER})([ \\t\\|-]*\\n)`, 'g'), '$1$3$2');
              
         let html = parseMarkdown(mdWithMarker);
         html = html.replace(CARET_MARKER, '<span id="caret-marker"></span>');
@@ -1467,9 +1482,16 @@ export const EditorArea = ({
     prevAutoMarkdown.current = isAutoMarkdownEnabled;
   }, [isAutoMarkdownEnabled, content, flushPreviewEdit, turndownService]);
 
+  const lastSelectionChangeTime = useRef<number>(0);
   const handleSelectionChange = useCallback(() => {
     if (!previewRef.current || isViewMode) return;
     
+    if (powerSaver) {
+       const now = Date.now();
+       if (now - lastSelectionChangeTime.current < 250) return;
+       lastSelectionChangeTime.current = now;
+    }
+
     setSelectedColIndex(null);
     setSelectedRowIndex(null);
     
@@ -1557,7 +1579,7 @@ export const EditorArea = ({
     } else {
       setActiveTableRow(null);
     }
-  }, [isViewMode]);
+  }, [isViewMode, powerSaver]);
 
   useEffect(() => {
     document.addEventListener('selectionchange', handleSelectionChange);
@@ -1565,7 +1587,7 @@ export const EditorArea = ({
   }, [handleSelectionChange]);
 
   useEffect(() => {
-    if (!activeTableRow || !previewRef.current) return;
+    if (!activeTableRow || !previewRef.current || powerSaver) return;
     const observer = new ResizeObserver(() => {
       const parentRect = previewRef.current!.parentElement?.getBoundingClientRect();
       if (!activeTableRow || !activeTableRow.getBoundingClientRect) return;
@@ -1582,7 +1604,7 @@ export const EditorArea = ({
 
     observer.observe(activeTableRow);
     return () => observer.disconnect();
-  }, [activeTableRow]);
+  }, [activeTableRow, powerSaver]);
 
   useEffect(() => {
     const el = previewRef.current;
@@ -1703,8 +1725,8 @@ export const EditorArea = ({
                      .replace(/&/g, '&amp;')
                      .replace(/</g, '&lt;')
                      .replace(/>/g, '&gt;');
-                  const codeHtml = `<pre style="margin:0;margin-top: -50px;margin-bottom: -50px;padding:0.5rem 1.5rem 0.5rem 1.25rem;font-size: 14px;line-height:1.5;font-family:'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;background:transparent;"><code class="code-element outline-none block min-h-[20px] whitespace-pre print:whitespace-pre-wrap [font-variant-ligatures:none] font-mono" contenteditable="plaintext-only">${codeContent}</code></pre>`;
-                  finalHtml += `<div class="code-block-wrapper border border-[#e5e7eb] dark:border-[#374151] rounded-md my-4 overflow-hidden not-prose shadow-sm max-w-full relative" contenteditable="false"><div class="bg-[#f8f9fa] dark:bg-[#1f2937] border-b border-[#e5e7eb] dark:border-[#374151] px-4 py-2 flex justify-between items-center text-[13px]"><div class="font-semibold text-[#6366f1] dark:text-[#818cf8] language-label flex items-center">${part.language}</div><div class="flex items-center gap-4"><button class="flex items-center gap-1 text-[#6366f1] dark:text-[#818cf8] hover:opacity-80 transition-opacity bg-transparent border-none cursor-pointer"><span class="text-xs">»</span> Open</button><button class="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-opacity bg-transparent border-none cursor-pointer copy-btn"><span class="copy-text">Copy</span></button><button class="flex items-center gap-1.5 text-slate-400 hover:text-red-500 transition-opacity bg-transparent border-none cursor-pointer delete-btn" title="Delete code block"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg></button></div></div><div class="bg-[#f4f7f9] dark:bg-[#0d1117] overflow-x-auto overflow-y-hidden w-full max-w-full code-container whitespace-pre print:whitespace-pre-wrap font-mono m-0 text-slate-800 dark:text-slate-200">${codeHtml}</div></div>`;
+                  const codeHtml = `<pre style="margin:0;padding:0.5rem 1.5rem 0.5rem 1.25rem;font-size: 14px;line-height:1.5;font-family:'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;background:transparent;"><code class="code-element outline-none block min-h-[20px] whitespace-pre print:whitespace-pre-wrap [font-variant-ligatures:none] font-mono" contenteditable="plaintext-only">${codeContent}</code></pre>`;
+                  finalHtml += `<div class="code-block-wrapper border border-[#e5e7eb] dark:border-[#374151] rounded-md my-4 overflow-hidden not-prose shadow-sm max-w-full relative" contenteditable="false"><div class="bg-[#f8f9fa] dark:bg-[#1f2937] border-b border-[#e5e7eb] dark:border-[#374151] px-4 py-2 flex justify-between items-center text-[13px]"><div class="font-semibold text-[#6366f1] dark:text-[#818cf8] language-label flex items-center">${part.language}</div><div class="flex items-center gap-4"><button class="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-opacity bg-transparent border-none cursor-pointer copy-btn" onclick="navigator.clipboard.writeText(this.closest('.code-block-wrapper').querySelector('.code-element').textContent); const span = this.querySelector('.copy-text'); span.textContent='Copied'; setTimeout(() => span.textContent='Copy', 2000);"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg><span class="copy-text">Copy</span></button><button class="flex items-center gap-1.5 text-slate-400 hover:text-red-500 transition-opacity bg-transparent border-none cursor-pointer delete-btn" onclick="const wrapper = this.closest('.code-block-wrapper'); const next = wrapper.nextElementSibling; if(next && next.tagName === 'P' && next.innerHTML.includes('&#8203;')) next.remove(); wrapper.remove();" title="Delete code block"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg></button></div></div><div class="bg-[#f4f7f9] dark:bg-[#0d1117] overflow-x-auto overflow-y-hidden w-full max-w-full code-container whitespace-pre print:whitespace-pre-wrap font-mono m-0 text-slate-800 dark:text-slate-200">${codeHtml}</div></div>`;
               } else {
                   const paragraphs = part.content.split(/\r?\n\r?\n/);
                   if (paragraphs.length === 1) {
@@ -1787,8 +1809,12 @@ export const EditorArea = ({
           }
         }}
         className={cn(
-          "prose prose-slate dark:prose-invert w-full min-w-0 max-w-full overflow-x-hidden print:overflow-x-visible break-words print:pb-0 text-lg prose-p:whitespace-pre-wrap prose-code:text-slate-800 dark:prose-code:text-slate-200 prose-code:bg-slate-100 dark:prose-code:bg-slate-800/80 prose-code:border prose-code:border-slate-200 dark:prose-code:border-slate-700 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md prose-code:font-mono prose-code:text-[0.85em] prose-code:font-medium prose-code:shadow-[0_1px_2px_rgba(0,0,0,0.05)] prose-code:before:content-none prose-code:after:content-none prose-pre:p-0 prose-pre:bg-transparent prose-img:rounded-xl prose-table:border-collapse prose-table:w-full prose-table:m-0 prose-th:border prose-th:border-border prose-th:p-3 prose-th:bg-muted/50 prose-th:font-semibold prose-td:border prose-td:border-border prose-td:p-3 outline-none focus:ring-0 min-h-[500px] print:min-h-0 print:prose-pre:break-inside-avoid print:prose-table:break-inside-avoid print:prose-img:break-inside-avoid print:prose-code:break-inside-avoid print:prose-headings:break-after-avoid transition-[padding] duration-500",
-          "pt-0 pb-[60vh]",
+          "prose prose-slate dark:prose-invert w-full min-w-0 max-w-full overflow-x-hidden print:overflow-visible break-words leading-relaxed prose-p:my-2 prose-headings:mt-6 prose-headings:mb-3 prose-ul:my-2 prose-ol:my-2 prose-li:my-0.5 prose-blockquote:my-4 prose-code:text-slate-800 dark:prose-code:text-slate-200 prose-code:bg-slate-100 dark:prose-code:bg-slate-800/80 prose-code:border prose-code:border-slate-200 dark:prose-code:border-slate-700 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md prose-code:font-mono prose-code:text-[0.85em] prose-code:font-medium prose-code:shadow-[0_1px_2px_rgba(0,0,0,0.05)] prose-code:before:content-none prose-code:after:content-none prose-pre:p-0 prose-pre:bg-transparent prose-img:rounded-xl prose-table:border-collapse prose-table:w-full prose-table:m-0 prose-th:border prose-th:border-border prose-th:p-3 prose-th:bg-muted/50 prose-th:font-semibold prose-td:border prose-td:border-border prose-td:p-3 outline-none focus:ring-0 min-h-[500px] print:min-h-0 print:prose-pre:break-inside-avoid print:prose-table:break-inside-avoid print:prose-img:break-inside-avoid print:prose-code:break-inside-avoid print:prose-headings:break-after-avoid transition-[padding] duration-500",
+          baseFontSize === 'text-sm' ? 'prose-sm' :
+          baseFontSize === 'text-lg' ? 'prose-lg' :
+          baseFontSize === 'text-xl' ? 'prose-xl' :
+          'prose-base',
+          "pt-0 pb-[60vh] print:py-0 print:block",
           isEraserMode && "cursor-[url('data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"%23f43f5e\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21\"/><path d=\"M22 21H7\"/><path d=\"m5 11 9 9\"/></svg>'),_crosshair]"
         )}
         role="textbox"
@@ -2078,7 +2104,6 @@ export const EditorArea = ({
             onSave={(svgString, stateString) => {
               const el = hoveredSketch as unknown as HTMLElement;
               
-              // eslint-disable-next-line react-hooks/immutability
               el.innerHTML = svgString;
               if (stateString) {
                 el.setAttribute('data-excalidraw', stateString);

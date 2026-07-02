@@ -15,6 +15,7 @@ import { Button } from "./ui/button";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { EditorAreaSkeleton } from "@/components/ui/skeleton-loaders";
 
 const SketchDialog = lazy(() => import('./editor/sketch-dialog').then(module => ({ default: module.SketchDialog })));
 const ImageInsertDialog = lazy(() => import('./editor/image-insert-dialog').then(module => ({ default: module.ImageInsertDialog })));
@@ -31,6 +32,9 @@ interface EditorProps {
   theme: string;
   fontFamily: string;
   onFontFamilyChange: (font: string) => void;
+  baseFontSize: string;
+  onBaseFontSizeChange: (size: string) => void;
+  powerSaver: boolean;
 }
 
 export function Editor({ 
@@ -40,7 +44,10 @@ export function Editor({
   onToggleSidebar,
   theme,
   fontFamily,
-  onFontFamilyChange
+  onFontFamilyChange,
+  baseFontSize,
+  onBaseFontSizeChange,
+  powerSaver
 }: EditorProps) {
   const exportMenuRef = useRef<HTMLDivElement>(null);
   const symbolMenuRef = useRef<HTMLDivElement>(null);
@@ -68,17 +75,18 @@ export function Editor({
 
   useEffect(() => {
     if (note?.id !== displayNoteId) {
-      setIsNoteTransitioning(true);
+      const transitionTimer = setTimeout(() => setIsNoteTransitioning(true), 0);
       const fadeOutTimer = setTimeout(() => {
         setShowLoading(true);
         setDisplayNoteId(note?.id);
-        const fadeInTimer = setTimeout(() => {
+        setTimeout(() => {
           setShowLoading(false);
           setIsNoteTransitioning(false);
-        }, 150); // Show loading spinner for a short moment
+        }, 150); // Show loading skeleton for a short moment
       }, 200); // Wait for fade out
       
       return () => {
+        clearTimeout(transitionTimer);
         clearTimeout(fadeOutTimer);
       };
     }
@@ -343,7 +351,7 @@ export function Editor({
 
   return (
     <div className={cn(
-      "flex-1 flex flex-col h-full overflow-hidden bg-background relative print:h-auto print:overflow-visible",
+      "flex-1 flex flex-col h-full overflow-hidden bg-background relative print:block print:h-auto print:overflow-visible print:bg-white",
       fontFamily === "serif" ? "font-serif" : fontFamily === "mono" ? "font-mono" : "font-sans"
     )}>
       {/* Toolbar */}
@@ -366,11 +374,13 @@ export function Editor({
         downloadLogs={downloadLogs}
         isViewMode={isViewMode}
         setIsViewMode={setIsViewMode}
+        baseFontSize={baseFontSize}
+        onBaseFontSizeChange={onBaseFontSizeChange}
       />
 
       {/* Editor Area */}
-      <div className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar print:overflow-visible print:bg-white print:text-black flex justify-center">
-        <div className="flex-1 w-full max-w-4xl px-8 pt-10 pb-24 md:px-12 md:pt-16 md:pb-32 print:p-0 flex flex-col gap-4 md:gap-5 min-h-full">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar print:overflow-visible print:bg-white print:text-black flex print:block justify-center">
+        <div className="flex-1 w-full max-w-4xl px-8 pt-10 pb-24 md:px-12 md:pt-16 md:pb-32 print:p-0 flex print:block flex-col gap-4 md:gap-5 min-h-full">
           <TextareaAutosize
             value={note.title}
             onChange={handleTitleChange}
@@ -425,9 +435,8 @@ export function Editor({
             onMouseUp={pendingSketchSvg && !showSketchConfirm ? handleEditorClickForSketch : undefined}
           >
             {showLoading ? (
-              <div className="w-full h-full min-h-[500px] flex flex-col items-center justify-center text-muted-foreground animate-in fade-in zoom-in-95 duration-200">
-                <Loader2 className="w-8 h-8 animate-spin text-primary mb-4" />
-                <span className="text-sm font-medium">Preparing space...</span>
+              <div className="w-full h-full min-h-[500px] flex flex-col items-center justify-center animate-in fade-in zoom-in-95 duration-200">
+                <EditorAreaSkeleton />
               </div>
             ) : (
               <EditorArea 
@@ -442,6 +451,8 @@ export function Editor({
                 isAutoMarkdownEnabled={isAutoMarkdownEnabled}
                 isViewMode={isViewMode}
                 isEraserMode={isEraserMode}
+                powerSaver={powerSaver}
+                baseFontSize={baseFontSize}
               />
             )}
           </div>

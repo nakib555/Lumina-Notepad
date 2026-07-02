@@ -83,7 +83,9 @@ export function useNotes() {
           if (lsNotes) setNotes(JSON.parse(lsNotes));
           const lsFolders = localStorage.getItem('lumina-folders');
           if (lsFolders) setFolders(JSON.parse(lsFolders));
-        } catch (e2) {}
+        } catch {
+          // Ignore fallback errors
+        }
       } finally {
         setIsLoaded(true);
       }

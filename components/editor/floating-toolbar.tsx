@@ -146,6 +146,8 @@ export const FloatingToolbar = ({
           left: document.queryCommandState('justifyLeft'),
           center: document.queryCommandState('justifyCenter'),
           right: document.queryCommandState('justifyRight'),
+          bulletList: document.queryCommandState('insertUnorderedList'),
+          orderedList: document.queryCommandState('insertOrderedList'),
         });
       } catch {
          // ignore errors in unsupported browsers
@@ -912,6 +914,7 @@ export const FloatingToolbar = ({
         <select
           value={fontFamily}
           onMouseDown={saveSelection}
+          onTouchStart={saveSelection}
           onChange={(e) => {
             restoreSelection();
             onFontFamilyChange(e.target.value);
@@ -920,12 +923,13 @@ export const FloatingToolbar = ({
           title="Font Style"
           aria-label="Font Style"
         >
-          <option value="sans">Sans</option>
-          <option value="serif">Serif</option>
-          <option value="mono">Mono</option>
+          <option value="sans" className="bg-background text-foreground">Sans</option>
+          <option value="serif" className="bg-background text-foreground">Serif</option>
+          <option value="mono" className="bg-background text-foreground">Mono</option>
         </select>
         <select
           onMouseDown={saveSelection}
+          onTouchStart={saveSelection}
           onChange={(e) => {
             if (e.target.value) {
               restoreSelection();
@@ -938,9 +942,9 @@ export const FloatingToolbar = ({
           title="Font Size"
           aria-label="Font Size"
         >
-          <option value="" disabled>Size</option>
+          <option value="" disabled className="bg-background text-foreground">Size</option>
           {[8, 9, 10, 11, 12, 14, 16, 18, 20, 22, 24, 26, 28, 36, 48, 72].map(size => (
-            <option key={size} value={size}>{size}</option>
+            <option key={size} value={size} className="bg-background text-foreground">{size}</option>
           ))}
         </select>
       </div>
@@ -1186,7 +1190,10 @@ export const FloatingToolbar = ({
           variant="ghost"
           size="icon"
           onClick={() => handleApplyFormatting("\n- ", "")}
-          className="h-8 w-8 text-orange-500 hover:text-orange-600 dark:text-orange-400 hover:bg-orange-500/10 rounded-lg shrink-0"
+          className={cn(
+            "h-8 w-8 text-orange-500 hover:text-orange-600 dark:text-orange-400 hover:bg-orange-500/10 rounded-lg shrink-0",
+            activeFormats.bulletList && "bg-orange-500/20 dark:bg-orange-500/30"
+          )}
           title="Bullet List"
         >
           <List className="w-4 h-4" />
@@ -1196,7 +1203,10 @@ export const FloatingToolbar = ({
           variant="ghost"
           size="icon"
           onClick={() => handleApplyFormatting("\n1. ", "")}
-          className="h-8 w-8 text-orange-500 hover:text-orange-600 dark:text-orange-400 hover:bg-orange-500/10 rounded-lg shrink-0"
+          className={cn(
+            "h-8 w-8 text-orange-500 hover:text-orange-600 dark:text-orange-400 hover:bg-orange-500/10 rounded-lg shrink-0",
+            activeFormats.orderedList && "bg-orange-500/20 dark:bg-orange-500/30"
+          )}
           title="Numbered List"
         >
           <ListOrdered className="w-4 h-4" />
@@ -1225,7 +1235,7 @@ export const FloatingToolbar = ({
           onPointerDown={(e) => e.preventDefault()}
           variant="ghost"
           size="icon"
-          onClick={() => handleApplyFormatting("\n| Header | Header |\n|--------|--------|\n| Cell   | Cell   |\n", "")}
+          onClick={() => handleApplyFormatting("\n| Header | Header |\n|--------|--------|\n|        |        |\n", "")}
           className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg shrink-0"
           title="Table"
         >

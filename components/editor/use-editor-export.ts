@@ -207,19 +207,30 @@ export const useEditorExport = (note: Note | null) => {
       }
     } else {
       try {
+        let savedWithPicker = false;
         if ('showSaveFilePicker' in window) {
-          const handle = await (window as unknown as { showSaveFilePicker: (options: unknown) => Promise<{ createWritable: () => Promise<{ write: (data: string) => Promise<void>, close: () => Promise<void> }> }> }).showSaveFilePicker({
-            suggestedName: `${note.title || 'Untitled'}.${format}`,
-            types: [{
-              description: format === 'md' ? 'Markdown File' : 'Text File',
-              accept: { 'text/plain': format === 'md' ? ['.md'] : ['.txt'] },
-            }],
-          });
-          const writable = await handle.createWritable();
-          await writable.write(content);
-          await writable.close();
-          toast.success(`Exported as ${format.toUpperCase()}`);
-        } else {
+          try {
+            const handle = await (window as unknown as { showSaveFilePicker: (options: unknown) => Promise<{ createWritable: () => Promise<{ write: (data: string) => Promise<void>, close: () => Promise<void> }> }> }).showSaveFilePicker({
+              suggestedName: `${note.title || 'Untitled'}.${format}`,
+              types: [{
+                description: format === 'md' ? 'Markdown File' : 'Text File',
+                accept: { 'text/plain': format === 'md' ? ['.md'] : ['.txt'] },
+              }],
+            });
+            const writable = await handle.createWritable();
+            await writable.write(content);
+            await writable.close();
+            savedWithPicker = true;
+            toast.success(`Exported as ${format.toUpperCase()}`);
+          } catch (err: unknown) {
+            if (err && typeof err === 'object' && 'name' in err && err.name === 'AbortError') {
+              return; // User cancelled
+            }
+            console.warn('showSaveFilePicker failed, falling back to blob download', err);
+          }
+        }
+        
+        if (!savedWithPicker) {
           const blob = new Blob([content], { type: 'text/plain' });
           const url = URL.createObjectURL(blob);
           const a = document.createElement('a');
@@ -232,10 +243,8 @@ export const useEditorExport = (note: Note | null) => {
           toast.success(`Exported as ${format.toUpperCase()}`);
         }
       } catch (err: unknown) {
-        if (err && typeof err === 'object' && 'name' in err && err.name !== 'AbortError') {
-          console.error('Failed to save file:', err);
-          toast.error('Failed to export.');
-        }
+        console.error('Failed to save file:', err);
+        toast.error('Failed to export.');
       }
     }
   };
@@ -316,19 +325,30 @@ export const useEditorExport = (note: Note | null) => {
     }
 
     try {
+      let savedWithPicker = false;
       if ('showSaveFilePicker' in window) {
-        const handle = await (window as unknown as { showSaveFilePicker: (options: unknown) => Promise<{ createWritable: () => Promise<{ write: (data: string) => Promise<void>, close: () => Promise<void> }> }> }).showSaveFilePicker({
-          suggestedName: 'editor-debug-logs.json',
-          types: [{
-            description: 'JSON File',
-            accept: { 'application/json': ['.json'] },
-          }],
-        });
-        const writable = await handle.createWritable();
-        await writable.write(content);
-        await writable.close();
-        toast.success("Debug logs downloaded");
-      } else {
+        try {
+          const handle = await (window as unknown as { showSaveFilePicker: (options: unknown) => Promise<{ createWritable: () => Promise<{ write: (data: string) => Promise<void>, close: () => Promise<void> }> }> }).showSaveFilePicker({
+            suggestedName: 'editor-debug-logs.json',
+            types: [{
+              description: 'JSON File',
+              accept: { 'application/json': ['.json'] },
+            }],
+          });
+          const writable = await handle.createWritable();
+          await writable.write(content);
+          await writable.close();
+          savedWithPicker = true;
+          toast.success("Debug logs downloaded");
+        } catch (err: unknown) {
+          if (err && typeof err === 'object' && 'name' in err && err.name === 'AbortError') {
+            return; // User cancelled
+          }
+          console.warn('showSaveFilePicker failed, falling back to blob download', err);
+        }
+      }
+      
+      if (!savedWithPicker) {
         const blob = new Blob([content], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -341,9 +361,8 @@ export const useEditorExport = (note: Note | null) => {
         toast.success("Debug logs downloaded");
       }
     } catch (err: unknown) {
-      if (err && typeof err === 'object' && 'name' in err && err.name !== 'AbortError') {
-        console.error(err);
-      }
+      console.error(err);
+      toast.error('Failed to export.');
     }
   };
 

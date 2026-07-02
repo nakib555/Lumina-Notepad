@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef } from 'react';
+import { motion, AnimatePresence } from "motion/react";
 import { Note, Folder as CommonFolder } from '@/hooks/use-notes';
 import { ChevronRight, ChevronDown, Folder, Trash2, Download, Plus, Upload, MoreHorizontal, FileText, FileUp, Edit2, Lock, Unlock, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -450,24 +451,34 @@ export function SidebarFileTree({
     const content = await zip.generateAsync({ type: "blob" });
     
     try {
+      let savedWithPicker = false;
       if ('showSaveFilePicker' in window) {
-        const handle = await (window as unknown as { showSaveFilePicker: (options: unknown) => Promise<{ createWritable: () => Promise<{ write: (data: Blob) => Promise<void>, close: () => Promise<void> }> }> }).showSaveFilePicker({
-           suggestedName: `${folder.name}.zip`,
-           types: [{
-             description: 'ZIP Archive',
-             accept: { 'application/zip': ['.zip'] },
-           }],
-        });
-        const writable = await handle.createWritable();
-        await writable.write(content);
-        await writable.close();
-      } else {
+        try {
+          const handle = await (window as unknown as { showSaveFilePicker: (options: unknown) => Promise<{ createWritable: () => Promise<{ write: (data: Blob) => Promise<void>, close: () => Promise<void> }> }> }).showSaveFilePicker({
+             suggestedName: `${folder.name}.zip`,
+             types: [{
+               description: 'ZIP Archive',
+               accept: { 'application/zip': ['.zip'] },
+             }],
+          });
+          const writable = await handle.createWritable();
+          await writable.write(content);
+          await writable.close();
+          savedWithPicker = true;
+        } catch (err: unknown) {
+          if (err && typeof err === 'object' && 'name' in err && err.name === 'AbortError') {
+            return; // User cancelled
+          }
+          console.warn('showSaveFilePicker failed, falling back to blob download', err);
+        }
+      }
+      
+      if (!savedWithPicker) {
         saveAs(content, `${folder.name}.zip`);
       }
     } catch (err: unknown) {
-      if (err && typeof err === 'object' && 'name' in err && err.name !== 'AbortError') {
-        saveAs(content, `${folder.name}.zip`);
-      }
+      console.error(err);
+      saveAs(content, `${folder.name}.zip`);
     }
   };
 
@@ -715,31 +726,37 @@ export function SidebarFileTree({
           </div>
         </div>
 
-        {isExpanded && (
-          <div
-            className={cn(
-               "w-full flex-col min-h-2",
-               dragState?.id === folder.id && dragState?.position === 'inside' ? "bg-primary/5 ring-1 ring-primary/20 rounded-md py-1" : ""
-            )}
-            onDragEnter={(e) => !isDndLocked && e.preventDefault()}
-            onDragOver={(e) => !isDndLocked && handleDragOver(e, folder.id, 'folder-container')}
-            onDragLeave={!isDndLocked ? handleDragLeave : undefined}
-            onDrop={(e) => !isDndLocked && handleDrop(e, folder.id, 'folder-container')}
-          >
-            {childrenFolders.map(childFolder => renderFolder(childFolder, level + 1))}
-            {childrenNotes.map(childNote => renderNote(childNote, level + 1))}
-            
-            {childrenFolders.length === 0 && childrenNotes.length === 0 && (
-              <div
-                style={{ paddingLeft: `${(level) * 12 + 32}px` }}
-                className="py-1.5 px-2 text-[11px] font-medium text-muted-foreground/40 pointer-events-none flex items-center gap-2"
-              >
-                <div className="w-1 h-1 rounded-full bg-border" />
-                Empty folder
-              </div>
-            )}
-          </div>
-        )}
+        <AnimatePresence initial={false}>
+          {isExpanded && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.2, ease: "easeInOut" }}
+              className={cn(
+                 "w-full flex-col min-h-0 overflow-hidden",
+                 dragState?.id === folder.id && dragState?.position === 'inside' ? "bg-primary/5 ring-1 ring-primary/20 rounded-md py-1" : ""
+              )}
+              onDragEnter={(e) => !isDndLocked && e.preventDefault()}
+              onDragOver={(e) => !isDndLocked && handleDragOver(e, folder.id, 'folder-container')}
+              onDragLeave={!isDndLocked ? handleDragLeave : undefined}
+              onDrop={(e) => !isDndLocked && handleDrop(e, folder.id, 'folder-container')}
+            >
+              {childrenFolders.map(childFolder => renderFolder(childFolder, level + 1))}
+              {childrenNotes.map(childNote => renderNote(childNote, level + 1))}
+              
+              {childrenFolders.length === 0 && childrenNotes.length === 0 && (
+                <div
+                  style={{ paddingLeft: `${(level) * 12 + 32}px` }}
+                  className="py-1.5 px-2 text-[11px] font-medium text-muted-foreground/40 pointer-events-none flex items-center gap-2"
+                >
+                  <div className="w-1 h-1 rounded-full bg-border" />
+                  Empty folder
+                </div>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     );
   };

@@ -26,6 +26,8 @@ interface EditorHeaderProps {
   downloadLogs: () => void;
   isViewMode: boolean;
   setIsViewMode: (viewMode: boolean) => void;
+  baseFontSize?: string;
+  onBaseFontSizeChange?: (size: string) => void;
 }
 
 export const EditorHeader = ({
@@ -47,6 +49,8 @@ export const EditorHeader = ({
   downloadLogs,
   isViewMode,
   setIsViewMode,
+  baseFontSize,
+  onBaseFontSizeChange,
 }: EditorHeaderProps) => {
   return (
     <header className={cn(
@@ -75,6 +79,23 @@ export const EditorHeader = ({
           {isViewMode ? <Edit3 className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
           <span className="hidden sm:inline font-medium">{isViewMode ? "Edit Mode" : "View Mode"}</span>
         </Button>
+
+        {baseFontSize && onBaseFontSizeChange && (
+          <div className="flex items-center gap-0.5 ml-1 mr-1 shrink-0 bg-muted/50 rounded-lg p-0.5">
+            <select
+              value={baseFontSize}
+              onChange={(e) => onBaseFontSizeChange(e.target.value)}
+              className="h-8 px-1.5 sm:px-2 bg-transparent text-muted-foreground hover:text-foreground rounded-md outline-none text-xs font-medium cursor-pointer focus:ring-2 focus:ring-primary"
+              title="Base Font Size"
+              aria-label="Base Font Size"
+            >
+              <option value="text-sm" className="bg-background text-foreground">S</option>
+              <option value="text-base" className="bg-background text-foreground">M</option>
+              <option value="text-lg" className="bg-background text-foreground">L</option>
+              <option value="text-xl" className="bg-background text-foreground">XL</option>
+            </select>
+          </div>
+        )}
 
         {!isViewMode && (
           <div className="flex items-center gap-0.5 sm:gap-1 shrink-0 ml-1">

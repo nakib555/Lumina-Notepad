@@ -69,7 +69,7 @@ export const useEditorFormatting = (
       const taskHTML = `<ul class="contains-task-list"><li class="task-list-item"><input type="checkbox" disabled /> </li></ul>`;
       document.execCommand('insertHTML', false, taskHTML);
     } else if (prefix.includes("| Header |")) {
-      const tableHTML = `<div class="overflow-x-auto w-full table-wrapper my-8 rounded-xl border border-[var(--border)]"><table class="border-hidden m-0 w-full"><thead><tr><th>Header</th><th>Header</th></tr></thead><tbody><tr><td>Cell</td><td>Cell</td></tr></tbody></table></div><p>&#8203;</p>`;
+      const tableHTML = `<div class="overflow-x-auto w-full table-wrapper my-8 rounded-xl border border-[var(--border)]"><table class="border-hidden m-0 w-full"><thead><tr><th>Header</th><th>Header</th></tr></thead><tbody><tr><td></td><td></td></tr></tbody></table></div><p>&#8203;</p>`;
       document.execCommand('insertHTML', false, tableHTML);
     } else if (prefix.match(/^```[a-zA-Z0-9-]*\n$/)) {
       const match = prefix.match(/^```([a-zA-Z0-9-]*)\n$/);
@@ -181,6 +181,12 @@ export const useEditorFormatting = (
     elements.forEach(el => {
        // Look up the tree for block elements (H1-H6, BLOCKQUOTE, PRE, DIV with align)
        let current = el.parentElement;
+       
+       // Skip formatting removal if inside a code block
+       if (current && current.closest('.code-block-wrapper')) {
+           return;
+       }
+       
        const editor = textareaRef.current;
        while (current && current !== editor) {
          if (/^(H[1-6]|BLOCKQUOTE|PRE)$/i.test(current.tagName)) {
@@ -191,6 +197,14 @@ export const useEditorFormatting = (
            }
            current.parentNode?.replaceChild(p, current);
            current = p; // Continue up from the p tag
+         } else if (/^(SUB|SUP|MARK|CODE|STRONG|B|EM|I|U|S|DEL|STRIKE)$/i.test(current.tagName)) {
+           const pNode = current.parentElement;
+           while (current.firstChild) {
+             pNode?.insertBefore(current.firstChild, current);
+           }
+           pNode?.removeChild(current);
+           current = pNode;
+           continue;
          } else if (current.tagName === 'DIV' && (current.getAttribute('align') || current.style.textAlign)) {
            current.removeAttribute('align');
            current.style.textAlign = '';

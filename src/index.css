@@ -247,6 +247,7 @@
     }
   html {
     @apply font-sans;
+    scroll-behavior: smooth;
     }
 }
 
@@ -291,13 +292,10 @@
   vertical-align: baseline;
 }
 
-/* CSS Custom Highlight API ::highlight causes lightningcss errors, commented out for now 
-*::highlight(search-results) {
-  background-color: rgb(250 204 21 / 0.4); 
+::highlight(search-results) {
+  background-color: rgba(250, 204, 21, 0.4);
   color: inherit;
-  border-radius: 2px;
 }
-*/
 
 body.search-is-active *::selection {
   background-color: transparent;
@@ -355,6 +353,28 @@ body.search-is-active *::selection {
   html, body, #root {
     overflow: visible !important;
     height: auto !important;
+    background: white !important;
+    color: black !important;
+  }
+
+  /* Reset dark mode prose colors for print */
+  .dark .prose, .prose {
+    --tw-prose-body: black !important;
+    --tw-prose-headings: black !important;
+    --tw-prose-lead: black !important;
+    --tw-prose-links: black !important;
+    --tw-prose-bold: black !important;
+    --tw-prose-counters: black !important;
+    --tw-prose-bullets: black !important;
+    --tw-prose-hr: #e5e7eb !important;
+    --tw-prose-quotes: black !important;
+    --tw-prose-quote-borders: #e5e7eb !important;
+    --tw-prose-captions: black !important;
+    --tw-prose-code: black !important;
+    --tw-prose-pre-code: black !important;
+    --tw-prose-pre-bg: transparent !important;
+    --tw-prose-th-borders: #e5e7eb !important;
+    --tw-prose-td-borders: #e5e7eb !important;
   }
 
   body {

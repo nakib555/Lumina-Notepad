@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { FileText, X, Download, Tag, Search, Hash, Sun, Moon, Calendar as CalendarIcon, FolderOpen} from "lucide-react";
+import { FileText, X, Download, Tag, Search, Hash, Sun, Moon, Calendar as CalendarIcon, FolderOpen, Battery, BatteryCharging, Type} from "lucide-react";
 import { Note, Folder as CommonFolder } from "@/hooks/use-notes";
 import { cn } from "@/lib/utils";
 import { usePWAInstall } from "@/hooks/use-pwa-install";
@@ -29,6 +29,10 @@ interface SidebarProps {
   onClose: () => void;
   theme: string;
   onThemeChange: (theme: string) => void;
+  powerSaver: boolean;
+  onPowerSaverChange: (value: boolean) => void;
+  baseFontSize?: string;
+  onBaseFontSizeChange?: (size: string) => void;
 }
 
 export function Sidebar({ 
@@ -46,7 +50,11 @@ export function Sidebar({
   isOpen, 
   onClose,
   theme,
-  onThemeChange
+  onThemeChange,
+  powerSaver,
+  onPowerSaverChange,
+  baseFontSize,
+  onBaseFontSizeChange
 }: SidebarProps) {
   const { isInstallable, installApp } = usePWAInstall();
   const [searchQuery, setSearchQuery] = useState("");
@@ -57,7 +65,6 @@ export function Sidebar({
   useEffect(() => {
     const activeNoteObj = notes.find(n => n.id === activeNoteId);
     if (activeNoteObj?.date) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSelectedDate(new Date(activeNoteObj.date));
     }
   }, [activeNoteId, notes]);
@@ -104,14 +111,14 @@ export function Sidebar({
       {/* Mobile Overlay */}
       {isOpen && (
         <div 
-          className="fixed inset-0 bg-black/20 z-40 md:hidden backdrop-blur-sm transition-opacity"
+          className="fixed inset-0 bg-black/25 z-40 md:hidden backdrop-blur-sm transition-all duration-300 ease-in-out animate-in fade-in"
           onClick={onClose}
         />
       )}
       
       {/* Sidebar */}
       <div className={cn(
-        "fixed md:static inset-y-0 left-0 z-50 w-72 border-r border-border bg-sidebar flex flex-col h-full shrink-0 transition-all duration-300 ease-in-out print:hidden",
+        "fixed md:static inset-y-0 left-0 z-50 w-72 border-r border-border bg-sidebar flex flex-col h-full shrink-0 transition-all duration-300 ease-in-out transform-gpu print:hidden",
         isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0 md:w-0 md:border-none md:overflow-hidden"
       )}>
         <div className="p-5 border-b border-border flex items-center justify-between bg-sidebar">
@@ -297,13 +304,70 @@ export function Sidebar({
         </TabsContent>
       </Tabs>
 
-      {/* Theme Switcher */}
+      {/* Font Size Selector Row */}
+      {baseFontSize && onBaseFontSizeChange && (
+        <div className="px-4 py-2.5 border-t border-border/60 flex items-center justify-between shrink-0 bg-muted/10">
+          <div className="flex items-center gap-2 pl-2">
+            <Type className="w-3.5 h-3.5 text-muted-foreground" aria-hidden="true" />
+            <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Font Size</span>
+          </div>
+          <div className="flex items-center gap-1 bg-muted/50 p-0.5 rounded-lg border border-border/30 shrink-0">
+            {[
+              { id: 'text-sm', label: 'A', title: 'Small' },
+              { id: 'text-base', label: 'A', title: 'Medium', className: 'text-xs' },
+              { id: 'text-lg', label: 'A', title: 'Large', className: 'text-sm font-medium' },
+              { id: 'text-xl', label: 'A', title: 'Extra Large', className: 'text-base font-bold' }
+            ].map((size) => (
+              <button
+                key={size.id}
+                onClick={() => {
+                  if (Capacitor.isNativePlatform()) {
+                    Haptics.impact({ style: ImpactStyle.Light }).catch(() => {});
+                  }
+                  onBaseFontSizeChange(size.id);
+                }}
+                className={cn(
+                  "h-8 sm:h-7 px-2.5 rounded-md text-[11px] font-medium transition-all duration-200 focus:outline-none focus:ring-1 focus:ring-primary flex items-center justify-center min-w-[36px] sm:min-w-[32px]",
+                  baseFontSize === size.id
+                    ? "bg-background shadow-sm text-foreground border border-border/50 scale-105"
+                    : "text-muted-foreground/80 hover:text-foreground hover:bg-background/20"
+                )}
+                title={size.title}
+                aria-label={`Set font size to ${size.title}`}
+                aria-pressed={baseFontSize === size.id}
+              >
+                <span className={size.className}>{size.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Theme and Settings Switcher */}
       <div className="px-4 py-3 border-t border-border flex items-center justify-between shrink-0">
         <div className="flex items-center gap-2 pl-2">
           <Tag className="w-3.5 h-3.5 text-muted-foreground" aria-hidden="true" />
-          <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Theme</span>
+          <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Settings</span>
         </div>
-        <div className="flex items-center gap-2 shrink-0" role="group" aria-label="Theme selection">
+        <div className="flex items-center gap-1.5 shrink-0" role="group" aria-label="Theme and settings">
+          <button
+            onClick={() => {
+              if (Capacitor.isNativePlatform()) Haptics.impact({ style: ImpactStyle.Light }).catch(()=>{});
+              onPowerSaverChange(!powerSaver);
+            }}
+            className={cn(
+              "h-8 w-10 rounded-lg border-[1.5px] transition-all flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-primary text-emerald-500",
+              powerSaver ? "bg-emerald-500/10 border-emerald-500/30" : "bg-transparent border-transparent hover:bg-muted"
+            )}
+            title={powerSaver ? "Power Saver (On)" : "Power Saver (Off)"}
+            aria-label="Toggle Power Saver mode"
+            aria-pressed={powerSaver}
+          >
+            {powerSaver ? <BatteryCharging className="w-4 h-4" /> : <Battery className="w-4 h-4 opacity-50" />}
+          </button>
+          
+          <div className="w-px h-5 bg-border mx-1" />
+
           {[
             { id: 'light', label: 'Light', color: 'bg-white border-slate-200 text-amber-500 hover:bg-slate-50', icon: Sun },
             { id: 'dark', label: 'Dark', color: 'bg-slate-900 border-slate-800 text-slate-100 hover:bg-slate-800', icon: Moon }
@@ -317,7 +381,7 @@ export function Sidebar({
                   onThemeChange(t.id);
                 }}
                 className={cn(
-                  "h-8 w-12 rounded-lg border-[1.5px] transition-all flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-primary",
+                  "h-8 w-10 rounded-lg border-[1.5px] transition-all flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-primary",
                   t.color,
                   theme === t.id ? "ring-2 ring-primary ring-offset-2 ring-offset-background border-transparent" : "hover:scale-105"
                 )}

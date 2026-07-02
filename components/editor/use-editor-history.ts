@@ -20,7 +20,6 @@ export const useEditorHistory = (note: Note | null, onUpdateNote: (id: string, u
   useEffect(() => {
     if (note && (history.length === 0 || history[historyIndex]?.title !== note.title)) {
       const initialHistory = [{ title: note.title, content: note.content }];
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setHistory(initialHistory);
       setHistoryIndex(0);
       historyRef.current = initialHistory;

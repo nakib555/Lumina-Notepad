@@ -1,4 +1,3 @@
-/* eslint-disable react-hooks/set-state-in-effect */
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -37,17 +36,37 @@ export const TableEditDialog = ({ isOpen, onClose, table, onConfirm }: TableEdit
 
   useEffect(() => {
     if (isOpen && table) {
-      const currentRows = table.querySelectorAll('tr').length;
-      const firstRow = table.querySelector('tr');
-      const currentCols = firstRow ? firstRow.querySelectorAll('th, td').length : 0;
+      // Find all direct rows of this table to avoid selecting nested table elements
+      const allDirectRows = Array.from(table.querySelectorAll('tr')).filter(tr => tr.closest('table') === table);
       
-      const thElements = Array.from(table.querySelectorAll('thead th'));
-      const headers = thElements.map(th => th.innerHTML || '');
-      const alignments = thElements.map(th => (th.getAttribute('align') || (th as HTMLElement).style.textAlign || '') as string);
+      const headerRow = allDirectRows[0];
+      const thElements = headerRow 
+        ? (Array.from(headerRow.querySelectorAll('th, td')).filter(cell => cell.closest('tr') === headerRow) as HTMLElement[])
+        : [];
+      const currentCols = thElements.length || 2;
+      
+      const headers = thElements.map((th, i) => th.innerHTML || `Header ${i + 1}`);
+      const alignments = thElements.map(th => {
+        const alignAttr = th.getAttribute('align');
+        if (alignAttr) return alignAttr;
+        const styleAlign = th.style.textAlign;
+        if (styleAlign) return styleAlign;
+        return '';
+      });
 
-      const rowsData = Array.from(table.querySelectorAll('tbody tr')).map(tr => 
-        Array.from(tr.querySelectorAll('td')).map(td => td.innerHTML || '')
+      const bodyRows = allDirectRows.slice(1);
+      const rowsData = bodyRows.map(tr => 
+        Array.from(tr.querySelectorAll('td, th')).filter(cell => cell.closest('tr') === tr).map(td => td.innerHTML || '')
       );
+
+      const paddedRowsData = rowsData.map(r => {
+        if (r.length < currentCols) {
+          return [...r, ...Array(currentCols - r.length).fill('')];
+        }
+        return r.slice(0, currentCols);
+      });
+      
+      const currentRows = allDirectRows.length || 2;
       
       const wrapper = table.closest('.overflow-x-auto');
       let currentCurveLevel = 0;
@@ -67,7 +86,7 @@ export const TableEditDialog = ({ isOpen, onClose, table, onConfirm }: TableEdit
       
       setRows(currentRows);
       setCols(currentCols);
-      setTableData({ headers, rows: rowsData, alignments });
+      setTableData({ headers, rows: paddedRowsData, alignments });
       setActiveTab('rows'); // Reset to rows when opened
       setSelectedCell(null);
     }
@@ -80,7 +99,15 @@ export const TableEditDialog = ({ isOpen, onClose, table, onConfirm }: TableEdit
     
     // Scrape latest values deeply from the preview DOM in case user didn't blur the field
     const previewTable = document.getElementById('table-settings-preview');
-    const latestTableData = { ...tableData, headers: [...tableData.headers], rows: tableData.rows.map(r => [...r]) };
+    
+    // Initialize latestTableData with exact final dimensions
+    const latestTableData = {
+      headers: Array.from({ length: finalCols }).map((_, i) => tableData.headers[i] || `Header ${i + 1}`),
+      rows: Array.from({ length: Math.max(0, finalRows - 1) }).map((_, r) => 
+        Array.from({ length: finalCols }).map((_, c) => tableData.rows[r]?.[c] || '')
+      ),
+      alignments: Array.from({ length: finalCols }).map((_, i) => tableData.alignments[i] || '')
+    };
     
     if (previewTable) {
         const ths = previewTable.querySelectorAll('thead th');
@@ -139,7 +166,7 @@ export const TableEditDialog = ({ isOpen, onClose, table, onConfirm }: TableEdit
       alignments.splice(index, 0, '');
       const rowData = prev.rows.map(r => {
         const newR = [...r];
-        newR.splice(index, 0, 'Cell');
+        newR.splice(index, 0, '');
         return newR;
       });
       return { headers, rows: rowData, alignments };
@@ -235,7 +262,7 @@ export const TableEditDialog = ({ isOpen, onClose, table, onConfirm }: TableEdit
   const insertRow = (index: number) => {
     setTableData(prev => {
       const rowData = [...prev.rows];
-      rowData.splice(index, 0, Array(prev.headers.length).fill('Cell'));
+      rowData.splice(index, 0, Array(prev.headers.length).fill(''));
       return { ...prev, rows: rowData };
     });
     setRows(r => Number(r) + 1);
@@ -264,7 +291,7 @@ export const TableEditDialog = ({ isOpen, onClose, table, onConfirm }: TableEdit
             const diff = newCols - headers.length;
             headers.push(...Array(diff).fill('Header'));
             alignments.push(...Array(diff).fill(''));
-            rowData = rowData.map(r => [...r, ...Array(diff).fill('Cell')]);
+            rowData = rowData.map(r => [...r, ...Array(diff).fill('')]);
         } else if (newCols < headers.length) {
             headers = headers.slice(0, newCols);
             alignments = alignments.slice(0, newCols);
@@ -277,7 +304,7 @@ export const TableEditDialog = ({ isOpen, onClose, table, onConfirm }: TableEdit
         if (targetBodyRows > rowData.length) {
             const diff = targetBodyRows - rowData.length;
             for (let i=0; i<diff; i++) {
-                rowData.push(Array(newCols).fill('Cell'));
+                rowData.push(Array(newCols).fill(''));
             }
         } else if (targetBodyRows < rowData.length) {
             rowData = rowData.slice(0, targetBodyRows);
@@ -574,7 +601,7 @@ export const TableEditDialog = ({ isOpen, onClose, table, onConfirm }: TableEdit
                               contentEditable={!isKeyboardLocked}
                               suppressContentEditableWarning
                               onBlur={(e) => handleCellTextChange(r, c, e.currentTarget.innerHTML)}
-                              dangerouslySetInnerHTML={{ __html: tableData.rows[r]?.[c] ?? 'Cell' }}
+                              dangerouslySetInnerHTML={{ __html: tableData.rows[r]?.[c] ?? '' }}
                             />
                           ))}
                         </tr>
