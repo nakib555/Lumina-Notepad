@@ -5,7 +5,22 @@ import { gfm } from 'turndown-plugin-gfm';
 import { marked } from 'marked';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { Trash2, Settings2, ExternalLink, AlignLeft, AlignCenter, AlignRight } from "lucide-react";
+import { 
+  Trash2, 
+  Settings2, 
+  ExternalLink, 
+  AlignLeft, 
+  AlignCenter, 
+  AlignRight,
+  ArrowLeftToLine,
+  ArrowRightToLine,
+  ArrowUpToLine,
+  ArrowDownToLine,
+  Copy,
+  Eraser,
+  Trash,
+  Plus
+} from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -18,6 +33,14 @@ import markedKatex from 'marked-katex-extension';
 import 'katex/dist/katex.min.css';
 import { cn } from "@/lib/utils";
 import { PenTool, Loader2 } from 'lucide-react';
+import {
+  ITableCell,
+  ITableModel,
+  PatchType,
+  ITableDOMPatch,
+  TableController,
+  ITableSelection
+} from './table-model';
 
 const SketchDialog = lazy(() => import('./sketch-dialog').then(module => ({ default: module.SketchDialog })));
 const TableEditDialog = lazy(() => import('./table-edit-dialog').then(module => ({ default: module.TableEditDialog })));
@@ -227,6 +250,158 @@ const parseMarkdown = (text: string) => {
   return finalHtml;
 };
 
+const focusCell = (cell: HTMLElement, atEnd: boolean = true) => {
+  cell.focus();
+  const range = document.createRange();
+  range.selectNodeContents(cell);
+  range.collapse(!atEnd);
+  const sel = window.getSelection();
+  if (sel) {
+    sel.removeAllRanges();
+    sel.addRange(range);
+  }
+};
+
+const getCellIndices = (cell: HTMLElement) => {
+  const tr = cell.closest('tr');
+  const table = cell.closest('table');
+  if (!tr || !table) return null;
+  const allRows = Array.from(table.querySelectorAll('tr'));
+  const r = allRows.indexOf(tr);
+  const cells = Array.from(tr.children);
+  const c = cells.indexOf(cell);
+  return { r, c, table, tr };
+};
+
+const parseTableDOM = (table: HTMLTableElement): ITableModel => {
+  const rows = Array.from(table.querySelectorAll('tr'));
+  const cells: ITableCell[][] = rows.map((tr) => {
+    return Array.from(tr.children).map((cell) => {
+      const alignment = cell.getAttribute('align') as 'left' | 'center' | 'right' | null || 'left';
+      return {
+        value: cell.innerHTML === '<br>' ? '' : cell.innerHTML,
+        style: { alignment }
+      };
+    });
+  });
+  return {
+    id: table.id || 'table_' + Math.random().toString(36).substring(2, 9),
+    cells,
+    rowCount: cells.length,
+    colCount: cells[0]?.length || 0
+  };
+};
+
+const renderDOMPatches = (table: HTMLTableElement, controller: TableController, domPatches: ITableDOMPatch[]) => {
+  const model = controller.getModel();
+  
+  const rebuildTable = () => {
+    table.innerHTML = '';
+    const thead = document.createElement('thead');
+    const tbody = document.createElement('tbody');
+    
+    model.cells.forEach((row, rIdx) => {
+      const tr = document.createElement('tr');
+      row.forEach((cell) => {
+        const isHeader = rIdx === 0;
+        const cellEl = document.createElement(isHeader ? 'th' : 'td');
+        cellEl.innerHTML = cell.value === '' ? '<br>' : cell.value;
+        if (cell.style.alignment) {
+          cellEl.setAttribute('align', cell.style.alignment);
+          cellEl.style.textAlign = cell.style.alignment;
+        }
+        tr.appendChild(cellEl);
+      });
+      if (rIdx === 0) {
+        thead.appendChild(tr);
+      } else {
+        tbody.appendChild(tr);
+      }
+    });
+    table.appendChild(thead);
+    table.appendChild(tbody);
+  };
+
+  const hasRebuild = domPatches.some(p => p.type === 'REBUILD_TABLE');
+  if (hasRebuild) {
+    rebuildTable();
+    return;
+  }
+
+  const rows = Array.from(table.querySelectorAll('tr'));
+  domPatches.forEach(patch => {
+    if (patch.type === 'UPDATE_CELL_HTML' && patch.targetCell) {
+      const { r, c } = patch.targetCell;
+      const tr = rows[r];
+      const cellEl = tr?.children[c] as HTMLElement;
+      if (cellEl) {
+        cellEl.innerHTML = patch.html === '' ? '<br>' : (patch.html || '<br>');
+        if (patch.style?.alignment) {
+          cellEl.setAttribute('align', patch.style.alignment);
+          cellEl.style.textAlign = patch.style.alignment;
+        }
+      }
+    } else if (patch.type === 'UPDATE_CELL_STYLE' && patch.targetCell) {
+      const { r, c } = patch.targetCell;
+      const tr = rows[r];
+      const cellEl = tr?.children[c] as HTMLElement;
+      if (cellEl && patch.style?.alignment) {
+        cellEl.setAttribute('align', patch.style.alignment);
+        cellEl.style.textAlign = patch.style.alignment;
+      }
+    }
+  });
+};
+
+const getTableController = (table: HTMLTableElement, selection: ITableSelection | null = null): TableController => {
+  const model = parseTableDOM(table);
+  const controller = new TableController(model);
+  if (selection) {
+    controller.setSelection(selection);
+  }
+  return controller;
+};
+
+const highlightTableCells = (
+  table: HTMLTableElement | null,
+  hovered: { r: number, c: number } | null,
+  active: { r: number, c: number } | null
+) => {
+  if (!table) return;
+  const rows = Array.from(table.querySelectorAll('tr'));
+  
+  rows.forEach((tr, rIndex) => {
+    const cells = Array.from(tr.children) as HTMLElement[];
+    cells.forEach((cell, cIndex) => {
+      // Clear previous custom highlights
+      cell.classList.remove(
+        'bg-slate-100/50', 'dark:bg-slate-800/30',
+        'bg-blue-50/10', 'dark:bg-blue-950/10',
+        'bg-slate-200/50', 'dark:bg-slate-700/50',
+        'bg-blue-100/20', 'dark:bg-blue-900/20',
+        'ring-2', 'ring-blue-500', 'z-10', 'relative', 'active-cell'
+      );
+
+      // 1. Active Cell
+      if (active && active.r === rIndex && active.c === cIndex) {
+        cell.classList.add('ring-2', 'ring-blue-500', 'z-10', 'relative', 'active-cell');
+      }
+      // 2. Active Row / Column
+      else if (active && active.r === rIndex) {
+        cell.classList.add('bg-slate-200/50', 'dark:bg-slate-700/50');
+      } else if (active && active.c === cIndex) {
+        cell.classList.add('bg-blue-100/20', 'dark:bg-blue-900/20');
+      }
+      // 3. Hovered Row / Column
+      else if (hovered && hovered.r === rIndex) {
+        cell.classList.add('bg-slate-100/50', 'dark:bg-slate-800/30');
+      } else if (hovered && hovered.c === cIndex) {
+        cell.classList.add('bg-blue-50/10', 'dark:bg-blue-950/10');
+      }
+    });
+  });
+};
+
   export interface EditorAreaRef {
     flushPreviewEdit: () => string | undefined;
   }
@@ -271,9 +446,11 @@ export const EditorArea = ({
   const [selectedRowIndex, setSelectedRowIndex] = useState<number | null>(null);
   const [isTableEditDialogOpen, setIsTableEditDialogOpen] = useState(false);
   const [activeTableRow, setActiveTableRow] = useState<HTMLTableRowElement | null>(null);
-  const [activeTableRowRect, setActiveTableRowRect] = useState<{ top: number, left: number, width: number, height: number } | null>(null);
   const [deletePromptInfo, setDeletePromptInfo] = useState<{ isOpen: boolean, targetRow: HTMLTableRowElement | null, targetTable: HTMLTableElement | null }>({ isOpen: false, targetRow: null, targetTable: null });
   const [deletePromptOption, setDeletePromptOption] = useState<'row' | 'table'>('row');
+
+  const [hoveredCell, setHoveredCell] = useState<{ r: number, c: number } | null>(null);
+  const [activeCell, setActiveCell] = useState<{ r: number, c: number } | null>(null);
 
   const [hoveredImage, setHoveredImage] = useState<HTMLImageElement | null>(null);
   const [imageRect, setImageRect] = useState<{ top: number, left: number, width: number, height: number } | null>(null);
@@ -402,7 +579,7 @@ export const EditorArea = ({
       const sketch = target.closest('.sketch-container') as HTMLElement | null;
       const img = sketch ? null : target.closest('img');
       const link = target.closest('a');
-      const isHoveringToolbar = target.closest('.table-floating-toolbar') || target.closest('.image-floating-toolbar') || target.closest('.sketch-floating-toolbar') || target.closest('.link-floating-toolbar') || target.closest('[role="dialog"]');
+      const isHoveringToolbar = target.closest('.table-floating-toolbar') || target.closest('.image-floating-toolbar') || target.closest('.sketch-floating-toolbar') || target.closest('.link-floating-toolbar') || target.closest('[role="dialog"]') || target.closest('.table-overlay-btn');
       
       // Inside table checking
       if (table && previewRef.current.contains(table) && !target.closest('.table-floating-toolbar')) {
@@ -471,6 +648,108 @@ export const EditorArea = ({
   }, [hoveredTable, updateTableRect, isTableEditDialogOpen, hoveredImage, updateImageRect, isImageEditDialogOpen, hoveredSketch, updateSketchRect, isSketchEditDialogOpen, hoveredLink, updateLinkRect, powerSaver]);
 
   useEffect(() => {
+    const el = previewRef.current;
+    if (!el) return;
+
+    const handleMouseOver = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      const cell = target.closest('td, th') as HTMLElement | null;
+      if (cell && el.contains(cell)) {
+        const indices = getCellIndices(cell);
+        if (indices) {
+          setHoveredCell({ r: indices.r, c: indices.c });
+          if (hoveredTable !== indices.table) {
+            setHoveredTable(indices.table);
+            updateTableRect(indices.table);
+          }
+        }
+      }
+    };
+
+    const handleMouseOut = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      const cell = target.closest('td, th') as HTMLElement | null;
+      if (cell && el.contains(cell)) {
+        setHoveredCell(null);
+      }
+    };
+
+    const handleFocusIn = (e: FocusEvent) => {
+      const target = e.target as HTMLElement;
+      const cell = target.closest('td, th') as HTMLElement | null;
+      if (cell && el.contains(cell)) {
+        const indices = getCellIndices(cell);
+        if (indices) {
+          setActiveCell({ r: indices.r, c: indices.c });
+          setActiveTableRow(indices.tr as HTMLTableRowElement);
+          if (hoveredTable !== indices.table) {
+            setHoveredTable(indices.table);
+            updateTableRect(indices.table);
+          }
+        }
+      }
+    };
+
+    const handleFocusOut = (e: FocusEvent) => {
+      const relatedTarget = e.relatedTarget as HTMLElement | null;
+      if (relatedTarget && (
+        relatedTarget.closest('td, th') || 
+        relatedTarget.closest('.table-floating-toolbar') || 
+        relatedTarget.closest('.table-overlay-btn') || 
+        relatedTarget.closest('[role="dialog"]')
+      )) {
+        return;
+      }
+      setTimeout(() => {
+        const activeEl = document.activeElement;
+        if (activeEl && (
+          activeEl.closest('td, th') || 
+          activeEl.closest('.table-floating-toolbar') || 
+          activeEl.closest('.table-overlay-btn') || 
+          activeEl.closest('[role="dialog"]')
+        )) {
+          return;
+        }
+        setActiveCell(null);
+      }, 150);
+    };
+
+    const handleClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      const cell = target.closest('td, th') as HTMLElement | null;
+      if (cell && el.contains(cell)) {
+        const indices = getCellIndices(cell);
+        if (indices) {
+          setActiveCell({ r: indices.r, c: indices.c });
+          setActiveTableRow(indices.tr as HTMLTableRowElement);
+          setSelectedColIndex(null);
+          setSelectedRowIndex(null);
+        }
+      }
+    };
+
+    el.addEventListener('mouseover', handleMouseOver);
+    el.addEventListener('mouseout', handleMouseOut);
+    el.addEventListener('focusin', handleFocusIn);
+    el.addEventListener('focusout', handleFocusOut);
+    el.addEventListener('click', handleClick);
+
+    return () => {
+      el.removeEventListener('mouseover', handleMouseOver);
+      el.removeEventListener('mouseout', handleMouseOut);
+      el.removeEventListener('focusin', handleFocusIn);
+      el.removeEventListener('focusout', handleFocusOut);
+      el.removeEventListener('click', handleClick);
+    };
+  }, [hoveredTable, updateTableRect]);
+
+  useEffect(() => {
+    if (hoveredTable) {
+      highlightTableCells(hoveredTable, hoveredCell, activeCell);
+    }
+  }, [hoveredTable, hoveredCell, activeCell]);
+
+  useEffect(() => {
     if (!hoveredTable || powerSaver) return;
     
     const observer = new ResizeObserver(() => {
@@ -517,7 +796,11 @@ export const EditorArea = ({
       emDelimiter: '*',
     });
     
-    service.escape = (string) => string; // Do not escape anything to allow live markdown typing
+    service.escape = (string) => {
+      // Avoid escaping most markdown characters to allow live markdown typing.
+      // But we MUST escape pipe '|' characters because they break table column parsing in GFM tables!
+      return string.replace(/\|/g, '\\|');
+    };
 
     service.use(gfm as import('turndown').Plugin);
 
@@ -853,6 +1136,248 @@ export const EditorArea = ({
     }
   }, [handleContentChange, turndownService]);
 
+  const handleInsertRowAbove = useCallback(() => {
+    if (!hoveredTable) return;
+    let rIdx = selectedRowIndex !== null ? selectedRowIndex : (activeCell ? activeCell.r : null);
+    if (rIdx === null && activeTableRow) {
+      rIdx = Array.from(hoveredTable.querySelectorAll('tr')).indexOf(activeTableRow);
+    }
+    if (rIdx === null) rIdx = 0;
+
+    const controller = getTableController(hoveredTable);
+    const result = controller.applyPatches([{
+      patchId: 'patch_' + Math.random().toString(36).substring(2, 9),
+      type: PatchType.INSERT_ROW,
+      timestamp: Date.now(),
+      payload: { count: 1, at: rIdx }
+    }]);
+
+    if (result.success) {
+      renderDOMPatches(hoveredTable, controller, result.domPatches);
+      flushPreviewEdit();
+    }
+  }, [hoveredTable, selectedRowIndex, activeCell, activeTableRow, flushPreviewEdit]);
+
+  const handleInsertRowBelow = useCallback(() => {
+    if (!hoveredTable) return;
+    let rIdx = selectedRowIndex !== null ? selectedRowIndex : (activeCell ? activeCell.r : null);
+    if (rIdx === null && activeTableRow) {
+      rIdx = Array.from(hoveredTable.querySelectorAll('tr')).indexOf(activeTableRow);
+    }
+    if (rIdx === null) rIdx = 0;
+
+    const controller = getTableController(hoveredTable);
+    const result = controller.applyPatches([{
+      patchId: 'patch_' + Math.random().toString(36).substring(2, 9),
+      type: PatchType.INSERT_ROW,
+      timestamp: Date.now(),
+      payload: { count: 1, at: rIdx + 1 }
+    }]);
+
+    if (result.success) {
+      renderDOMPatches(hoveredTable, controller, result.domPatches);
+      flushPreviewEdit();
+    }
+  }, [hoveredTable, selectedRowIndex, activeCell, activeTableRow, flushPreviewEdit]);
+
+  const handleInsertColLeft = useCallback(() => {
+    if (!hoveredTable) return;
+    const cIdx = selectedColIndex !== null ? selectedColIndex : (activeCell ? activeCell.c : 0);
+
+    const controller = getTableController(hoveredTable);
+    const result = controller.applyPatches([{
+      patchId: 'patch_' + Math.random().toString(36).substring(2, 9),
+      type: PatchType.INSERT_COL,
+      timestamp: Date.now(),
+      payload: { count: 1, at: cIdx }
+    }]);
+
+    if (result.success) {
+      renderDOMPatches(hoveredTable, controller, result.domPatches);
+      flushPreviewEdit();
+    }
+  }, [hoveredTable, selectedColIndex, activeCell, flushPreviewEdit]);
+
+  const handleInsertColRight = useCallback(() => {
+    if (!hoveredTable) return;
+    const cIdx = selectedColIndex !== null ? selectedColIndex : (activeCell ? activeCell.c : 0);
+
+    const controller = getTableController(hoveredTable);
+    const result = controller.applyPatches([{
+      patchId: 'patch_' + Math.random().toString(36).substring(2, 9),
+      type: PatchType.INSERT_COL,
+      timestamp: Date.now(),
+      payload: { count: 1, at: cIdx + 1 }
+    }]);
+
+    if (result.success) {
+      renderDOMPatches(hoveredTable, controller, result.domPatches);
+      flushPreviewEdit();
+    }
+  }, [hoveredTable, selectedColIndex, activeCell, flushPreviewEdit]);
+
+  const handleDuplicateRow = useCallback(() => {
+    if (!hoveredTable) return;
+    let rIdx = selectedRowIndex !== null ? selectedRowIndex : (activeCell ? activeCell.r : null);
+    if (rIdx === null && activeTableRow) {
+      rIdx = Array.from(hoveredTable.querySelectorAll('tr')).indexOf(activeTableRow);
+    }
+    if (rIdx === null) return;
+
+    const controller = getTableController(hoveredTable);
+    const result = controller.applyPatches([{
+      patchId: 'patch_' + Math.random().toString(36).substring(2, 9),
+      type: PatchType.DUPLICATE_ROW,
+      timestamp: Date.now(),
+      payload: { r: rIdx }
+    }]);
+
+    if (result.success) {
+      renderDOMPatches(hoveredTable, controller, result.domPatches);
+      flushPreviewEdit();
+    }
+  }, [hoveredTable, selectedRowIndex, activeCell, activeTableRow, flushPreviewEdit]);
+
+  const handleDuplicateCol = useCallback(() => {
+    if (!hoveredTable) return;
+    const cIdx = selectedColIndex !== null ? selectedColIndex : (activeCell ? activeCell.c : null);
+    if (cIdx === null) return;
+
+    const controller = getTableController(hoveredTable);
+    const result = controller.applyPatches([{
+      patchId: 'patch_' + Math.random().toString(36).substring(2, 9),
+      type: PatchType.DUPLICATE_COL,
+      timestamp: Date.now(),
+      payload: { c: cIdx }
+    }]);
+
+    if (result.success) {
+      renderDOMPatches(hoveredTable, controller, result.domPatches);
+      flushPreviewEdit();
+    }
+  }, [hoveredTable, selectedColIndex, activeCell, flushPreviewEdit]);
+
+  const handleClearRow = useCallback(() => {
+    if (!hoveredTable) return;
+    let rIdx = selectedRowIndex !== null ? selectedRowIndex : (activeCell ? activeCell.r : null);
+    if (rIdx === null && activeTableRow) {
+      rIdx = Array.from(hoveredTable.querySelectorAll('tr')).indexOf(activeTableRow);
+    }
+    if (rIdx === null) return;
+
+    const controller = getTableController(hoveredTable);
+    const result = controller.applyPatches([{
+      patchId: 'patch_' + Math.random().toString(36).substring(2, 9),
+      type: PatchType.CLEAR_ROW,
+      timestamp: Date.now(),
+      payload: { r: rIdx }
+    }]);
+
+    if (result.success) {
+      renderDOMPatches(hoveredTable, controller, result.domPatches);
+      flushPreviewEdit();
+    }
+  }, [hoveredTable, selectedRowIndex, activeCell, activeTableRow, flushPreviewEdit]);
+
+  const handleClearCol = useCallback(() => {
+    if (!hoveredTable) return;
+    const cIdx = selectedColIndex !== null ? selectedColIndex : (activeCell ? activeCell.c : null);
+    if (cIdx === null) return;
+
+    const controller = getTableController(hoveredTable);
+    const result = controller.applyPatches([{
+      patchId: 'patch_' + Math.random().toString(36).substring(2, 9),
+      type: PatchType.CLEAR_COL,
+      timestamp: Date.now(),
+      payload: { c: cIdx }
+    }]);
+
+    if (result.success) {
+      renderDOMPatches(hoveredTable, controller, result.domPatches);
+      flushPreviewEdit();
+    }
+  }, [hoveredTable, selectedColIndex, activeCell, flushPreviewEdit]);
+
+  const handleDeleteRow = useCallback(() => {
+    if (!hoveredTable) return;
+    let rIdx = selectedRowIndex !== null ? selectedRowIndex : (activeCell ? activeCell.r : null);
+    if (rIdx === null && activeTableRow) {
+      rIdx = Array.from(hoveredTable.querySelectorAll('tr')).indexOf(activeTableRow);
+    }
+    if (rIdx === null) return;
+
+    const controller = getTableController(hoveredTable);
+    const model = controller.getModel();
+    if (model.rowCount <= 1) {
+      const wrapper = hoveredTable.closest('.table-wrapper');
+      if (wrapper) wrapper.remove();
+      else hoveredTable.remove();
+      setHoveredTable(null);
+      flushPreviewEdit();
+    } else {
+      const result = controller.applyPatches([{
+        patchId: 'patch_' + Math.random().toString(36).substring(2, 9),
+        type: PatchType.DELETE_ROW,
+        timestamp: Date.now(),
+        payload: { r: rIdx }
+      }]);
+
+      if (result.success) {
+        renderDOMPatches(hoveredTable, controller, result.domPatches);
+        flushPreviewEdit();
+      }
+    }
+    setSelectedRowIndex(null);
+  }, [hoveredTable, selectedRowIndex, activeCell, activeTableRow, flushPreviewEdit]);
+
+  const handleDeleteCol = useCallback(() => {
+    if (!hoveredTable) return;
+    const cIdx = selectedColIndex !== null ? selectedColIndex : (activeCell ? activeCell.c : null);
+    if (cIdx === null) return;
+
+    const controller = getTableController(hoveredTable);
+    const model = controller.getModel();
+    if (model.colCount <= 1) {
+      const wrapper = hoveredTable.closest('.table-wrapper');
+      if (wrapper) wrapper.remove();
+      else hoveredTable.remove();
+      setHoveredTable(null);
+      flushPreviewEdit();
+    } else {
+      const result = controller.applyPatches([{
+        patchId: 'patch_' + Math.random().toString(36).substring(2, 9),
+        type: PatchType.DELETE_COL,
+        timestamp: Date.now(),
+        payload: { c: cIdx }
+      }]);
+
+      if (result.success) {
+        renderDOMPatches(hoveredTable, controller, result.domPatches);
+        flushPreviewEdit();
+      }
+    }
+    setSelectedColIndex(null);
+  }, [hoveredTable, selectedColIndex, activeCell, flushPreviewEdit]);
+
+  const handleSetColAlign = useCallback((align: 'left' | 'center' | 'right') => {
+    if (!hoveredTable) return;
+    const cIdx = selectedColIndex !== null ? selectedColIndex : (activeCell ? activeCell.c : null);
+    if (cIdx === null) return;
+
+    const controller = getTableController(hoveredTable);
+    const result = controller.applyPatches([{
+      patchId: 'patch_' + Math.random().toString(36).substring(2, 9),
+      type: PatchType.FORMAT_COL,
+      timestamp: Date.now(),
+      payload: { c: cIdx, alignment: align }
+    }]);
+
+    if (result.success) {
+      renderDOMPatches(hoveredTable, controller, result.domPatches);
+      flushPreviewEdit();
+    }
+  }, [hoveredTable, selectedColIndex, activeCell, flushPreviewEdit]);
+
 
 
 
@@ -905,113 +1430,28 @@ export const EditorArea = ({
   const handleTableEditConfirm = useCallback((targetRows: number, targetCols: number, curveClass: string, tableData?: { headers: string[], rows: string[][], alignments?: string[] }) => {
     if (!hoveredTable) return;
 
-    let thead = hoveredTable.querySelector('thead');
-    let tbody = hoveredTable.querySelector('tbody');
-    
-    if (!thead) {
-      thead = document.createElement('thead');
-      hoveredTable.insertBefore(thead, hoveredTable.firstChild);
-    }
-    if (!tbody) {
-      tbody = document.createElement('tbody');
-      hoveredTable.appendChild(tbody);
-    }
-
     if (tableData) {
-      // Rebuild the entire table contents safely using the provided structural data
-      // which has preserved the exact HTML via innerHTML
-      thead.innerHTML = '';
-      const headerTr = document.createElement('tr');
-      tableData.headers.forEach((h, i) => {
-        const th = document.createElement('th');
-        th.innerHTML = h || 'Header';
-        if (tableData.alignments?.[i]) {
-          th.setAttribute('align', tableData.alignments[i]);
-          th.style.textAlign = tableData.alignments[i];
-        }
-        headerTr.appendChild(th);
+      const cells: ITableCell[][] = [];
+      cells.push(tableData.headers.map((h, i) => ({
+        value: h,
+        style: { alignment: (tableData.alignments?.[i] as 'left' | 'center' | 'right' | null) || 'left' }
+      })));
+      tableData.rows.forEach(row => {
+        cells.push(row.map((val, i) => ({
+          value: val,
+          style: { alignment: (tableData.alignments?.[i] as 'left' | 'center' | 'right' | null) || 'left' }
+        })));
       });
-      thead.appendChild(headerTr);
 
-      tbody.innerHTML = '';
-      tableData.rows.forEach(rowData => {
-        const tr = document.createElement('tr');
-        rowData.forEach((cellHtml, i) => {
-          const td = document.createElement('td');
-          td.innerHTML = cellHtml || '';
-          if (tableData.alignments?.[i]) {
-            td.setAttribute('align', tableData.alignments[i]);
-            td.style.textAlign = tableData.alignments[i];
-          }
-          tr.appendChild(td);
-        });
-        tbody.appendChild(tr);
-      });
-    } else {
-      // Fallback for old way
-      const firstRow = hoveredTable.querySelector('tr');
-      const currentCols = firstRow ? firstRow.querySelectorAll('th, td').length : 0;
+      const model: ITableModel = {
+        id: hoveredTable.id || 'table_' + Math.random().toString(36).substring(2, 9),
+        cells,
+        rowCount: cells.length,
+        colCount: cells[0]?.length || 0
+      };
 
-      // Adjust columns
-      if (targetCols > currentCols) {
-        const diff = targetCols - currentCols;
-        // Add to header
-        const headerRow = thead.querySelector('tr');
-        if (headerRow) {
-          for (let i = 0; i < diff; i++) {
-            const th = document.createElement('th');
-            th.textContent = 'Header';
-            headerRow.appendChild(th);
-          }
-        }
-        // Add to body rows
-        const bodyRows = tbody.querySelectorAll('tr');
-        bodyRows.forEach(row => {
-          for (let i = 0; i < diff; i++) {
-            const td = document.createElement('td');
-            td.textContent = '';
-            row.appendChild(td);
-          }
-        });
-      } else if (targetCols < currentCols) {
-        const diff = currentCols - targetCols;
-        // Remove from header
-        const headerRow = thead.querySelector('tr');
-        if (headerRow) {
-          for (let i = 0; i < diff; i++) {
-            if (headerRow.lastChild) headerRow.removeChild(headerRow.lastChild);
-          }
-        }
-        // Remove from body rows
-        const bodyRows = tbody.querySelectorAll('tr');
-        bodyRows.forEach(row => {
-          for (let i = 0; i < diff; i++) {
-            if (row.lastChild) row.removeChild(row.lastChild);
-          }
-        });
-      }
-
-      // Adjust rows
-      const targetBodyRows = Math.max(0, targetRows - 1);
-      const currentBodyRows = tbody.querySelectorAll('tr').length;
-
-      if (targetBodyRows > currentBodyRows) {
-        const diff = targetBodyRows - currentBodyRows;
-        for (let i = 0; i < diff; i++) {
-          const tr = document.createElement('tr');
-          for (let j = 0; j < targetCols; j++) {
-            const td = document.createElement('td');
-            td.textContent = '';
-            tr.appendChild(td);
-          }
-          tbody.appendChild(tr);
-        }
-      } else if (targetBodyRows < currentBodyRows) {
-        const diff = currentBodyRows - targetBodyRows;
-        for (let i = 0; i < diff; i++) {
-          if (tbody.lastChild) tbody.removeChild(tbody.lastChild);
-        }
-      }
+      const controller = new TableController(model);
+      renderDOMPatches(hoveredTable, controller, [{ type: 'REBUILD_TABLE' }]);
     }
 
     // Handle rounded corners
@@ -1366,6 +1806,124 @@ export const EditorArea = ({
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     const target = e.target as HTMLElement;
 
+    // Check if we are inside a table cell
+    const cell = target.closest('td, th') as HTMLElement | null;
+    const table = cell?.closest('table');
+
+    if (cell && table) {
+      const maxRows = table.querySelectorAll('tr').length;
+      const maxCols = table.querySelectorAll('tr')[0]?.children.length || 0;
+      const indices = getCellIndices(cell);
+
+      if (indices) {
+        const { r, c } = indices;
+
+        const getCellAt = (rowIdx: number, colIdx: number): HTMLElement | null => {
+          const rows = table.querySelectorAll('tr');
+          const targetRow = rows[rowIdx];
+          if (targetRow) {
+            return targetRow.children[colIdx] as HTMLElement;
+          }
+          return null;
+        };
+
+        if (e.key === 'ArrowUp') {
+          const targetCell = getCellAt(r - 1, c);
+          if (targetCell) {
+            e.preventDefault();
+            focusCell(targetCell, true);
+            return;
+          }
+        } else if (e.key === 'ArrowDown') {
+          const targetCell = getCellAt(r + 1, c);
+          if (targetCell) {
+            e.preventDefault();
+            focusCell(targetCell, true);
+            return;
+          }
+        } else if (e.key === 'ArrowLeft') {
+          const sel = window.getSelection();
+          const isAtStart = sel ? sel.anchorOffset === 0 : true;
+          if (isAtStart || e.ctrlKey || e.metaKey) {
+            const targetCell = c > 0 ? getCellAt(r, c - 1) : getCellAt(r - 1, maxCols - 1);
+            if (targetCell) {
+              e.preventDefault();
+              focusCell(targetCell, true);
+              return;
+            }
+          }
+        } else if (e.key === 'ArrowRight') {
+          const sel = window.getSelection();
+          const isAtEnd = sel ? sel.anchorOffset === (sel.anchorNode?.textContent?.length || 0) : true;
+          if (isAtEnd || e.ctrlKey || e.metaKey) {
+            const targetCell = c < maxCols - 1 ? getCellAt(r, c + 1) : getCellAt(r + 1, 0);
+            if (targetCell) {
+              e.preventDefault();
+              focusCell(targetCell, false);
+              return;
+            }
+          }
+        } else if (e.key === 'Tab') {
+          e.preventDefault();
+          if (e.shiftKey) {
+            const targetCell = c > 0 ? getCellAt(r, c - 1) : getCellAt(r - 1, maxCols - 1);
+            if (targetCell) {
+              focusCell(targetCell, true);
+            }
+          } else {
+            if (r === maxRows - 1 && c === maxCols - 1) {
+              const controller = getTableController(table);
+              const result = controller.applyPatches([{
+                patchId: 'patch_' + Math.random().toString(36).substring(2, 9),
+                type: PatchType.INSERT_ROW,
+                timestamp: Date.now(),
+                payload: { count: 1, at: r + 1 }
+              }]);
+
+              if (result.success) {
+                renderDOMPatches(table, controller, result.domPatches);
+                flushPreviewEdit();
+                
+                setTimeout(() => {
+                  const addedCell = getCellAt(r + 1, 0);
+                  if (addedCell) focusCell(addedCell, true);
+                }, 50);
+              }
+            } else {
+              const targetCell = c < maxCols - 1 ? getCellAt(r, c + 1) : getCellAt(r + 1, 0);
+              if (targetCell) {
+                focusCell(targetCell, true);
+              }
+            }
+          }
+          return;
+        } else if (e.key === 'Home') {
+          if (e.ctrlKey || e.metaKey) {
+            const targetCell = getCellAt(r, 0);
+            if (targetCell) {
+              e.preventDefault();
+              focusCell(targetCell, true);
+              return;
+            }
+          }
+        } else if (e.key === 'End') {
+          if (e.ctrlKey || e.metaKey) {
+            const targetCell = getCellAt(r, maxCols - 1);
+            if (targetCell) {
+              e.preventDefault();
+              focusCell(targetCell, false);
+              return;
+            }
+          }
+        } else if (e.key === 'Escape') {
+          e.preventDefault();
+          cell.blur();
+          setActiveCell(null);
+          return;
+        }
+      }
+    }
+
     if (e.key === 'Backspace') {
       const sel = window.getSelection();
       if (sel && sel.isCollapsed && sel.rangeCount > 0) {
@@ -1568,47 +2126,12 @@ export const EditorArea = ({
       }
     }
 
-    const tr = (node.nodeType === Node.TEXT_NODE ? node.parentElement : node as Element)?.closest('tr');
-    if (tr && previewRef.current.contains(tr)) {
-      setActiveTableRow(tr as HTMLTableRowElement);
-      if (!tr.getBoundingClientRect) return;
-      const rect = tr.getBoundingClientRect();
-      const parentRect = previewRef.current.parentElement!.getBoundingClientRect();
-      setActiveTableRowRect({
-        top: rect.top - parentRect.top,
-        left: rect.left - parentRect.left,
-        width: rect.width,
-        height: rect.height,
-      });
-    } else {
-      setActiveTableRow(null);
-    }
   }, [isViewMode, powerSaver]);
 
   useEffect(() => {
     document.addEventListener('selectionchange', handleSelectionChange);
     return () => document.removeEventListener('selectionchange', handleSelectionChange);
   }, [handleSelectionChange]);
-
-  useEffect(() => {
-    if (!activeTableRow || !previewRef.current || powerSaver) return;
-    const observer = new ResizeObserver(() => {
-      const parentRect = previewRef.current!.parentElement?.getBoundingClientRect();
-      if (!activeTableRow || !activeTableRow.getBoundingClientRect) return;
-      const rect = activeTableRow.getBoundingClientRect();
-      if (parentRect) {
-        setActiveTableRowRect({
-          top: rect.top - parentRect.top,
-          left: rect.left - parentRect.left,
-          width: rect.width,
-          height: rect.height,
-        });
-      }
-    });
-
-    observer.observe(activeTableRow);
-    return () => observer.disconnect();
-  }, [activeTableRow, powerSaver]);
 
   useEffect(() => {
     const el = previewRef.current;
@@ -1666,6 +2189,28 @@ export const EditorArea = ({
   }, [flushPreviewEdit]);
 
   const handlePaste = useCallback((e: React.ClipboardEvent<HTMLDivElement>) => {
+    const textData = e.clipboardData.getData('text/plain');
+    const selNode = window.getSelection()?.anchorNode;
+    const activeCellEl = (selNode instanceof Element ? selNode : selNode?.parentElement)?.closest('td, th') as HTMLElement | null;
+
+    if (activeCellEl && textData && (textData.includes('\t') || textData.includes('\n'))) {
+      e.preventDefault();
+      const table = activeCellEl.closest('table');
+      if (table) {
+        const indices = getCellIndices(activeCellEl);
+        if (indices) {
+          const { r: startRow, c: startCol } = indices;
+          const controller = getTableController(table);
+          const result = controller.handlePaste(textData, startRow, startCol);
+          if (result && result.success) {
+            renderDOMPatches(table, controller, result.domPatches);
+            flushPreviewEdit();
+          }
+          return;
+        }
+      }
+    }
+
     if (e.clipboardData.files && e.clipboardData.files.length > 0) {
       for (let i = 0; i < e.clipboardData.files.length; i++) {
         const file = e.clipboardData.files[i];
@@ -1865,136 +2410,217 @@ export const EditorArea = ({
            )}
          </>
       )}
-      {!isViewMode && activeTableRow && activeTableRowRect && !selectedColIndex && !selectedRowIndex && (
-        <>
-          <div 
-            className="table-floating-toolbar absolute z-[1] flex items-center justify-center gap-0.5 bg-background border border-border rounded-md shadow-[0_2px_8px_rgba(0,0,0,0.08)] pointer-events-auto px-0.5 py-0.5 print:hidden"
-            style={{ 
-              top: activeTableRowRect.top, 
-              left: activeTableRowRect.left,
-              transform: 'translate(-50%, -50%)'
-            }}
+      {!isViewMode && hoveredTable && tableRect && (
+        <div 
+          className="table-floating-toolbar absolute z-30 flex items-center gap-1 bg-background/95 backdrop-blur-sm border border-border rounded-lg shadow-[0_4px_20px_rgba(0,0,0,0.1)] pointer-events-auto p-1.5 transition-all duration-150 animate-in fade-in zoom-in-95 print:hidden select-none"
+          style={{ 
+            top: tableRect.top - 54, 
+            left: tableRect.left,
+          }}
+          onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+        >
+          {/* Section 1: Table Global Settings */}
+          <button 
+            onClick={(e) => { e.preventDefault(); setIsTableEditDialogOpen(true); }}
+            className="p-1.5 text-muted-foreground hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 rounded-md transition-colors flex items-center gap-1 text-xs font-semibold cursor-pointer"
+            title="Table Styling & Settings"
           >
-            <button 
-              onClick={(e) => { e.preventDefault(); setIsTableEditDialogOpen(true); }}
-              className="p-1 px-1.5 text-muted-foreground hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/30 rounded transition-colors"
-              title="Table Settings"
-            >
-              <Settings2 className="w-4 h-4" />
-            </button>
-          </div>
-          <div 
-            className="table-floating-toolbar absolute z-[1] flex items-center justify-center bg-background border border-border rounded-md shadow-[0_2px_8px_rgba(0,0,0,0.08)] pointer-events-auto px-0.5 py-0.5 print:hidden"
-            style={{ 
-              top: activeTableRowRect.top, 
-              left: activeTableRowRect.left + activeTableRowRect.width,
-              transform: 'translate(-50%, -50%)'
-            }}
-          >
-            <button 
-              onClick={(e) => { 
-                  e.preventDefault(); 
-                  const table = activeTableRow.closest('table');
-                  setDeletePromptInfo({ isOpen: true, targetRow: activeTableRow, targetTable: table });
-              }}
-              className="p-1 px-1.5 text-muted-foreground hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded transition-colors"
-              title="Delete Options"
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
-          </div>
-        </>
-      )}
+            <Settings2 className="w-3.5 h-3.5" />
+            <span>Format</span>
+          </button>
 
-      {selectedColIndex !== null && colRects[selectedColIndex] && hoveredTable && tableRect && (
-          <div 
-            className="table-floating-toolbar absolute z-30 flex items-center justify-center gap-0.5 bg-background border border-border rounded-md shadow-[0_2px_8px_rgba(0,0,0,0.08)] pointer-events-auto px-0.5 py-0.5"
-            style={{ 
-              top: tableRect.top - 16, 
-              left: colRects[selectedColIndex].left + colRects[selectedColIndex].width / 2,
-              transform: 'translate(-50%, -100%)'
-            }}
-            onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
-          >
-            <button 
-              onClick={(e) => { 
-                e.preventDefault(); 
-                e.stopPropagation();
-                if (!hoveredTable) return;
-                const trs = hoveredTable.querySelectorAll('tr');
-                trs.forEach(tr => {
-                  if (tr.children[selectedColIndex]) tr.children[selectedColIndex].remove();
-                });
-                if (hoveredTable.querySelectorAll('tr')[0]?.children.length === 0) {
-                     const wrapper = hoveredTable.closest('.table-wrapper');
-                     if (wrapper) wrapper.remove();
-                     else hoveredTable.remove();
-                     setHoveredTable(null);
-                }
-                flushPreviewEdit();
-                setSelectedColIndex(null);
-              }}
-              className="p-1 px-1.5 text-muted-foreground hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded transition-colors"
+          <div className="w-px h-5 bg-border mx-1" />
+
+          {/* Section 2: Row Actions */}
+          <div className="flex items-center gap-0.5">
+            <span className="text-[10px] uppercase tracking-wider text-muted-foreground/60 font-bold px-1.5">Row</span>
+            <button
+              onClick={(e) => { e.preventDefault(); handleInsertRowAbove(); }}
+              className="p-1 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors cursor-pointer"
+              title="Insert Row Above"
+            >
+              <ArrowUpToLine className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={(e) => { e.preventDefault(); handleInsertRowBelow(); }}
+              className="p-1 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors cursor-pointer"
+              title="Insert Row Below"
+            >
+              <ArrowDownToLine className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={(e) => { e.preventDefault(); handleDuplicateRow(); }}
+              className="p-1 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors cursor-pointer"
+              title="Duplicate Current Row"
+            >
+              <Copy className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={(e) => { e.preventDefault(); handleClearRow(); }}
+              className="p-1 text-muted-foreground hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-950/20 rounded-md transition-colors cursor-pointer"
+              title="Clear Row Content"
+            >
+              <Eraser className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={(e) => { e.preventDefault(); handleDeleteRow(); }}
+              className="p-1 text-muted-foreground hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-md transition-colors cursor-pointer"
+              title="Delete Row"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          <div className="w-px h-5 bg-border mx-1" />
+
+          {/* Section 3: Column Actions */}
+          <div className="flex items-center gap-0.5">
+            <span className="text-[10px] uppercase tracking-wider text-muted-foreground/60 font-bold px-1.5">Col</span>
+            <button
+              onClick={(e) => { e.preventDefault(); handleInsertColLeft(); }}
+              className="p-1 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors cursor-pointer"
+              title="Insert Column Left"
+            >
+              <ArrowLeftToLine className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={(e) => { e.preventDefault(); handleInsertColRight(); }}
+              className="p-1 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors cursor-pointer"
+              title="Insert Column Right"
+            >
+              <ArrowRightToLine className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={(e) => { e.preventDefault(); handleDuplicateCol(); }}
+              className="p-1 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors cursor-pointer"
+              title="Duplicate Current Column"
+            >
+              <Copy className="w-3.5 h-3.5 rotate-90" />
+            </button>
+            <button
+              onClick={(e) => { e.preventDefault(); handleClearCol(); }}
+              className="p-1 text-muted-foreground hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-950/20 rounded-md transition-colors cursor-pointer"
+              title="Clear Column Content"
+            >
+              <Eraser className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={(e) => { e.preventDefault(); handleDeleteCol(); }}
+              className="p-1 text-muted-foreground hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-md transition-colors cursor-pointer"
               title="Delete Column"
             >
-              <Trash2 className="w-4 h-4" />
+              <Trash2 className="w-3.5 h-3.5" />
             </button>
-            <div className="w-px h-4 bg-border mx-0.5" />
+          </div>
+
+          <div className="w-px h-5 bg-border mx-1" />
+
+          {/* Section 4: Alignments */}
+          <div className="flex items-center gap-0.5">
             {['left', 'center', 'right'].map(align => (
               <button
-                 key={align}
-                 onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    if (!hoveredTable) return;
-                    const trs = hoveredTable.querySelectorAll('tr');
-                    trs.forEach(tr => {
-                      if (tr.children[selectedColIndex]) tr.children[selectedColIndex].setAttribute('align', align);
-                    });
-                    flushPreviewEdit();
-                 }}
-                 className="p-1 px-1.5 text-muted-foreground hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/30 rounded transition-colors"
-                 title={`Align ${align}`}
+                key={align}
+                onClick={(e) => { e.preventDefault(); handleSetColAlign(align as 'left'|'center'|'right'); }}
+                className="p-1 text-muted-foreground hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/20 rounded-md transition-colors cursor-pointer"
+                title={`Align Column ${align}`}
               >
-                 {align === 'left' && <AlignLeft className="w-4 h-4" />}
-                 {align === 'center' && <AlignCenter className="w-4 h-4" />}
-                 {align === 'right' && <AlignRight className="w-4 h-4" />}
+                {align === 'left' && <AlignLeft className="w-3.5 h-3.5" />}
+                {align === 'center' && <AlignCenter className="w-3.5 h-3.5" />}
+                {align === 'right' && <AlignRight className="w-3.5 h-3.5" />}
               </button>
             ))}
           </div>
-      )}
-      {selectedRowIndex !== null && rowRects[selectedRowIndex] && hoveredTable && tableRect && (
-          <div 
-            className="table-floating-toolbar absolute z-30 flex items-center justify-center gap-0.5 bg-background border border-border rounded-md shadow-[0_2px_8px_rgba(0,0,0,0.08)] pointer-events-auto px-0.5 py-0.5"
-            style={{ 
-              top: rowRects[selectedRowIndex].top + rowRects[selectedRowIndex].height / 2, 
-              left: tableRect.left - 16,
-              transform: 'translate(-100%, -50%)'
+
+          <div className="w-px h-5 bg-border mx-1" />
+
+          {/* Section 5: Table Delete */}
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              const wrapper = hoveredTable.closest('.table-wrapper');
+              if (wrapper) wrapper.remove();
+              else hoveredTable.remove();
+              setHoveredTable(null);
+              flushPreviewEdit();
             }}
-            onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+            className="p-1.5 text-muted-foreground hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-md transition-colors cursor-pointer"
+            title="Delete Entire Table"
           >
-            <button 
-              onClick={(e) => { 
-                  e.preventDefault(); 
-                  e.stopPropagation();
-                  if (!hoveredTable) return;
-                  const trs = hoveredTable.querySelectorAll('tr');
-                  if (trs[selectedRowIndex]) trs[selectedRowIndex].remove();
-                  if (hoveredTable.querySelectorAll('tr').length === 0) {
-                     const wrapper = hoveredTable.closest('.table-wrapper');
-                     if (wrapper) wrapper.remove();
-                     else hoveredTable.remove();
-                     setHoveredTable(null);
+            <Trash className="w-3.5 h-3.5 text-rose-500" />
+          </button>
+        </div>
+      )}
+
+      {!isViewMode && hoveredTable && tableRect && (
+        <>
+          {/* Notion-style bottom "+" button */}
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              const controller = getTableController(hoveredTable);
+              const model = controller.getModel();
+              const result = controller.applyPatches([{
+                patchId: 'patch_' + Math.random().toString(36).substring(2, 9),
+                type: PatchType.INSERT_ROW,
+                timestamp: Date.now(),
+                payload: { count: 1, at: model.rowCount }
+              }]);
+
+              if (result.success) {
+                renderDOMPatches(hoveredTable, controller, result.domPatches);
+                flushPreviewEdit();
+                
+                // Focus the first cell of the newly added row
+                setTimeout(() => {
+                  const rows = Array.from(hoveredTable.querySelectorAll('tr'));
+                  const newTr = rows[model.rowCount];
+                  if (newTr) {
+                    const addedCell = newTr.children[0] as HTMLElement;
+                    if (addedCell) focusCell(addedCell);
                   }
-                  flushPreviewEdit();
-                  setSelectedRowIndex(null);
-              }}
-              className="p-1 px-1.5 text-muted-foreground hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded transition-colors"
-              title="Delete Row"
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
-          </div>
+                }, 50);
+              }
+            }}
+            className="table-overlay-btn absolute z-20 w-5 h-5 bg-indigo-500 hover:bg-indigo-600 text-white rounded-full flex items-center justify-center shadow-md transition-all hover:scale-110 active:scale-95 print:hidden cursor-pointer"
+            style={{
+              top: tableRect.top + tableRect.height + 6,
+              left: tableRect.left + tableRect.width / 2 - 10,
+            }}
+            title="Add Row"
+          >
+            <Plus className="w-3.5 h-3.5" />
+          </button>
+
+          {/* Notion-style right "+" button */}
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              const controller = getTableController(hoveredTable);
+              const model = controller.getModel();
+              const result = controller.applyPatches([{
+                patchId: 'patch_' + Math.random().toString(36).substring(2, 9),
+                type: PatchType.INSERT_COL,
+                timestamp: Date.now(),
+                payload: { count: 1, at: model.colCount }
+              }]);
+
+              if (result.success) {
+                renderDOMPatches(hoveredTable, controller, result.domPatches);
+                flushPreviewEdit();
+              }
+            }}
+            className="table-overlay-btn absolute z-20 w-5 h-5 bg-indigo-500 hover:bg-indigo-600 text-white rounded-full flex items-center justify-center shadow-md transition-all hover:scale-110 active:scale-95 print:hidden cursor-pointer"
+            style={{
+              top: tableRect.top + tableRect.height / 2 - 10,
+              left: tableRect.left + tableRect.width + 6,
+            }}
+            title="Add Column"
+          >
+            <Plus className="w-3.5 h-3.5" />
+          </button>
+        </>
       )}
 
       <Suspense fallback={null}>
