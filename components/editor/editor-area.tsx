@@ -661,6 +661,15 @@ export const EditorArea = ({
       } else {
         if (!timeoutRef.current && (hoveredTable || hoveredImage || hoveredSketch || hoveredLink)) {
           timeoutRef.current = setTimeout(() => {
+            const sel = window.getSelection();
+            const caretInsideHoveredTable = hoveredTable && sel && sel.anchorNode && hoveredTable.contains(sel.anchorNode);
+            const focusInsideHoveredTable = hoveredTable && (hoveredTable.contains(document.activeElement) || activeCell !== null);
+            
+            if (caretInsideHoveredTable || focusInsideHoveredTable) {
+              timeoutRef.current = null;
+              return;
+            }
+
             setHoveredTable(null);
             setHoveredImage(null);
             setHoveredSketch(null);
@@ -676,7 +685,7 @@ export const EditorArea = ({
       window.removeEventListener('mousemove', handleMouseMove);
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
-  }, [hoveredTable, updateTableRect, isTableEditDialogOpen, hoveredImage, updateImageRect, isImageEditDialogOpen, hoveredSketch, updateSketchRect, isSketchEditDialogOpen, hoveredLink, updateLinkRect, powerSaver]);
+  }, [hoveredTable, updateTableRect, isTableEditDialogOpen, hoveredImage, updateImageRect, isImageEditDialogOpen, hoveredSketch, updateSketchRect, isSketchEditDialogOpen, hoveredLink, updateLinkRect, powerSaver, activeCell]);
 
   useEffect(() => {
     const el = previewRef.current;
@@ -792,6 +801,32 @@ export const EditorArea = ({
     observer.observe(hoveredTable);
     return () => observer.disconnect();
   }, [hoveredTable, updateTableRect, powerSaver]);
+
+  // Update positions of hovered elements on scrolling
+  useEffect(() => {
+    const handleScroll = () => {
+      window.requestAnimationFrame(() => {
+        if (hoveredTable) updateTableRect(hoveredTable);
+        if (hoveredImage) updateImageRect(hoveredImage);
+        if (hoveredSketch) updateSketchRect(hoveredSketch);
+        if (hoveredLink) updateLinkRect(hoveredLink);
+      });
+    };
+    
+    window.addEventListener('scroll', handleScroll, { capture: true, passive: true });
+    
+    const parent = previewRef.current?.parentElement;
+    if (parent) {
+      parent.addEventListener('scroll', handleScroll, { passive: true });
+    }
+    
+    return () => {
+      window.removeEventListener('scroll', handleScroll, { capture: true });
+      if (parent) {
+        parent.removeEventListener('scroll', handleScroll);
+      }
+    };
+  }, [hoveredTable, hoveredImage, hoveredSketch, hoveredLink, updateTableRect, updateImageRect, updateSketchRect, updateLinkRect]);
 
   useEffect(() => {
     if (!hoveredImage || powerSaver) return;
@@ -2166,7 +2201,7 @@ export const EditorArea = ({
       }
     }
 
-  }, [isViewMode, powerSaver]);
+  }, [isViewMode, powerSaver, hoveredTable, updateTableRect]);
 
   useEffect(() => {
     document.addEventListener('selectionchange', handleSelectionChange);
@@ -2453,9 +2488,12 @@ export const EditorArea = ({
         <div 
           className="table-floating-toolbar absolute z-30 flex items-center gap-1 bg-background/95 backdrop-blur-sm border border-border rounded-lg shadow-[0_4px_20px_rgba(0,0,0,0.1)] pointer-events-auto p-1.5 transition-all duration-150 animate-in fade-in zoom-in-95 print:hidden select-none"
           style={(() => {
-            let activeRowIdx = selectedRowIndex !== null ? selectedRowIndex : (activeCell ? activeCell.r : null);
-            if (activeRowIdx === null && activeTableRow) {
+            let activeRowIdx: number | null = null;
+            if (activeTableRow && hoveredTable && hoveredTable.contains(activeTableRow)) {
               activeRowIdx = Array.from(hoveredTable.querySelectorAll('tr')).indexOf(activeTableRow);
+            }
+            if (activeRowIdx === null || activeRowIdx < 0) {
+              activeRowIdx = selectedRowIndex !== null ? selectedRowIndex : (activeCell ? activeCell.r : null);
             }
             if (activeRowIdx === null || activeRowIdx < 0) activeRowIdx = 0;
             
@@ -2480,9 +2518,26 @@ export const EditorArea = ({
               topPosition = maxTop;
             }
 
+            // Horizontal position: center it above the table if possible, or align with table left,
+            // but keep it within the visible screen area
+            let leftPosition = tableRect.left;
+            if (parentRect) {
+              const scrollLeft = previewRef.current?.parentElement?.scrollLeft || 0;
+              const viewportWidth = parentRect.width;
+              const toolbarWidth = 580; // approximate width of the toolbar
+              
+              if (leftPosition < scrollLeft) {
+                leftPosition = scrollLeft;
+              }
+              const maxLeft = scrollLeft + viewportWidth - toolbarWidth - 16;
+              if (leftPosition > maxLeft) {
+                leftPosition = Math.max(scrollLeft, maxLeft);
+              }
+            }
+
             return {
               top: topPosition,
-              left: Math.max(0, tableRect.left),
+              left: Math.max(0, leftPosition),
             };
           })()}
           onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
