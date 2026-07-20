@@ -1,8 +1,5 @@
-name = "luminanotepad"
+name = "lumina-notepad"
 compatibility_date = "2026-04-09"
-
-[build]
-cache = true
 
 [assets]
 directory = "./dist"

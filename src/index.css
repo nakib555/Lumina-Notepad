@@ -422,4 +422,12 @@ td:empty::before, th:empty::before {
   display: inline-block;
 }
 
+/* Zebra-striping styles for tables */
+.table-zebra tbody tr:nth-child(even) {
+  background-color: var(--muted) !important;
+}
+.table-zebra tbody tr:nth-child(even) td {
+  background-color: var(--muted) !important;
+}
+
 

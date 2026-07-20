@@ -19,6 +19,7 @@ import {
   Copy,
   Eraser,
   Trash,
+  Rows3,
 } from "lucide-react";
 import {
   Dialog,
@@ -487,7 +488,16 @@ export const EditorArea = ({
   const [hoveredLink, setHoveredLink] = useState<HTMLAnchorElement | null>(null);
   const [linkRect, setLinkRect] = useState<{ top: number, left: number, width: number, height: number } | null>(null);
   
+  const [isZebraState, setIsZebraState] = useState(false);
 
+  useEffect(() => {
+    if (hoveredTable) {
+      const wrapper = hoveredTable.closest('.table-wrapper');
+      setIsZebraState(wrapper?.classList.contains('table-zebra') || false);
+    } else {
+      setIsZebraState(false);
+    }
+  }, [hoveredTable]);
 
   // Sync previewRef with textareaRef if provided
   useEffect(() => {
@@ -1067,9 +1077,10 @@ export const EditorArea = ({
         if (table) {
           const classes = Array.from(node.classList);
           const curveClass = classes.find((c: string) => c.startsWith('rounded-') && c !== 'rounded-table') || 'rounded-xl';
+          const isZebra = node.classList.contains('table-zebra') ? ' table-zebra' : '';
           table.classList.add('border-hidden', 'm-0', 'w-full');
           table.classList.remove('border-0');
-          return '\n\n<div class="overflow-x-auto overflow-hidden w-full table-wrapper my-8 rounded-table ' + curveClass + ' border border-border">\n' + table.outerHTML + '\n</div>\n\n';
+          return '\n\n<div class="overflow-x-auto overflow-hidden w-full table-wrapper my-8 rounded-table ' + curveClass + ' border border-border' + isZebra + '">\n' + table.outerHTML + '\n</div>\n\n';
         }
         return content;
       }
@@ -1432,6 +1443,22 @@ export const EditorArea = ({
       renderDOMPatches(hoveredTable, controller, result.domPatches, flushPreviewEdit);
     }
   }, [hoveredTable, selectedColIndex, activeCell, flushPreviewEdit]);
+
+  const handleToggleZebra = useCallback(() => {
+    if (!hoveredTable) return;
+    const wrapper = hoveredTable.closest('.table-wrapper');
+    if (wrapper) {
+      const hasZebra = wrapper.classList.contains('table-zebra');
+      if (hasZebra) {
+        wrapper.classList.remove('table-zebra');
+        setIsZebraState(false);
+      } else {
+        wrapper.classList.add('table-zebra');
+        setIsZebraState(true);
+      }
+      flushPreviewEdit();
+    }
+  }, [hoveredTable, flushPreviewEdit]);
 
 
 
@@ -2486,7 +2513,7 @@ export const EditorArea = ({
       )}
       {!isViewMode && hoveredTable && tableRect && (
         <div 
-          className="table-floating-toolbar absolute z-30 flex items-center gap-1 bg-background/95 backdrop-blur-sm border border-border rounded-lg shadow-[0_4px_20px_rgba(0,0,0,0.1)] pointer-events-auto p-1.5 transition-all duration-150 animate-in fade-in zoom-in-95 print:hidden select-none"
+          className="table-floating-toolbar absolute z-30 flex flex-wrap sm:flex-nowrap items-center gap-0.5 sm:gap-1 bg-background/95 backdrop-blur-sm border border-border rounded-lg shadow-[0_4px_20px_rgba(0,0,0,0.1)] pointer-events-auto p-1 sm:p-1.5 transition-all duration-150 animate-in fade-in zoom-in-95 print:hidden select-none max-w-[calc(100vw-32px)]"
           style={(() => {
             let activeRowIdx: number | null = null;
             if (activeTableRow && hoveredTable && hoveredTable.contains(activeTableRow)) {
@@ -2524,7 +2551,8 @@ export const EditorArea = ({
             if (parentRect) {
               const scrollLeft = previewRef.current?.parentElement?.scrollLeft || 0;
               const viewportWidth = parentRect.width;
-              const toolbarWidth = 580; // approximate width of the toolbar
+              const isMobile = viewportWidth < 640;
+              const toolbarWidth = isMobile ? 320 : 620; // compact width for mobile, full width for desktop
               
               if (leftPosition < scrollLeft) {
                 leftPosition = scrollLeft;
@@ -2545,98 +2573,115 @@ export const EditorArea = ({
           {/* Section 1: Table Global Settings */}
           <button 
             onClick={(e) => { e.preventDefault(); setIsTableEditDialogOpen(true); }}
-            className="p-1.5 text-muted-foreground hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 rounded-md transition-colors flex items-center gap-1 text-xs font-semibold cursor-pointer"
+            className="p-1 sm:p-1.5 text-muted-foreground hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 rounded-md transition-colors flex items-center gap-1 text-xs font-semibold cursor-pointer"
             title="Table Styling & Settings"
           >
             <Settings2 className="w-3.5 h-3.5" />
-            <span>Format</span>
+            <span className="hidden sm:inline">Format</span>
           </button>
 
-          <div className="w-px h-5 bg-border mx-1" />
+          <div className="w-px h-5 bg-border mx-0.5 sm:mx-1" />
+
+          {/* Section 1.5: Zebra Striping */}
+          <button 
+            onClick={(e) => { e.preventDefault(); handleToggleZebra(); }}
+            className={cn(
+              "p-1 sm:p-1.5 rounded-md transition-colors flex items-center gap-1 text-xs font-semibold cursor-pointer border",
+              isZebraState
+                ? "text-indigo-600 bg-indigo-50 border-indigo-200/50 dark:text-indigo-400 dark:bg-indigo-950/40 dark:border-indigo-800/40 font-bold"
+                : "text-muted-foreground hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 border-transparent"
+            )}
+            title="Toggle Zebra-Striping (Alternate Row background)"
+          >
+            <Rows3 className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Zebra</span>
+          </button>
+
+          <div className="w-px h-5 bg-border mx-0.5 sm:mx-1" />
 
           {/* Section 2: Row Actions */}
           <div className="flex items-center gap-0.5">
-            <span className="text-[10px] uppercase tracking-wider text-muted-foreground/60 font-bold px-1.5">Row</span>
+            <span className="text-[10px] uppercase tracking-wider text-muted-foreground/60 font-bold px-1 hidden md:inline">Row</span>
             <button
               onClick={(e) => { e.preventDefault(); handleInsertRowAbove(); }}
-              className="p-1 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors cursor-pointer"
+              className="p-0.5 sm:p-1 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors cursor-pointer"
               title="Insert Row Above"
             >
               <ArrowUpToLine className="w-3.5 h-3.5" />
             </button>
             <button
               onClick={(e) => { e.preventDefault(); handleInsertRowBelow(); }}
-              className="p-1 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors cursor-pointer"
+              className="p-0.5 sm:p-1 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors cursor-pointer"
               title="Insert Row Below"
             >
               <ArrowDownToLine className="w-3.5 h-3.5" />
             </button>
             <button
               onClick={(e) => { e.preventDefault(); handleDuplicateRow(); }}
-              className="p-1 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors cursor-pointer"
+              className="p-0.5 sm:p-1 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors cursor-pointer"
               title="Duplicate Current Row"
             >
               <Copy className="w-3.5 h-3.5" />
             </button>
             <button
               onClick={(e) => { e.preventDefault(); handleClearRow(); }}
-              className="p-1 text-muted-foreground hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-950/20 rounded-md transition-colors cursor-pointer"
+              className="p-0.5 sm:p-1 text-muted-foreground hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-950/20 rounded-md transition-colors cursor-pointer"
               title="Clear Row Content"
             >
               <Eraser className="w-3.5 h-3.5" />
             </button>
             <button
               onClick={(e) => { e.preventDefault(); handleDeleteRow(); }}
-              className="p-1 text-muted-foreground hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-md transition-colors cursor-pointer"
+              className="p-0.5 sm:p-1 text-muted-foreground hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-md transition-colors cursor-pointer"
               title="Delete Row"
             >
               <Trash2 className="w-3.5 h-3.5" />
             </button>
           </div>
 
-          <div className="w-px h-5 bg-border mx-1" />
+          <div className="w-px h-5 bg-border mx-0.5 sm:mx-1" />
 
           {/* Section 3: Column Actions */}
           <div className="flex items-center gap-0.5">
-            <span className="text-[10px] uppercase tracking-wider text-muted-foreground/60 font-bold px-1.5">Col</span>
+            <span className="text-[10px] uppercase tracking-wider text-muted-foreground/60 font-bold px-1 hidden md:inline">Col</span>
             <button
               onClick={(e) => { e.preventDefault(); handleInsertColLeft(); }}
-              className="p-1 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors cursor-pointer"
+              className="p-0.5 sm:p-1 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors cursor-pointer"
               title="Insert Column Left"
             >
               <ArrowLeftToLine className="w-3.5 h-3.5" />
             </button>
             <button
               onClick={(e) => { e.preventDefault(); handleInsertColRight(); }}
-              className="p-1 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors cursor-pointer"
+              className="p-0.5 sm:p-1 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors cursor-pointer"
               title="Insert Column Right"
             >
               <ArrowRightToLine className="w-3.5 h-3.5" />
             </button>
             <button
               onClick={(e) => { e.preventDefault(); handleDuplicateCol(); }}
-              className="p-1 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors cursor-pointer"
+              className="p-0.5 sm:p-1 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors cursor-pointer"
               title="Duplicate Current Column"
             >
               <Copy className="w-3.5 h-3.5 rotate-90" />
             </button>
             <button
               onClick={(e) => { e.preventDefault(); handleClearCol(); }}
-              className="p-1 text-muted-foreground hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-950/20 rounded-md transition-colors cursor-pointer"
+              className="p-0.5 sm:p-1 text-muted-foreground hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-950/20 rounded-md transition-colors cursor-pointer"
               title="Clear Column Content"
             >
               <Eraser className="w-3.5 h-3.5" />
             </button>
             <button
               onClick={(e) => { e.preventDefault(); handleDeleteCol(); }}
-              className="p-1 text-muted-foreground hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-md transition-colors cursor-pointer"
+              className="p-0.5 sm:p-1 text-muted-foreground hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-md transition-colors cursor-pointer"
               title="Delete Column"
             >
               <Trash2 className="w-3.5 h-3.5" />
             </button>
           </div>
 
-          <div className="w-px h-5 bg-border mx-1" />
+          <div className="w-px h-5 bg-border mx-0.5 sm:mx-1" />
 
           {/* Section 4: Alignments */}
           <div className="flex items-center gap-0.5">
@@ -2644,7 +2689,7 @@ export const EditorArea = ({
               <button
                 key={align}
                 onClick={(e) => { e.preventDefault(); handleSetColAlign(align as 'left'|'center'|'right'); }}
-                className="p-1 text-muted-foreground hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/20 rounded-md transition-colors cursor-pointer"
+                className="p-0.5 sm:p-1 text-muted-foreground hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/20 rounded-md transition-colors cursor-pointer"
                 title={`Align Column ${align}`}
               >
                 {align === 'left' && <AlignLeft className="w-3.5 h-3.5" />}
@@ -2654,7 +2699,7 @@ export const EditorArea = ({
             ))}
           </div>
 
-          <div className="w-px h-5 bg-border mx-1" />
+          <div className="w-px h-5 bg-border mx-0.5 sm:mx-1" />
 
           {/* Section 5: Table Delete */}
           <button
@@ -2666,7 +2711,7 @@ export const EditorArea = ({
               setHoveredTable(null);
               flushPreviewEdit();
             }}
-            className="p-1.5 text-muted-foreground hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-md transition-colors cursor-pointer"
+            className="p-1 sm:p-1.5 text-muted-foreground hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-md transition-colors cursor-pointer"
             title="Delete Entire Table"
           >
             <Trash className="w-3.5 h-3.5 text-rose-500" />
