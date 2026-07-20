@@ -18,6 +18,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { EditorAreaSkeleton } from "@/components/ui/skeleton-loaders";
+import { FontPickerDialog } from "./editor/font-picker-dialog";
 
 const SketchDialog = lazy(() => import('./editor/sketch-dialog').then(module => ({ default: module.SketchDialog })));
 const ImageInsertDialog = lazy(() => import('./editor/image-insert-dialog').then(module => ({ default: module.ImageInsertDialog })));
@@ -69,6 +70,7 @@ export function Editor({
   const [isAutoMarkdownEnabled, setIsAutoMarkdownEnabled] = useState(false);
   const [isViewMode, setIsViewMode] = useState(false);
   const [isEraserMode, setIsEraserMode] = useState(false);
+  const [showFontPicker, setShowFontPicker] = useState(false);
   const savedRangeRef = useRef<Range | null>(null);
 
   const [showAiDialog, setShowAiDialog] = useState(false);
@@ -391,7 +393,12 @@ export function Editor({
   return (
     <div className={cn(
       "flex-1 flex flex-col h-full overflow-hidden bg-background relative print:block print:h-auto print:overflow-visible print:bg-white",
-      fontFamily === "serif" ? "font-serif" : fontFamily === "mono" ? "font-mono" : "font-sans"
+      fontFamily === "poppins" ? "font-poppins" :
+      fontFamily === "inter" ? "font-inter" :
+      fontFamily === "lora" ? "font-lora" :
+      fontFamily === "jetbrains" ? "font-jetbrains" :
+      fontFamily === "serif" ? "font-serif" :
+      fontFamily === "mono" ? "font-mono" : "font-sans"
     )}>
       {/* Toolbar */}
       <EditorHeader 
@@ -519,7 +526,13 @@ export function Editor({
             handleMouseUp={handleMouseUp}
             handleMouseMove={handleMouseMove}
             fontFamily={fontFamily}
-            onFontFamilyChange={onFontFamilyChange}
+            onFontFamilyChange={(font) => {
+              if (font === "custom_picker") {
+                setShowFontPicker(true);
+              } else {
+                onFontFamilyChange(font);
+              }
+            }}
             applyFontSize={applyFontSize}
             isEraserMode={isEraserMode}
             setIsEraserMode={setIsEraserMode}
@@ -640,6 +653,13 @@ export function Editor({
           </div>
         </DialogContent>
       </Dialog>
+
+      <FontPickerDialog
+        isOpen={showFontPicker}
+        onClose={() => setShowFontPicker(false)}
+        currentFont={fontFamily}
+        onSelectFont={onFontFamilyChange}
+      />
 
       <AiAssistantDialog 
         isOpen={showAiDialog}

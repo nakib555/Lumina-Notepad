@@ -11,6 +11,7 @@ import { IntroSequence } from "@/components/intro-sequence";
 import { SplashScreen } from "@/components/splash-screen";
 import { SidebarSkeleton, EditorSkeleton } from "@/components/ui/skeleton-loaders";
 import { cn } from "@/lib/utils";
+import { loadGoogleFont } from "@/components/editor/font-loader";
 
 const Editor = lazy(() => import("@/components/editor.tsx").then(m => ({ default: m.Editor })));
 const CommandPalette = lazy(() => import("@/components/command-palette.tsx").then(m => ({ default: m.CommandPalette })));
@@ -85,8 +86,28 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('lumina-font', fontFamily);
     const root = window.document.documentElement;
-    root.classList.remove('font-sans', 'font-serif', 'font-mono');
-    root.classList.add(`font-${fontFamily}`);
+    root.classList.remove('font-sans', 'font-serif', 'font-mono', 'font-poppins', 'font-inter', 'font-lora', 'font-jetbrains');
+    
+    const lowerFont = fontFamily.toLowerCase();
+    const isStandard = ['poppins', 'inter', 'lora', 'jetbrains', 'sans', 'serif', 'mono'].includes(lowerFont);
+
+    if (isStandard) {
+      root.style.removeProperty('--font-sans');
+      let fontClass = 'font-sans';
+      if (fontFamily === 'poppins') fontClass = 'font-poppins';
+      else if (fontFamily === 'inter') fontClass = 'font-inter';
+      else if (fontFamily === 'lora') fontClass = 'font-lora';
+      else if (fontFamily === 'jetbrains') fontClass = 'font-jetbrains';
+      else if (fontFamily === 'serif') fontClass = 'font-serif';
+      else if (fontFamily === 'mono') fontClass = 'font-mono';
+      
+      root.classList.add(fontClass);
+    } else {
+      // Dynamic Google Font selected!
+      loadGoogleFont(fontFamily);
+      root.style.setProperty('--font-sans', `"${fontFamily}", sans-serif`);
+      root.classList.add('font-sans');
+    }
   }, [fontFamily]);
 
 

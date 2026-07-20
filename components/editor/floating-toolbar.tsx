@@ -914,7 +914,7 @@ export const FloatingToolbar = ({
       {/* Font Style & Size Group */}
       <div className="flex items-center gap-0.5 px-1 border-r border-border">
         <select
-          value={fontFamily}
+          value={['poppins', 'inter', 'lora', 'jetbrains', 'sans', 'serif', 'mono'].includes(fontFamily.toLowerCase()) ? fontFamily : fontFamily}
           onMouseDown={saveSelection}
           onTouchStart={saveSelection}
           onChange={(e) => {
@@ -925,9 +925,17 @@ export const FloatingToolbar = ({
           title="Font Style"
           aria-label="Font Style"
         >
-          <option value="sans" className="bg-background text-foreground">Sans</option>
-          <option value="serif" className="bg-background text-foreground">Serif</option>
-          <option value="mono" className="bg-background text-foreground">Mono</option>
+          <option value="poppins" className="bg-background text-foreground font-poppins">Poppins</option>
+          <option value="inter" className="bg-background text-foreground font-inter">Inter</option>
+          <option value="lora" className="bg-background text-foreground font-lora">Lora</option>
+          <option value="jetbrains" className="bg-background text-foreground font-mono">JetBrains Mono</option>
+          <option value="sans" className="bg-background text-foreground">Sans (Default)</option>
+          <option value="serif" className="bg-background text-foreground">Serif (Default)</option>
+          <option value="mono" className="bg-background text-foreground">Mono (Default)</option>
+          {!['poppins', 'inter', 'lora', 'jetbrains', 'sans', 'serif', 'mono'].includes(fontFamily.toLowerCase()) && (
+            <option value={fontFamily} className="bg-background text-indigo-600 font-semibold">{fontFamily}</option>
+          )}
+          <option value="custom_picker" className="bg-background text-indigo-600 font-semibold">🔍 More Fonts (2,000+)...</option>
         </select>
         <select
           onMouseDown={saveSelection}
