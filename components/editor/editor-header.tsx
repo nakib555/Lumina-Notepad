@@ -1,11 +1,13 @@
+import { useState, useRef } from "react";
 import { 
   Menu, Undo2, Redo2, 
   Download, FileCode, FileText, Printer, 
   Copy, CheckCircle2, Bug,
-  Eye, Edit3
+  Eye, Edit3, Sliders
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { EditorSettingsDropdown } from "./editor-settings-dropdown";
 
 interface EditorHeaderProps {
   onToggleSidebar: () => void;
@@ -28,6 +30,8 @@ interface EditorHeaderProps {
   setIsViewMode: (viewMode: boolean) => void;
   baseFontSize?: string;
   onBaseFontSizeChange?: (size: string) => void;
+  fontFamily: string;
+  onFontFamilyChange: (font: string) => void;
 }
 
 export const EditorHeader = ({
@@ -51,7 +55,11 @@ export const EditorHeader = ({
   setIsViewMode,
   baseFontSize,
   onBaseFontSizeChange,
+  fontFamily,
+  onFontFamilyChange,
 }: EditorHeaderProps) => {
+  const [showSettingsDropdown, setShowSettingsDropdown] = useState(false);
+  const settingsButtonRef = useRef<HTMLButtonElement>(null);
   return (
     <header className={cn(
       "h-14 border-b border-border flex items-center justify-between px-2 sm:px-4 shrink-0 bg-background/80 backdrop-blur-md z-10 print:hidden transition-opacity duration-500",
@@ -80,22 +88,33 @@ export const EditorHeader = ({
           <span className="hidden sm:inline font-medium">{isViewMode ? "Edit Mode" : "View Mode"}</span>
         </Button>
 
-        {baseFontSize && onBaseFontSizeChange && (
-          <div className="flex items-center gap-0.5 ml-1 mr-1 shrink-0 bg-muted/50 rounded-lg p-0.5">
-            <select
-              value={baseFontSize}
-              onChange={(e) => onBaseFontSizeChange(e.target.value)}
-              className="h-8 px-1.5 sm:px-2 bg-transparent text-muted-foreground hover:text-foreground rounded-md outline-none text-xs font-medium cursor-pointer focus:ring-2 focus:ring-primary"
-              title="Base Font Size"
-              aria-label="Base Font Size"
-            >
-              <option value="text-sm" className="bg-background text-foreground">S</option>
-              <option value="text-base" className="bg-background text-foreground">M</option>
-              <option value="text-lg" className="bg-background text-foreground">L</option>
-              <option value="text-xl" className="bg-background text-foreground">XL</option>
-            </select>
-          </div>
-        )}
+        <div className="relative z-50">
+          <Button
+            ref={settingsButtonRef}
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowSettingsDropdown(!showSettingsDropdown)}
+            className={cn(
+              "h-9 px-2 sm:px-3 gap-1.5 rounded-xl transition-all shrink-0",
+              showSettingsDropdown ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground hover:bg-muted"
+            )}
+            title="Editor Typography Settings"
+            aria-label="Editor Typography Settings"
+          >
+            <Sliders className="w-4 h-4" />
+            <span className="hidden sm:inline font-medium text-xs">A𝄡 Settings</span>
+          </Button>
+
+          <EditorSettingsDropdown
+            isOpen={showSettingsDropdown}
+            onClose={() => setShowSettingsDropdown(false)}
+            currentFont={fontFamily}
+            onSelectFont={onFontFamilyChange}
+            baseFontSize={baseFontSize || 'text-base'}
+            onBaseFontSizeChange={onBaseFontSizeChange || (() => {})}
+            triggerRef={settingsButtonRef}
+          />
+        </div>
 
         {!isViewMode && (
           <div className="flex items-center gap-0.5 sm:gap-1 shrink-0 ml-1">

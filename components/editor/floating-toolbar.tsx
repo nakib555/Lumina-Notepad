@@ -97,6 +97,28 @@ const getSearchRanges = (container: HTMLElement, query: string): Range[] => {
   return ranges;
 };
 
+const getSelectedFontLabel = (font: string) => {
+  const lower = font.toLowerCase();
+  if (lower === 'poppins') return 'Poppins';
+  if (lower === 'inter') return 'Inter';
+  if (lower === 'lora') return 'Lora';
+  if (lower === 'jetbrains') return 'JetBrains Mono';
+  if (lower === 'sans') return 'Sans (Default)';
+  if (lower === 'serif') return 'Serif (Default)';
+  if (lower === 'mono') return 'Mono (Default)';
+  return font.split(/[\s_-]+/)
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+};
+
+const getSelectWidth = (font: string) => {
+  const label = getSelectedFontLabel(font);
+  const charWidth = 7.5;
+  const padding = 24;
+  const estimatedWidth = label.length * charWidth + padding;
+  return `${Math.max(65, Math.min(estimatedWidth, 180))}px`;
+};
+
 export const FloatingToolbar = ({
   toolbarRef,
   isDragging,
@@ -922,6 +944,7 @@ export const FloatingToolbar = ({
             onFontFamilyChange(e.target.value);
           }}
           className="h-8 px-1 sm:px-2 bg-transparent text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg outline-none text-xs font-medium cursor-pointer shrink-0 focus:ring-2 focus:ring-primary"
+          style={{ width: getSelectWidth(fontFamily) }}
           title="Font Style"
           aria-label="Font Style"
         >

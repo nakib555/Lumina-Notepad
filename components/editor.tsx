@@ -391,15 +391,7 @@ export function Editor({
   const stats = getStats();
 
   return (
-    <div className={cn(
-      "flex-1 flex flex-col h-full overflow-hidden bg-background relative print:block print:h-auto print:overflow-visible print:bg-white",
-      fontFamily === "poppins" ? "font-poppins" :
-      fontFamily === "inter" ? "font-inter" :
-      fontFamily === "lora" ? "font-lora" :
-      fontFamily === "jetbrains" ? "font-jetbrains" :
-      fontFamily === "serif" ? "font-serif" :
-      fontFamily === "mono" ? "font-mono" : "font-sans"
-    )}>
+    <div className="flex-1 flex flex-col h-full overflow-hidden bg-background relative print:block print:h-auto print:overflow-visible print:bg-white">
       {/* Toolbar */}
       <EditorHeader 
         onToggleSidebar={onToggleSidebar}
@@ -422,11 +414,28 @@ export function Editor({
         setIsViewMode={setIsViewMode}
         baseFontSize={baseFontSize}
         onBaseFontSizeChange={onBaseFontSizeChange}
+        fontFamily={fontFamily}
+        onFontFamilyChange={onFontFamilyChange}
       />
 
       {/* Editor Area */}
       <div className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar print:overflow-visible print:bg-white print:text-black flex print:block justify-center">
-        <div className="flex-1 w-full max-w-4xl px-8 pt-10 pb-24 md:px-12 md:pt-16 md:pb-32 print:p-0 flex print:block flex-col gap-4 md:gap-5 min-h-full">
+        <div 
+          className={cn(
+            "flex-1 w-full max-w-4xl px-8 pt-10 pb-24 md:px-12 md:pt-16 md:pb-32 print:p-0 flex print:block flex-col gap-4 md:gap-5 min-h-full",
+            fontFamily === "poppins" ? "font-poppins" :
+            fontFamily === "inter" ? "font-inter" :
+            fontFamily === "lora" ? "font-lora" :
+            fontFamily === "jetbrains" ? "font-jetbrains" :
+            fontFamily === "serif" ? "font-serif" :
+            fontFamily === "mono" ? "font-mono" : "font-sans"
+          )}
+          style={{
+            fontFamily: !['poppins', 'inter', 'lora', 'jetbrains', 'sans', 'serif', 'mono'].includes(fontFamily.toLowerCase())
+              ? `"${fontFamily}", sans-serif`
+              : undefined
+          }}
+        >
           <TextareaAutosize
             value={note.title}
             onChange={handleTitleChange}

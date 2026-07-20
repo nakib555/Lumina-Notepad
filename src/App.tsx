@@ -85,28 +85,13 @@ export default function App() {
 
   useEffect(() => {
     localStorage.setItem('lumina-font', fontFamily);
-    const root = window.document.documentElement;
-    root.classList.remove('font-sans', 'font-serif', 'font-mono', 'font-poppins', 'font-inter', 'font-lora', 'font-jetbrains');
     
     const lowerFont = fontFamily.toLowerCase();
     const isStandard = ['poppins', 'inter', 'lora', 'jetbrains', 'sans', 'serif', 'mono'].includes(lowerFont);
 
-    if (isStandard) {
-      root.style.removeProperty('--font-sans');
-      let fontClass = 'font-sans';
-      if (fontFamily === 'poppins') fontClass = 'font-poppins';
-      else if (fontFamily === 'inter') fontClass = 'font-inter';
-      else if (fontFamily === 'lora') fontClass = 'font-lora';
-      else if (fontFamily === 'jetbrains') fontClass = 'font-jetbrains';
-      else if (fontFamily === 'serif') fontClass = 'font-serif';
-      else if (fontFamily === 'mono') fontClass = 'font-mono';
-      
-      root.classList.add(fontClass);
-    } else {
-      // Dynamic Google Font selected!
+    if (!isStandard) {
+      // Dynamic Google Font selected! Trigger font loading
       loadGoogleFont(fontFamily);
-      root.style.setProperty('--font-sans', `"${fontFamily}", sans-serif`);
-      root.classList.add('font-sans');
     }
   }, [fontFamily]);
 
