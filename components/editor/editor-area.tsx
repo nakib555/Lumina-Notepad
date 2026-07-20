@@ -19,7 +19,6 @@ import {
   Copy,
   Eraser,
   Trash,
-  Plus
 } from "lucide-react";
 import {
   Dialog,
@@ -170,29 +169,8 @@ renderer.code = function(token) {
     }
   }
 
-  return `
-<div class="code-block-wrapper border border-[#e5e7eb] dark:border-[#374151] rounded-md my-4 overflow-hidden not-prose shadow-sm max-w-full relative" contenteditable="false">
-  <div class="bg-[#f8f9fa] dark:bg-[#1f2937] border-b border-[#e5e7eb] dark:border-[#374151] px-4 py-2 flex justify-between items-center text-[13px]">
-    <div class="font-semibold text-[#6366f1] dark:text-[#818cf8] language-label flex items-center">
-      ${displayLang}
-    </div>
-    <div class="flex items-center gap-4">
-      <button class="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-opacity bg-transparent border-none cursor-pointer copy-btn" onclick="navigator.clipboard.writeText(this.closest('.code-block-wrapper').querySelector('.code-element').textContent); const span = this.querySelector('.copy-text'); span.textContent='Copied'; setTimeout(() => span.textContent='Copy', 2000);">
-        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-        <span class="copy-text">Copy</span>
-      </button>
-      <button class="flex items-center gap-1.5 text-slate-400 hover:text-red-500 transition-opacity bg-transparent border-none cursor-pointer delete-btn" onclick="const wrapper = this.closest('.code-block-wrapper'); const next = wrapper.nextElementSibling; if(next && next.tagName === 'P' && next.innerHTML.includes('&#8203;')) next.remove(); wrapper.remove();" title="Delete code block">
-        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
-      </button>
-    </div>
-  </div>
-  <div class="bg-[#f4f7f9] dark:bg-[#0d1117] overflow-x-auto overflow-y-hidden w-full max-w-full code-container whitespace-pre print:whitespace-pre-wrap font-mono m-0 text-slate-800 dark:text-slate-200">
-    ${highlightedContent}
-  </div>
-</div>
-`;
+  return `<div class="code-block-wrapper not-prose my-6" contenteditable="false"><div class="rounded-xl font-sans group transition-colors duration-300 border border-border relative overflow-hidden bg-muted/10"><div class="sticky top-0 z-10 flex justify-between items-center px-5 py-2.5 border-b border-border select-none bg-muted/30"><div class="flex items-center gap-3"><span class="text-[13px] font-semibold text-muted-foreground font-mono capitalize language-label">${displayLang}</span></div><div class="flex items-center gap-4"><button class="flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[13px] font-medium transition-all text-emerald-600 hover:bg-emerald-500/10 hover:text-emerald-700 dark:hover:text-emerald-400" title="Run Code"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>Run</button><button class="flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[13px] font-medium text-purple-600 hover:bg-purple-500/10 hover:text-purple-700 dark:hover:text-purple-400 transition-all" title="Open in Side Panel"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>Open</button><button class="flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[13px] font-medium text-muted-foreground hover:bg-muted/80 hover:text-foreground transition-all active:scale-95 copy-btn" onclick="navigator.clipboard.writeText(this.closest('.code-block-wrapper').querySelector('.code-element').textContent); const span = this.querySelector('.copy-text'); span.textContent='Copied'; setTimeout(() => span.textContent='Copy', 2000);" title="Copy code"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg><span class="copy-text">Copy</span></button><button class="flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[13px] font-medium text-muted-foreground hover:bg-red-500/10 hover:text-red-500 transition-all active:scale-95 delete-btn" onclick="const wrapper = this.closest('.code-block-wrapper'); const next = wrapper.nextElementSibling; if(next && next.tagName === 'P' && next.innerHTML.includes('&#8203;')) next.remove(); wrapper.remove();" title="Delete code block"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg></button></div></div><div class="relative overflow-x-auto text-[14px] leading-relaxed custom-scrollbar bg-transparent code-container whitespace-pre print:whitespace-pre-wrap font-mono m-0 text-slate-800 dark:text-slate-200">${highlightedContent}</div></div></div>`;
 };
-
 renderer.table = function(token: import('marked').Tokens.Table) {
   let html = marked.Renderer.prototype.table.call(this, token);
   html = html.replace('<table>', '<table class="border-hidden m-0 w-full">');
@@ -292,7 +270,7 @@ const parseTableDOM = (table: HTMLTableElement): ITableModel => {
   };
 };
 
-const renderDOMPatches = (table: HTMLTableElement, controller: TableController, domPatches: ITableDOMPatch[]) => {
+const applyDOMPatchesSynchronously = (table: HTMLTableElement, controller: TableController, domPatches: ITableDOMPatch[]) => {
   const model = controller.getModel();
   
   const rebuildTable = () => {
@@ -351,6 +329,52 @@ const renderDOMPatches = (table: HTMLTableElement, controller: TableController, 
       }
     }
   });
+};
+
+type FlushFn = () => void;
+interface TableMutationTask {
+  table: HTMLTableElement;
+  controller: TableController;
+  domPatches: ITableDOMPatch[];
+  flushFn?: FlushFn;
+}
+
+const tableMutationQueue: TableMutationTask[] = [];
+let isTableMutationScheduled = false;
+
+const renderDOMPatches = (table: HTMLTableElement, controller: TableController, domPatches: ITableDOMPatch[], flushFn?: FlushFn) => {
+  tableMutationQueue.push({ table, controller, domPatches, flushFn });
+  if (!isTableMutationScheduled) {
+    isTableMutationScheduled = true;
+    requestAnimationFrame(() => {
+      isTableMutationScheduled = false;
+      const tasks = [...tableMutationQueue];
+      tableMutationQueue.length = 0;
+      
+      const tasksByTable = new Map<HTMLTableElement, TableMutationTask[]>();
+      tasks.forEach(task => {
+        if (!tasksByTable.has(task.table)) {
+          tasksByTable.set(task.table, []);
+        }
+        tasksByTable.get(task.table)!.push(task);
+      });
+      
+      tasksByTable.forEach((tableTasks, table) => {
+        const lastTask = tableTasks[tableTasks.length - 1];
+        const allPatches = tableTasks.flatMap(t => t.domPatches);
+        const hasRebuild = allPatches.some(p => p.type === 'REBUILD_TABLE');
+        
+        if (hasRebuild) {
+          applyDOMPatchesSynchronously(table, lastTask.controller, [{ type: 'REBUILD_TABLE' }]);
+        } else {
+          applyDOMPatchesSynchronously(table, lastTask.controller, allPatches);
+        }
+      });
+      
+      const flushFns = new Set(tasks.map(t => t.flushFn).filter(Boolean) as FlushFn[]);
+      flushFns.forEach(fn => fn());
+    });
+  }
 };
 
 const getTableController = (table: HTMLTableElement, selection: ITableSelection | null = null): TableController => {
@@ -588,6 +612,13 @@ export const EditorArea = ({
           timeoutRef.current = null;
         }
         if (hoveredTable !== table) setHoveredTable(table);
+        
+        // Update active table row based on mouse cursor position
+        const tr = target.closest('tr');
+        if (tr) {
+          setActiveTableRow(tr as HTMLTableRowElement);
+        }
+        
         updateTableRect(table);
         setHoveredImage(null);
         setHoveredSketch(null);
@@ -1153,8 +1184,7 @@ export const EditorArea = ({
     }]);
 
     if (result.success) {
-      renderDOMPatches(hoveredTable, controller, result.domPatches);
-      flushPreviewEdit();
+      renderDOMPatches(hoveredTable, controller, result.domPatches, flushPreviewEdit);
     }
   }, [hoveredTable, selectedRowIndex, activeCell, activeTableRow, flushPreviewEdit]);
 
@@ -1175,8 +1205,7 @@ export const EditorArea = ({
     }]);
 
     if (result.success) {
-      renderDOMPatches(hoveredTable, controller, result.domPatches);
-      flushPreviewEdit();
+      renderDOMPatches(hoveredTable, controller, result.domPatches, flushPreviewEdit);
     }
   }, [hoveredTable, selectedRowIndex, activeCell, activeTableRow, flushPreviewEdit]);
 
@@ -1193,8 +1222,7 @@ export const EditorArea = ({
     }]);
 
     if (result.success) {
-      renderDOMPatches(hoveredTable, controller, result.domPatches);
-      flushPreviewEdit();
+      renderDOMPatches(hoveredTable, controller, result.domPatches, flushPreviewEdit);
     }
   }, [hoveredTable, selectedColIndex, activeCell, flushPreviewEdit]);
 
@@ -1211,8 +1239,7 @@ export const EditorArea = ({
     }]);
 
     if (result.success) {
-      renderDOMPatches(hoveredTable, controller, result.domPatches);
-      flushPreviewEdit();
+      renderDOMPatches(hoveredTable, controller, result.domPatches, flushPreviewEdit);
     }
   }, [hoveredTable, selectedColIndex, activeCell, flushPreviewEdit]);
 
@@ -1233,8 +1260,7 @@ export const EditorArea = ({
     }]);
 
     if (result.success) {
-      renderDOMPatches(hoveredTable, controller, result.domPatches);
-      flushPreviewEdit();
+      renderDOMPatches(hoveredTable, controller, result.domPatches, flushPreviewEdit);
     }
   }, [hoveredTable, selectedRowIndex, activeCell, activeTableRow, flushPreviewEdit]);
 
@@ -1252,8 +1278,7 @@ export const EditorArea = ({
     }]);
 
     if (result.success) {
-      renderDOMPatches(hoveredTable, controller, result.domPatches);
-      flushPreviewEdit();
+      renderDOMPatches(hoveredTable, controller, result.domPatches, flushPreviewEdit);
     }
   }, [hoveredTable, selectedColIndex, activeCell, flushPreviewEdit]);
 
@@ -1274,8 +1299,7 @@ export const EditorArea = ({
     }]);
 
     if (result.success) {
-      renderDOMPatches(hoveredTable, controller, result.domPatches);
-      flushPreviewEdit();
+      renderDOMPatches(hoveredTable, controller, result.domPatches, flushPreviewEdit);
     }
   }, [hoveredTable, selectedRowIndex, activeCell, activeTableRow, flushPreviewEdit]);
 
@@ -1293,8 +1317,7 @@ export const EditorArea = ({
     }]);
 
     if (result.success) {
-      renderDOMPatches(hoveredTable, controller, result.domPatches);
-      flushPreviewEdit();
+      renderDOMPatches(hoveredTable, controller, result.domPatches, flushPreviewEdit);
     }
   }, [hoveredTable, selectedColIndex, activeCell, flushPreviewEdit]);
 
@@ -1323,8 +1346,7 @@ export const EditorArea = ({
       }]);
 
       if (result.success) {
-        renderDOMPatches(hoveredTable, controller, result.domPatches);
-        flushPreviewEdit();
+        renderDOMPatches(hoveredTable, controller, result.domPatches, flushPreviewEdit);
       }
     }
     setSelectedRowIndex(null);
@@ -1352,8 +1374,7 @@ export const EditorArea = ({
       }]);
 
       if (result.success) {
-        renderDOMPatches(hoveredTable, controller, result.domPatches);
-        flushPreviewEdit();
+        renderDOMPatches(hoveredTable, controller, result.domPatches, flushPreviewEdit);
       }
     }
     setSelectedColIndex(null);
@@ -1373,8 +1394,7 @@ export const EditorArea = ({
     }]);
 
     if (result.success) {
-      renderDOMPatches(hoveredTable, controller, result.domPatches);
-      flushPreviewEdit();
+      renderDOMPatches(hoveredTable, controller, result.domPatches, flushPreviewEdit);
     }
   }, [hoveredTable, selectedColIndex, activeCell, flushPreviewEdit]);
 
@@ -1881,8 +1901,7 @@ export const EditorArea = ({
               }]);
 
               if (result.success) {
-                renderDOMPatches(table, controller, result.domPatches);
-                flushPreviewEdit();
+                renderDOMPatches(table, controller, result.domPatches, flushPreviewEdit);
                 
                 setTimeout(() => {
                   const addedCell = getCellAt(r + 1, 0);
@@ -2070,6 +2089,27 @@ export const EditorArea = ({
       return;
     }
 
+    // Update active table row if we're inside a table
+    const el = node.nodeType === Node.TEXT_NODE ? node.parentElement : node as Element;
+    if (el) {
+      const cell = el.closest('td, th');
+      if (cell) {
+        const indices = getCellIndices(cell as HTMLElement);
+        if (indices) {
+          setActiveCell({ r: indices.r, c: indices.c });
+          setActiveTableRow(indices.tr as HTMLTableRowElement);
+          if (hoveredTable !== indices.table) {
+            setHoveredTable(indices.table);
+            updateTableRect(indices.table);
+          }
+        }
+      } else {
+         // Optionally clear activeTableRow if we navigated out of the table entirely
+         // Wait, if we hover over the table, it stays, but if we navigate out with keyboard...
+         setActiveTableRow(null);
+      }
+    }
+
     // Typewriter mode logic, now permanently enabled
     if (sel.isCollapsed && previewRef.current.contains(sel.anchorNode)) {
       const range = sel.getRangeAt(0);
@@ -2203,8 +2243,7 @@ export const EditorArea = ({
           const controller = getTableController(table);
           const result = controller.handlePaste(textData, startRow, startCol);
           if (result && result.success) {
-            renderDOMPatches(table, controller, result.domPatches);
-            flushPreviewEdit();
+            renderDOMPatches(table, controller, result.domPatches, flushPreviewEdit);
           }
           return;
         }
@@ -2275,7 +2314,7 @@ export const EditorArea = ({
                      .replace(/</g, '&lt;')
                      .replace(/>/g, '&gt;');
                   const codeHtml = `<pre style="margin:0;padding:0.5rem 1.5rem 0.5rem 1.25rem;font-size: 14px;line-height:1.5;font-family:'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;background:transparent;"><code class="code-element outline-none block min-h-[20px] whitespace-pre print:whitespace-pre-wrap [font-variant-ligatures:none] font-mono" contenteditable="plaintext-only">${codeContent}</code></pre>`;
-                  finalHtml += `<div class="code-block-wrapper border border-[#e5e7eb] dark:border-[#374151] rounded-md my-4 overflow-hidden not-prose shadow-sm max-w-full relative" contenteditable="false"><div class="bg-[#f8f9fa] dark:bg-[#1f2937] border-b border-[#e5e7eb] dark:border-[#374151] px-4 py-2 flex justify-between items-center text-[13px]"><div class="font-semibold text-[#6366f1] dark:text-[#818cf8] language-label flex items-center">${part.language}</div><div class="flex items-center gap-4"><button class="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-opacity bg-transparent border-none cursor-pointer copy-btn" onclick="navigator.clipboard.writeText(this.closest('.code-block-wrapper').querySelector('.code-element').textContent); const span = this.querySelector('.copy-text'); span.textContent='Copied'; setTimeout(() => span.textContent='Copy', 2000);"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg><span class="copy-text">Copy</span></button><button class="flex items-center gap-1.5 text-slate-400 hover:text-red-500 transition-opacity bg-transparent border-none cursor-pointer delete-btn" onclick="const wrapper = this.closest('.code-block-wrapper'); const next = wrapper.nextElementSibling; if(next && next.tagName === 'P' && next.innerHTML.includes('&#8203;')) next.remove(); wrapper.remove();" title="Delete code block"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg></button></div></div><div class="bg-[#f4f7f9] dark:bg-[#0d1117] overflow-x-auto overflow-y-hidden w-full max-w-full code-container whitespace-pre print:whitespace-pre-wrap font-mono m-0 text-slate-800 dark:text-slate-200">${codeHtml}</div></div>`;
+                  finalHtml += `<div class="code-block-wrapper not-prose my-6" contenteditable="false"><div class="rounded-xl font-sans group transition-colors duration-300 border border-border relative overflow-hidden bg-muted/10"><div class="sticky top-0 z-10 flex justify-between items-center px-5 py-2.5 border-b border-border select-none bg-muted/30"><div class="flex items-center gap-3"><span class="text-[13px] font-semibold text-muted-foreground font-mono capitalize language-label">${part.language}</span></div><div class="flex items-center gap-4"><button class="flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[13px] font-medium transition-all text-emerald-600 hover:bg-emerald-500/10 hover:text-emerald-700 dark:hover:text-emerald-400" title="Run Code"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>Run</button><button class="flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[13px] font-medium text-purple-600 hover:bg-purple-500/10 hover:text-purple-700 dark:hover:text-purple-400 transition-all" title="Open in Side Panel"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>Open</button><button class="flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[13px] font-medium text-muted-foreground hover:bg-muted/80 hover:text-foreground transition-all active:scale-95 copy-btn" onclick="navigator.clipboard.writeText(this.closest('.code-block-wrapper').querySelector('.code-element').textContent); const span = this.querySelector('.copy-text'); span.textContent='Copied'; setTimeout(() => span.textContent='Copy', 2000);" title="Copy code"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg><span class="copy-text">Copy</span></button><button class="flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[13px] font-medium text-muted-foreground hover:bg-red-500/10 hover:text-red-500 transition-all active:scale-95 delete-btn" onclick="const wrapper = this.closest('.code-block-wrapper'); const next = wrapper.nextElementSibling; if(next && next.tagName === 'P' && next.innerHTML.includes('&#8203;')) next.remove(); wrapper.remove();" title="Delete code block"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg></button></div></div><div class="relative overflow-x-auto text-[14px] leading-relaxed custom-scrollbar bg-transparent code-container whitespace-pre print:whitespace-pre-wrap font-mono m-0 text-slate-800 dark:text-slate-200">${codeHtml}</div></div></div>`;
               } else {
                   const paragraphs = part.content.split(/\r?\n\r?\n/);
                   if (paragraphs.length === 1) {
@@ -2413,10 +2452,39 @@ export const EditorArea = ({
       {!isViewMode && hoveredTable && tableRect && (
         <div 
           className="table-floating-toolbar absolute z-30 flex items-center gap-1 bg-background/95 backdrop-blur-sm border border-border rounded-lg shadow-[0_4px_20px_rgba(0,0,0,0.1)] pointer-events-auto p-1.5 transition-all duration-150 animate-in fade-in zoom-in-95 print:hidden select-none"
-          style={{ 
-            top: tableRect.top - 54, 
-            left: tableRect.left,
-          }}
+          style={(() => {
+            let activeRowIdx = selectedRowIndex !== null ? selectedRowIndex : (activeCell ? activeCell.r : null);
+            if (activeRowIdx === null && activeTableRow) {
+              activeRowIdx = Array.from(hoveredTable.querySelectorAll('tr')).indexOf(activeTableRow);
+            }
+            if (activeRowIdx === null || activeRowIdx < 0) activeRowIdx = 0;
+            
+            const activeRowTop = (rowRects[activeRowIdx] && rowRects[activeRowIdx].top) ?? tableRect.top;
+            
+            // Calculate viewport constraints
+            const parentRect = previewRef.current?.parentElement?.getBoundingClientRect();
+            let minTop = 0;
+            if (parentRect && parentRect.top < 0) {
+              // If the container is scrolled up, keep the toolbar visible
+              minTop = -parentRect.top + 10; 
+            }
+            
+            // Adjust position so it doesn't clip off screen
+            let topPosition = activeRowTop - 54;
+            if (topPosition < minTop) {
+              topPosition = minTop; // stick to top of screen
+            }
+            // Keep it within the table bounds (don't go below the table)
+            const maxTop = tableRect.top + tableRect.height - 40;
+            if (topPosition > maxTop) {
+              topPosition = maxTop;
+            }
+
+            return {
+              top: topPosition,
+              left: Math.max(0, tableRect.left),
+            };
+          })()}
           onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
         >
           {/* Section 1: Table Global Settings */}
@@ -2551,77 +2619,6 @@ export const EditorArea = ({
         </div>
       )}
 
-      {!isViewMode && hoveredTable && tableRect && (
-        <>
-          {/* Notion-style bottom "+" button */}
-          <button
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              const controller = getTableController(hoveredTable);
-              const model = controller.getModel();
-              const result = controller.applyPatches([{
-                patchId: 'patch_' + Math.random().toString(36).substring(2, 9),
-                type: PatchType.INSERT_ROW,
-                timestamp: Date.now(),
-                payload: { count: 1, at: model.rowCount }
-              }]);
-
-              if (result.success) {
-                renderDOMPatches(hoveredTable, controller, result.domPatches);
-                flushPreviewEdit();
-                
-                // Focus the first cell of the newly added row
-                setTimeout(() => {
-                  const rows = Array.from(hoveredTable.querySelectorAll('tr'));
-                  const newTr = rows[model.rowCount];
-                  if (newTr) {
-                    const addedCell = newTr.children[0] as HTMLElement;
-                    if (addedCell) focusCell(addedCell);
-                  }
-                }, 50);
-              }
-            }}
-            className="table-overlay-btn absolute z-20 w-5 h-5 bg-indigo-500 hover:bg-indigo-600 text-white rounded-full flex items-center justify-center shadow-md transition-all hover:scale-110 active:scale-95 print:hidden cursor-pointer"
-            style={{
-              top: tableRect.top + tableRect.height + 6,
-              left: tableRect.left + tableRect.width / 2 - 10,
-            }}
-            title="Add Row"
-          >
-            <Plus className="w-3.5 h-3.5" />
-          </button>
-
-          {/* Notion-style right "+" button */}
-          <button
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              const controller = getTableController(hoveredTable);
-              const model = controller.getModel();
-              const result = controller.applyPatches([{
-                patchId: 'patch_' + Math.random().toString(36).substring(2, 9),
-                type: PatchType.INSERT_COL,
-                timestamp: Date.now(),
-                payload: { count: 1, at: model.colCount }
-              }]);
-
-              if (result.success) {
-                renderDOMPatches(hoveredTable, controller, result.domPatches);
-                flushPreviewEdit();
-              }
-            }}
-            className="table-overlay-btn absolute z-20 w-5 h-5 bg-indigo-500 hover:bg-indigo-600 text-white rounded-full flex items-center justify-center shadow-md transition-all hover:scale-110 active:scale-95 print:hidden cursor-pointer"
-            style={{
-              top: tableRect.top + tableRect.height / 2 - 10,
-              left: tableRect.left + tableRect.width + 6,
-            }}
-            title="Add Column"
-          >
-            <Plus className="w-3.5 h-3.5" />
-          </button>
-        </>
-      )}
 
       <Suspense fallback={null}>
         <TableEditDialog 
@@ -2635,8 +2632,8 @@ export const EditorArea = ({
         <div 
           className="sketch-floating-toolbar absolute z-50 flex items-center bg-background border border-border shadow-md rounded-lg overflow-hidden print:hidden animate-in fade-in zoom-in-95 duration-200"
           style={{ 
-            top: sketchRect.top - 46, 
-            left: sketchRect.left,
+            top: Math.max(0, sketchRect.top - 46), 
+            left: Math.max(0, sketchRect.left),
           }}
         >
           <button 
@@ -2667,8 +2664,8 @@ export const EditorArea = ({
           <div 
             className="image-floating-toolbar absolute z-50 flex items-center justify-center print:hidden"
             style={{ 
-              top: imageRect.top - 36, 
-              left: imageRect.left,
+              top: Math.max(0, imageRect.top - 36), 
+              left: Math.max(0, imageRect.left),
             }}
           >
             <button 
@@ -2682,8 +2679,8 @@ export const EditorArea = ({
           <div 
             className="image-floating-toolbar absolute z-50 flex items-center justify-center gap-1 print:hidden"
             style={{ 
-              top: imageRect.top - 36, 
-              left: imageRect.left + 36,
+              top: Math.max(0, imageRect.top - 36), 
+              left: Math.max(0, imageRect.left) + 36,
             }}
           >
             <button 
@@ -2701,8 +2698,8 @@ export const EditorArea = ({
         <div 
           className="link-floating-toolbar absolute z-50 flex items-center justify-center gap-1 print:hidden"
           style={{ 
-            top: linkRect.top - 36, 
-            left: linkRect.left,
+            top: Math.max(0, linkRect.top - 36), 
+            left: Math.max(0, linkRect.left),
           }}
         >
           <button 
