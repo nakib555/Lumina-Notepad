@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LayoutGrid, Rows3, Columns3, Plus, Minus, Settings2, ArrowLeftToLine, ArrowRightToLine, ArrowUpToLine, ArrowDownToLine, Trash2, AlignLeft, AlignCenter, AlignRight, Lock, Unlock } from "lucide-react";
@@ -21,7 +22,7 @@ interface TableEditDialogProps {
   isOpen: boolean;
   onClose: () => void;
   table: HTMLTableElement | null;
-  onConfirm: (rows: number, cols: number, curveClass: string, tableData?: { headers: string[], rows: string[][], alignments: string[] }) => void;
+  onConfirm: (rows: number, cols: number, curveClass: string, tableData?: { headers: string[], rows: string[][], alignments: string[] }, isZebra?: boolean) => void;
 }
 
 export const TableEditDialog = ({ isOpen, onClose, table, onConfirm }: TableEditDialogProps) => {
@@ -29,6 +30,7 @@ export const TableEditDialog = ({ isOpen, onClose, table, onConfirm }: TableEdit
   const [cols, setCols] = useState<number | string>(2);
   const [activeTab, setActiveTab] = useState<'rows' | 'cols'>('rows');
   const [curveLevel, setCurveLevel] = useState<number>(0);
+  const [isZebra, setIsZebra] = useState<boolean>(false);
   const [tableData, setTableData] = useState<{headers: string[], rows: string[][], alignments: string[]}>({ headers: [], rows: [], alignments: [] });
   const [selectedCell, setSelectedCell] = useState<{ r: number, c: number } | null>(null);
   const [isKeyboardLocked, setIsKeyboardLocked] = useState<boolean>(true);
@@ -41,7 +43,7 @@ export const TableEditDialog = ({ isOpen, onClose, table, onConfirm }: TableEdit
       
       const headerRow = allDirectRows[0];
       const thElements = headerRow 
-        ? (Array.from(headerRow.querySelectorAll('th, td')).filter(cell => cell.closest('tr') === headerRow) as HTMLElement[])
+         ? (Array.from(headerRow.querySelectorAll('th, td')).filter(cell => cell.closest('tr') === headerRow) as HTMLElement[])
         : [];
       const currentCols = thElements.length || 2;
       
@@ -70,7 +72,9 @@ export const TableEditDialog = ({ isOpen, onClose, table, onConfirm }: TableEdit
       
       const wrapper = table.closest('.overflow-x-auto');
       let currentCurveLevel = 0;
+      let currentZebra = false;
       if (wrapper) {
+        currentZebra = wrapper.classList.contains('table-zebra');
         const classes = Array.from(wrapper.classList);
         const curveClass = classes.find(c => c.startsWith('rounded-') && c !== 'rounded-table');
         if (curveClass) {
@@ -83,6 +87,7 @@ export const TableEditDialog = ({ isOpen, onClose, table, onConfirm }: TableEdit
         }
       }
       setCurveLevel(currentCurveLevel);
+      setIsZebra(currentZebra);
       
       setRows(currentRows);
       setCols(currentCols);
@@ -127,7 +132,7 @@ export const TableEditDialog = ({ isOpen, onClose, table, onConfirm }: TableEdit
         });
     }
 
-    onConfirm(finalRows, finalCols, curveClass, latestTableData);
+    onConfirm(finalRows, finalCols, curveClass, latestTableData, isZebra);
     onClose();
   };
 
@@ -425,11 +430,11 @@ export const TableEditDialog = ({ isOpen, onClose, table, onConfirm }: TableEdit
               <TabsContent value="style" className="space-y-4 mt-0 outline-none">
                 <div className="flex flex-col gap-4 p-4 rounded-xl border border-border/50 bg-muted/20">
                   <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label htmlFor="curve-slider" className="text-sm font-medium">Corner Radius</Label>
-                    <p className="text-xs text-muted-foreground">Apply rounded corners to the table outer border.</p>
-                  </div>
-                  <span className="text-xs font-medium bg-background px-2 py-1 rounded-md border border-border/50">
+                    <div className="space-y-0.5">
+                      <Label htmlFor="curve-slider" className="text-sm font-medium">Corner Radius</Label>
+                      <p className="text-xs text-muted-foreground">Apply rounded corners to the table outer border.</p>
+                    </div>
+                    <span className="text-xs font-medium bg-background px-2 py-1 rounded-md border border-border/50">
                       {curveLevel === 0 ? 'None' : CURVE_LEVELS[curveLevel].class.replace('rounded-', '')}
                     </span>
                   </div>
@@ -447,6 +452,18 @@ export const TableEditDialog = ({ isOpen, onClose, table, onConfirm }: TableEdit
                     <span>Square</span>
                     <span>Rounded</span>
                   </div>
+                </div>
+
+                <div className="flex items-center justify-between p-4 rounded-xl border border-border/50 bg-muted/20">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="zebra-toggle" className="text-sm font-medium">Zebra Striping</Label>
+                    <p className="text-xs text-muted-foreground">Alternate row background colors for better readability.</p>
+                  </div>
+                  <Switch 
+                    id="zebra-toggle"
+                    checked={isZebra}
+                    onCheckedChange={setIsZebra}
+                  />
                 </div>
               </TabsContent>
             </Tabs>
@@ -512,7 +529,7 @@ export const TableEditDialog = ({ isOpen, onClose, table, onConfirm }: TableEdit
               <div className="border border-border/50 rounded-xl p-4 bg-muted/20 overflow-hidden relative group">
                 <div className="absolute inset-0 bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] dark:bg-[radial-gradient(#374151_1px,transparent_1px)] [background-size:16px_16px] opacity-40 pointer-events-none" onClick={() => setSelectedCell(null)}></div>
                 
-                <div className={`relative z-10 bg-background/80 backdrop-blur-md shadow-sm overflow-x-auto overflow-y-auto max-h-[164px] w-full custom-scrollbar ${isRounded ? `overflow-hidden rounded-table ${previewCurveClass} border border-border` : ''}`}>
+                <div className={`relative z-10 bg-background/80 backdrop-blur-md shadow-sm overflow-x-auto overflow-y-auto max-h-[164px] w-full custom-scrollbar ${isRounded ? `overflow-hidden rounded-table ${previewCurveClass} border border-border` : ''} ${isZebra ? 'table-zebra' : ''}`}>
                   <table id="table-settings-preview" className={`w-full border-collapse ${isRounded ? 'border-hidden' : 'border border-border/50'}`}>
                     <thead className="relative z-20">
                       <tr>

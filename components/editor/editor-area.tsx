@@ -1056,17 +1056,50 @@ export const EditorArea = ({
 
     service.addRule('roundedTable', {
       filter: function (node) {
-        return node.nodeName === 'DIV' && node.classList.contains('overflow-x-auto') && node.classList.contains('rounded-table');
+        return node.nodeName === 'DIV' && (node.classList.contains('table-wrapper') || node.classList.contains('overflow-x-auto')) && node.querySelector('table') !== null;
       },
       replacement: function (content, node) {
         const table = node.querySelector('table');
         if (table) {
           const classes = Array.from(node.classList);
-          const curveClass = classes.find((c: string) => c.startsWith('rounded-') && c !== 'rounded-table') || 'rounded-xl';
-          const isZebra = node.classList.contains('table-zebra') ? ' table-zebra' : '';
-          table.classList.add('border-hidden', 'm-0', 'w-full');
-          table.classList.remove('border-0');
-          return '\n\n<div class="overflow-x-auto overflow-hidden w-full table-wrapper my-8 rounded-table ' + curveClass + ' border border-border' + isZebra + '">\n' + table.outerHTML + '\n</div>\n\n';
+          const hasRoundedTable = node.classList.contains('rounded-table');
+          const curveClass = classes.find((c: string) => c.startsWith('rounded-') && c !== 'rounded-table') || '';
+          const isZebra = node.classList.contains('table-zebra');
+          
+          const cleanTable = table.cloneNode(true) as HTMLTableElement;
+          const cells = Array.from(cleanTable.querySelectorAll('td, th'));
+          cells.forEach(cell => {
+            cell.classList.remove(
+              'bg-slate-100/50', 'dark:bg-slate-800/30',
+              'bg-blue-50/10', 'dark:bg-blue-950/10',
+              'bg-slate-200/50', 'dark:bg-slate-700/50',
+              'bg-blue-100/20', 'dark:bg-blue-900/20',
+              'ring-2', 'ring-blue-500', 'z-10', 'relative', 'active-cell'
+            );
+            if (!cell.getAttribute('class')) {
+              cell.removeAttribute('class');
+            }
+          });
+
+          // Ensure standard classes on the table element
+          cleanTable.className = 'border-hidden m-0 w-full';
+
+          // Construct the classes for the wrapper div
+          const wrapperClasses = ['overflow-x-auto', 'overflow-hidden', 'w-full', 'table-wrapper', 'my-8'];
+          if (hasRoundedTable) {
+            wrapperClasses.push('rounded-table');
+          }
+          if (curveClass) {
+            wrapperClasses.push(curveClass);
+          }
+          if (hasRoundedTable || curveClass) {
+            wrapperClasses.push('border', 'border-border');
+          }
+          if (isZebra) {
+            wrapperClasses.push('table-zebra');
+          }
+          
+          return '\n\n<div class="' + wrapperClasses.join(' ') + '">\n' + cleanTable.outerHTML + '\n</div>\n\n';
         }
         return content;
       }
@@ -1495,8 +1528,21 @@ export const EditorArea = ({
 
 
 
-  const handleTableEditConfirm = useCallback((targetRows: number, targetCols: number, curveClass: string, tableData?: { headers: string[], rows: string[][], alignments?: string[] }) => {
+  const handleTableEditConfirm = useCallback((targetRows: number, targetCols: number, curveClass: string, tableData?: { headers: string[], rows: string[][], alignments?: string[] }, isZebra?: boolean) => {
     if (!hoveredTable) return;
+
+    const applyStyles = (wrapper: Element) => {
+      wrapper.classList.remove('rounded-table', 'rounded-sm', 'rounded-md', 'rounded-lg', 'rounded-xl', 'rounded-2xl', 'rounded-3xl', 'border', 'border-border', 'border-[var(--border)]', 'overflow-hidden', 'table-zebra');
+      hoveredTable.classList.remove('border-hidden', 'border-0');
+      
+      if (curveClass) {
+        wrapper.classList.add('rounded-table', curveClass, 'border', 'border-border', 'overflow-hidden');
+        hoveredTable.classList.add('border-hidden');
+      }
+      if (isZebra) {
+        wrapper.classList.add('table-zebra');
+      }
+    };
 
     if (tableData) {
       const cells: ITableCell[][] = [];
@@ -1519,22 +1565,22 @@ export const EditorArea = ({
       };
 
       const controller = new TableController(model);
-      renderDOMPatches(hoveredTable, controller, [{ type: 'REBUILD_TABLE' }]);
-    }
-
-    // Handle rounded corners
-    const wrapper = hoveredTable.closest('.overflow-x-auto');
-    if (wrapper) {
-      wrapper.classList.remove('rounded-table', 'rounded-sm', 'rounded-md', 'rounded-lg', 'rounded-xl', 'rounded-2xl', 'rounded-3xl', 'border', 'border-border', 'border-[var(--border)]', 'overflow-hidden');
-      hoveredTable.classList.remove('border-hidden', 'border-0');
-      
-      if (curveClass) {
-        wrapper.classList.add('rounded-table', curveClass, 'border', 'border-border', 'overflow-hidden');
-        hoveredTable.classList.add('border-hidden');
+      renderDOMPatches(hoveredTable, controller, [{ type: 'REBUILD_TABLE' }], () => {
+        // Handle rounded corners inside the animation frame callback so DOM updates are fully completed
+        const wrapper = hoveredTable.closest('.overflow-x-auto');
+        if (wrapper) {
+          applyStyles(wrapper);
+        }
+        flushPreviewEdit(true);
+      });
+    } else {
+      // Handle rounded corners immediately if tableData is not provided
+      const wrapper = hoveredTable.closest('.overflow-x-auto');
+      if (wrapper) {
+        applyStyles(wrapper);
       }
+      flushPreviewEdit(true);
     }
-
-    flushPreviewEdit(true);
   }, [hoveredTable, flushPreviewEdit]);
 
   React.useImperativeHandle(editorAreaRef, () => ({
