@@ -44,7 +44,7 @@ export const MetadataBar = ({
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-4 print:hidden w-full">
-      <div className="flex flex-wrap items-center gap-4">
+      <div className="flex flex-wrap items-center gap-4 -ml-[3px]">
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex flex-wrap gap-1.5">
             {note.tags?.map(tag => (
@@ -74,7 +74,7 @@ export const MetadataBar = ({
               onKeyDown={onTagKeyDown}
               onBlur={handleAddTag}
               autoComplete="off"
-              className="pl-8 pr-3 py-1 text-[11px] font-medium bg-muted/40 border border-transparent focus:bg-background focus:border-primary/30 rounded-full outline-none transition-all w-24 focus:w-32 text-foreground shadow-sm focus:shadow-md focus:shadow-primary/5 focus:ring-0"
+              className="pl-8 pr-3 py-1 pt-[4px] -ml-[10px] text-[11px] font-medium bg-[#fef9f9] border border-transparent focus:bg-background focus:border-primary/30 rounded-full outline-none transition-all w-24 focus:w-32 text-foreground shadow-sm focus:shadow-md focus:shadow-primary/5 focus:ring-0"
               aria-label="Add tag"
             />
           </div>
@@ -91,7 +91,7 @@ export const MetadataBar = ({
             onChange={(e) => setFolderInput(e.target.value)}
             onKeyDown={updateFolder}
             autoComplete="off"
-            className="pl-8 pr-3 py-1 text-[11px] font-medium bg-muted/40 border border-transparent focus:bg-background focus:border-primary/30 rounded-full outline-none transition-all w-32 focus:w-40 text-foreground shadow-sm focus:shadow-md focus:shadow-primary/5 focus:ring-0"
+            className="pl-8 pr-3 py-1 text-[11px] font-medium bg-[#fffefe] border border-transparent focus:bg-background focus:border-primary/30 rounded-full outline-none transition-all w-32 focus:w-40 text-foreground shadow-sm focus:shadow-md focus:shadow-primary/5 focus:ring-0"
             aria-label="Add to folder"
           />
         </div>

@@ -621,7 +621,7 @@ export const EditorArea = ({
           clearTimeout(timeoutRef.current);
           timeoutRef.current = null;
         }
-        if (hoveredTable !== table) setHoveredTable(table);
+        // if (hoveredTable !== table) setHoveredTable(table);
         
         // Update active table row based on mouse cursor position
         const tr = target.closest('tr');
@@ -629,7 +629,10 @@ export const EditorArea = ({
           setActiveTableRow(tr as HTMLTableRowElement);
         }
         
-        updateTableRect(table);
+        // Only update rect if it's already hovered (e.g. from click)
+        if (hoveredTable === table) {
+           updateTableRect(table);
+        }
         setHoveredImage(null);
         setHoveredSketch(null);
         setHoveredLink(null);
@@ -708,10 +711,6 @@ export const EditorArea = ({
         const indices = getCellIndices(cell);
         if (indices) {
           setHoveredCell({ r: indices.r, c: indices.c });
-          if (hoveredTable !== indices.table) {
-            setHoveredTable(indices.table);
-            updateTableRect(indices.table);
-          }
         }
       }
     };
@@ -874,8 +873,8 @@ export const EditorArea = ({
     
     service.escape = (string) => {
       // Avoid escaping most markdown characters to allow live markdown typing.
-      // But we MUST escape pipe '|' characters because they break table column parsing in GFM tables!
-      return string.replace(/\|/g, '\\|');
+      // We don't escape pipes so users can type markdown tables natively.
+      return string;
     };
 
     service.use(gfm as import('turndown').Plugin);
@@ -1619,17 +1618,6 @@ export const EditorArea = ({
 
              // Fix horizontal rule typing: if '---' is entered, ensure it's on its own line so marked parses it as HR
              mdWithMarker = mdWithMarker.replace(new RegExp(`^(\\s*---)\\s*(${CARET_MARKER})$`, 'gm'), '$1\n$2');
-
-             // Fix caret inside table separator: move caret to the end of the previous line (header) to allow table parsing
-             const tableSepRegex = new RegExp(`^[ \\t]*\\|?[-: \\t]*${CARET_MARKER}[-: \\t]*\\|?[ \\t]*$`, 'm');
-             if (tableSepRegex.test(mdWithMarker)) {
-                 const replaceRegex = new RegExp(`([^\\n]+)\\n([ \\t\\|-]*[-:][ \\t\\|-]*)(${CARET_MARKER})([ \\t\\|-]*(\\n|$))`, 'g');
-                 mdWithMarker = mdWithMarker.replace(replaceRegex, `$1${CARET_MARKER}\n$2$4`);
-             }
-
-             // Also fix if caret is placed exactly after pipes in header/separator line in a way that breaks regex
-             const afterPipeRegex = new RegExp(`(\\n[ \\t\\|-]*[-:][ \\t\\|-]*)(${CARET_MARKER})([ \\t\\|-]*\\n)`, 'g');
-             mdWithMarker = mdWithMarker.replace(afterPipeRegex, '$1$3$2');
              
              let newHtml = parseMarkdown(mdWithMarker);
              newHtml = newHtml.replace(CARET_MARKER, '<span id="caret-marker"></span>');
@@ -2088,10 +2076,7 @@ export const EditorArea = ({
         }
 
         const htmlWithMarker = previewRef.current.innerHTML;
-        let mdWithMarker = turndownService.turndown(htmlWithMarker);
-        
-        mdWithMarker = mdWithMarker.replace(new RegExp(`([^\\n]+)\\n([ \\t\\|-]*[-:][ \\t\\|-]*)(${CARET_MARKER})([ \\t\\|-]*(\\n|$))`, 'g'), `$1${CARET_MARKER}\n$2$4`);
-        mdWithMarker = mdWithMarker.replace(new RegExp(`(\\n[ \\t\\|-]*[-:][ \\t\\|-]*)(${CARET_MARKER})([ \\t\\|-]*\\n)`, 'g'), '$1$3$2');
+        const mdWithMarker = turndownService.turndown(htmlWithMarker);
              
         let html = parseMarkdown(mdWithMarker);
         html = html.replace(CARET_MARKER, '<span id="caret-marker"></span>');
@@ -2147,7 +2132,13 @@ export const EditorArea = ({
     
     const node = sel.anchorNode;
     if (!previewRef.current.contains(node)) {
+      // Don't clear if focus moved to the toolbar itself
+      const el = node.nodeType === Node.TEXT_NODE ? node.parentElement : node as Element;
+      if (el && (el.closest('.table-floating-toolbar') || el.closest('[role="dialog"]'))) {
+        return;
+      }
       setActiveTableRow(null);
+      setHoveredTable(null);
       return;
     }
 
@@ -2169,6 +2160,7 @@ export const EditorArea = ({
          // Optionally clear activeTableRow if we navigated out of the table entirely
          // Wait, if we hover over the table, it stays, but if we navigate out with keyboard...
          setActiveTableRow(null);
+         setHoveredTable(null);
       }
     }
 
