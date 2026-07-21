@@ -420,7 +420,7 @@ const highlightTableCells = (
 interface EditorAreaProps {
   content: string;
   theme: string;
-  handleContentChange: (content: string) => void;
+  handleContentChange: (content: string, immediate?: boolean) => void;
   handleDrop: (e: React.DragEvent<HTMLDivElement>) => void;
   handleDragOver: (e: React.DragEvent<HTMLDivElement>) => void;
   editorAreaRef?: React.RefObject<EditorAreaRef | null>;
@@ -1187,13 +1187,13 @@ export const EditorArea = ({
 
   const lastProcessedContent = useRef(content);
 
-  const flushPreviewEdit = useCallback(() => {
+  const flushPreviewEdit = useCallback((immediate = false) => {
     if (previewRef.current) {
       const htmlContent = previewRef.current.innerHTML;
       const markdown = turndownService.turndown(htmlContent);
       if (markdown !== lastProcessedContent.current) {
         lastProcessedContent.current = markdown;
-        handleContentChange(markdown);
+        handleContentChange(markdown, immediate);
       }
       return markdown;
     }
@@ -1459,7 +1459,7 @@ export const EditorArea = ({
         hoveredImage.remove();
       }
       setHoveredImage(null);
-      flushPreviewEdit();
+      flushPreviewEdit(true);
     }
   }, [hoveredImage, flushPreviewEdit]);
 
@@ -1490,7 +1490,7 @@ export const EditorArea = ({
       hoveredImage.style.marginRight = 'auto';
     }
 
-    flushPreviewEdit();
+    flushPreviewEdit(true);
   }, [hoveredImage, flushPreviewEdit]);
 
 
@@ -1534,7 +1534,7 @@ export const EditorArea = ({
       }
     }
 
-    flushPreviewEdit();
+    flushPreviewEdit(true);
   }, [hoveredTable, flushPreviewEdit]);
 
   React.useImperativeHandle(editorAreaRef, () => ({
@@ -2291,7 +2291,7 @@ export const EditorArea = ({
           const controller = getTableController(table);
           const result = controller.handlePaste(textData, startRow, startCol);
           if (result && result.success) {
-            renderDOMPatches(table, controller, result.domPatches, flushPreviewEdit);
+            renderDOMPatches(table, controller, result.domPatches, () => flushPreviewEdit(true));
           }
           return;
         }
@@ -2307,7 +2307,7 @@ export const EditorArea = ({
           reader.onload = (event) => {
             const base64String = event.target?.result as string;
             document.execCommand('insertHTML', false, `<img src="${base64String}" alt="Pasted Image" style="max-width: 100%;" /><p>&#8203;</p>`);
-            flushPreviewEdit();
+            flushPreviewEdit(true);
           };
           reader.readAsDataURL(file);
           return;
@@ -2321,7 +2321,7 @@ export const EditorArea = ({
       if (text.match(/\.(jpeg|jpg|gif|png|webp|avif|svg)$/i) || text.startsWith('data:image/')) {
          e.preventDefault();
          document.execCommand('insertHTML', false, `<img src="${text}" alt="Pasted Image" style="max-width: 100%;" /><p>&#8203;</p>`);
-         flushPreviewEdit();
+         flushPreviewEdit(true);
          return;
       }
 
@@ -2577,7 +2577,7 @@ export const EditorArea = ({
               if (hoveredSketch && previewRef.current) {
                 hoveredSketch.remove();
                 setHoveredSketch(null);
-                flushPreviewEdit();
+                flushPreviewEdit(true);
               }
             }}
           >
@@ -2735,7 +2735,7 @@ export const EditorArea = ({
                 el.setAttribute('data-excalidraw', stateString);
               }
               setIsSketchEditDialogOpen(false);
-              flushPreviewEdit();
+              flushPreviewEdit(true);
             }}
           />
         </React.Suspense>
@@ -2812,7 +2812,7 @@ export const EditorArea = ({
                   }
                 }
               }
-              flushPreviewEdit();
+              flushPreviewEdit(true);
               setActiveTableRow(null);
               setDeletePromptInfo({ isOpen: false, targetRow: null, targetTable: null });
             }}>

@@ -53,6 +53,19 @@ export default function App() {
   }, []);
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mediaQuery = window.matchMedia("(min-width: 768px)");
+    setIsSidebarOpen(mediaQuery.matches);
+
+    const listener = (e: MediaQueryListEvent) => {
+      setIsSidebarOpen(e.matches);
+    };
+
+    mediaQuery.addEventListener("change", listener);
+    return () => mediaQuery.removeEventListener("change", listener);
+  }, []);
   const [theme, setTheme] = useState<string>(() => localStorage.getItem('lumina-theme') || 'light');
   const [fontFamily, setFontFamily] = useState<string>(() => localStorage.getItem('lumina-font') || 'sans');
   const [baseFontSize, setBaseFontSize] = useState<string>(() => localStorage.getItem('lumina-base-font-size') || 'text-base');
@@ -126,6 +139,14 @@ export default function App() {
       setIsSidebarOpen(false);
     }
   }, [setActiveNoteId]);
+
+  const handleCreateNote = useCallback((title?: string, content?: string, folderId?: string, metadata?: Partial<Note>) => {
+    const id = createNote(title, content, folderId, metadata);
+    if (window.innerWidth < 768) {
+      setIsSidebarOpen(false);
+    }
+    return id;
+  }, [createNote]);
 
   // Handle opening files from Android Action VIEW/EDIT intents
   useEffect(() => {
@@ -287,7 +308,7 @@ export default function App() {
               folders={folders}
               activeNoteId={activeNoteId}
               onSelectNote={handleSelectNote}
-              onCreateNote={createNote}
+              onCreateNote={handleCreateNote}
               onDeleteNote={deleteNote}
               onCreateFolder={createFolder}
               onUpdateFolder={updateFolder}
@@ -309,7 +330,7 @@ export default function App() {
               note={activeNote}
               notes={notes}
               onSelectNote={handleSelectNote}
-              onCreateNote={createNote}
+              onCreateNote={handleCreateNote}
               onDeleteNote={deleteNote}
               onUpdateNote={updateNote}
               onToggleSidebar={() => {
@@ -327,7 +348,7 @@ export default function App() {
             <CommandPalette 
               notes={notes}
               onSelectNote={handleSelectNote}
-              onCreateNote={createNote}
+              onCreateNote={handleCreateNote}
               onThemeChange={setTheme}
             />
           </Suspense>

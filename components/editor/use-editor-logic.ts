@@ -5,16 +5,16 @@ import { toast } from 'sonner';
 export const useEditorLogic = (
   note: Note | null,
   onUpdateNote: (id: string, updates: Partial<Note>) => void,
-  addToHistory: (title: string, content: string) => void
+  addToHistory: (title: string, content: string, immediate?: boolean) => void
 ) => {
   const textareaRef = useRef<HTMLDivElement>(null); // Changed to HTMLDivElement
   const [tagInput, setTagInput] = useState("");
   const [folderInput, setFolderInput] = useState("");
 
-  const handleContentChange = (newContent: string) => {
+  const handleContentChange = (newContent: string, immediate = false) => {
     if (!note) return;
     onUpdateNote(note.id, { content: newContent });
-    addToHistory(note.title, newContent);
+    addToHistory(note.title, newContent, immediate);
   };
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
