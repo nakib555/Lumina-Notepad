@@ -1,12 +1,11 @@
 import { useState, useRef, useEffect, useCallback, Suspense, lazy } from "react";
 import TextareaAutosize from 'react-textarea-autosize';
-import { marked } from "marked";
 import { AiAssistantDialog } from "./editor/ai-assistant-dialog";
 import { Note } from "@/hooks/use-notes";
 import { EditorHeader } from "./editor/editor-header";
 import { BottomBar } from "./editor/bottom-bar";
 import { MetadataBar } from "./editor/metadata-bar";
-import { EditorArea, EditorAreaRef } from "./editor/editor-area";
+import { EditorArea, EditorAreaRef, parseMarkdown } from "./editor/editor-area";
 import { useEditorFormatting } from "./editor/use-editor-formatting";
 import { useEditorHistory } from "./editor/use-editor-history";
 import { useEditorExport } from "./editor/use-editor-export";
@@ -240,6 +239,25 @@ export function Editor({
     setShowAiDialog(true);
   };
 
+  const cleanAiResponse = (text: string): string => {
+    if (!text) return "";
+    let cleaned = text.trim();
+    
+    // Strip markdown code block wrappers
+    const codeBlockRegex = /^```(?:markdown|html|text)?\s*\n?([\s\S]*?)\n?\s*```$/i;
+    let matches = cleaned.match(codeBlockRegex);
+    if (matches) {
+      cleaned = matches[1].trim();
+    } else {
+      const genericCodeBlockRegex = /^```(?:markdown|html|text)?\s*([\s\S]*?)\s*```$/i;
+      matches = cleaned.match(genericCodeBlockRegex);
+      if (matches) {
+        cleaned = matches[1].trim();
+      }
+    }
+    return cleaned;
+  };
+
   const handleAiInsertText = (newText: string) => {
     if (textareaRef.current) {
       textareaRef.current.focus();
@@ -249,7 +267,8 @@ export function Editor({
         selection?.addRange(savedRangeRef.current);
       }
       try {
-        const parsedHtml = marked.parse(newText) as string;
+        const cleanedText = cleanAiResponse(newText);
+        const parsedHtml = parseMarkdown(cleanedText);
         document.execCommand('insertHTML', false, parsedHtml);
         if (editorAreaRef.current) {
           editorAreaRef.current.flushPreviewEdit();

@@ -3,6 +3,86 @@ import path from "path";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
 
+function cleanAiResponse(text: string): string {
+  if (!text) return "";
+  
+  let cleaned = text.trim();
+  
+  // 1. Strip Markdown code block wrappers at start and end of string
+  const codeBlockRegex = /^```(?:markdown|html|text)?\s*\n?([\s\S]*?)\n?\s*```$/i;
+  let matches = cleaned.match(codeBlockRegex);
+  if (matches) {
+    cleaned = matches[1].trim();
+  } else {
+    const genericCodeBlockRegex = /^```(?:markdown|html|text)?\s*([\s\S]*?)\s*```$/i;
+    matches = cleaned.match(genericCodeBlockRegex);
+    if (matches) {
+      cleaned = matches[1].trim();
+    }
+  }
+
+  // 2. Remove common conversational introductory filler phrases
+  const introPatterns = [
+    /^here is the updated text:?\s*\n*/i,
+    /^here is the polished text:?\s*\n*/i,
+    /^here is the summary:?\s*\n*/i,
+    /^here is the translation:?\s*\n*/i,
+    /^here's the updated text:?\s*\n*/i,
+    /^here's the polished text:?\s*\n*/i,
+    /^here's the summary:?\s*\n*/i,
+    /^here's the translation:?\s*\n*/i,
+    /^sure, here is the updated text:?\s*\n*/i,
+    /^sure, here is the polished text:?\s*\n*/i,
+    /^sure, here's the updated text:?\s*\n*/i,
+    /^sure, here's the polished text:?\s*\n*/i,
+    /^sure, here is the summary:?\s*\n*/i,
+    /^sure, here's the summary:?\s*\n*/i,
+    /^sure, here is the translation:?\s*\n*/i,
+    /^sure, here's the translation:?\s*\n*/i,
+    /^sure! here is the text:?\s*\n*/i,
+    /^here is the translation of your text into [a-zA-Z]+:?\s*\n*/i,
+    /^sure, here are the corrections:?\s*\n*/i,
+    /^here are the corrections for the text:?\s*\n*/i,
+    /^as requested, here is the text:?\s*\n*/i,
+  ];
+
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const pattern of introPatterns) {
+      if (pattern.test(cleaned)) {
+        cleaned = cleaned.replace(pattern, "").trim();
+        changed = true;
+      }
+    }
+  }
+
+  // 3. Remove common conversational outro phrases at the very end
+  const outroPatterns = [
+    /\s*\n*hope this helps!?$/i,
+    /\s*\n*let me know if you need anything else!?$/i,
+    /\s*\n*let me know if you want me to make any other changes!?$/i,
+    /\s*\n*let me know if you need any other changes!?$/i,
+    /\s*\n*let me know if you need further assistance!?$/i,
+    /\s*\n*i hope this helps!?$/i,
+    /\s*\n*hope this is what you were looking for!?$/i,
+    /\s*\n*i hope this is what you were looking for!?$/i,
+  ];
+
+  changed = true;
+  while (changed) {
+    changed = false;
+    for (const pattern of outroPatterns) {
+      if (pattern.test(cleaned)) {
+        cleaned = cleaned.replace(pattern, "").trim();
+        changed = true;
+      }
+    }
+  }
+
+  return cleaned;
+}
+
 async function startServer() {
   const app = express();
   const PORT = 3000;
@@ -88,7 +168,7 @@ async function startServer() {
       });
 
       const resultText = response.text || "";
-      res.json({ result: resultText.trim() });
+      res.json({ result: cleanAiResponse(resultText) });
     } catch (err: unknown) {
       console.error("Gemini service error:", err);
       const errorMessage = err instanceof Error ? err.message : "An error occurred with the Gemini AI service.";

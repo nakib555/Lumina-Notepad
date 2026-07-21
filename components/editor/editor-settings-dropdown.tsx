@@ -110,8 +110,8 @@ export function EditorSettingsDropdown({
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: 10, scale: 0.95 }}
           transition={{ duration: 0.2, ease: "easeOut" }}
-          className="absolute right-0 mt-2 w-[340px] max-w-[calc(100vw-1rem)] bg-background/95 backdrop-blur-xl border border-border/50 rounded-2xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.15)] p-0 z-50 overflow-hidden flex flex-col h-[480px]"
-          style={{ transformOrigin: "top right" }}
+          className="fixed left-2 right-2 top-14 mt-2 sm:absolute sm:inset-auto sm:left-0 sm:top-auto sm:mt-2 w-auto sm:w-[340px] bg-background/95 backdrop-blur-xl border border-border/50 rounded-2xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.15)] p-0 z-[100] overflow-hidden flex flex-col h-[480px] max-h-[calc(100dvh-5rem)]"
+          style={{ transformOrigin: "top center" }}
         >
           {/* Header */}
           <div className="px-4 py-3.5 border-b border-border/50 bg-muted/20">

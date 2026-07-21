@@ -9,7 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { marked } from "marked";
+import { parseMarkdown } from "./editor-area";
 
 interface AiAssistantDialogProps {
   isOpen: boolean;
@@ -109,7 +109,27 @@ export const AiAssistantDialog = ({
 
   const renderResultHtml = () => {
     try {
-      return { __html: marked.parse(result) as string };
+      const cleanResponse = (text: string): string => {
+        if (!text) return "";
+        let cleaned = text.trim();
+        
+        // Strip markdown code block wrappers
+        const codeBlockRegex = /^```(?:markdown|html|text)?\s*\n?([\s\S]*?)\n?\s*```$/i;
+        let matches = cleaned.match(codeBlockRegex);
+        if (matches) {
+          cleaned = matches[1].trim();
+        } else {
+          const genericCodeBlockRegex = /^```(?:markdown|html|text)?\s*([\s\S]*?)\s*```$/i;
+          matches = cleaned.match(genericCodeBlockRegex);
+          if (matches) {
+            cleaned = matches[1].trim();
+          }
+        }
+        return cleaned;
+      };
+
+      const cleanedResult = cleanResponse(result);
+      return { __html: parseMarkdown(cleanedResult) };
     } catch {
       return { __html: result };
     }
