@@ -2448,7 +2448,7 @@ export const EditorArea = ({
         <>
           {/* Left formatting icon */}
           <div 
-            className="table-floating-toolbar absolute z-30 flex items-center justify-center print:hidden pointer-events-none"
+            className="table-floating-toolbar absolute z-30 flex items-center justify-center print:hidden"
             style={(() => {
               let activeRowIdx = null;
               if (activeTableRow && hoveredTable && hoveredTable.contains(activeTableRow)) {
@@ -2461,19 +2461,18 @@ export const EditorArea = ({
               
               const activeRowTop = (rowRects[activeRowIdx] && rowRects[activeRowIdx].top) ?? tableRect.top;
               const activeRowHeight = (rowRects[activeRowIdx] && rowRects[activeRowIdx].height) ?? 40;
+              const topPosition = activeRowTop + (activeRowHeight / 2) - 14;
               const leftPosition = Math.max(0, tableRect.left - 32);
               
               return {
-                top: activeRowTop,
-                height: activeRowHeight,
-                left: leftPosition,
-              };
+                top: topPosition,
+                left: leftPosition};
             })()}
             onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
           >
             <button 
               onClick={(e) => { e.preventDefault(); setIsTableEditDialogOpen(true); }}
-              className="p-1.5 text-muted-foreground hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 rounded-md transition-colors bg-background/95 backdrop-blur-sm border border-border shadow-[0_2px_10px_rgba(0,0,0,0.05)] cursor-pointer pointer-events-auto"
+              className="p-1.5 text-muted-foreground hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 rounded-md transition-colors bg-background/95 backdrop-blur-sm border border-border shadow-[0_2px_10px_rgba(0,0,0,0.05)] cursor-pointer"
               title="Table Styling & Settings"
             >
               <Settings2 className="w-4 h-4" />
@@ -2482,7 +2481,7 @@ export const EditorArea = ({
           
           {/* Right delete icon */}
           <div 
-            className="table-floating-toolbar absolute z-30 flex items-center justify-center print:hidden pointer-events-none"
+            className="table-floating-toolbar absolute z-30 flex items-center justify-center print:hidden"
             style={(() => {
               let activeRowIdx = null;
               if (activeTableRow && hoveredTable && hoveredTable.contains(activeTableRow)) {
@@ -2495,6 +2494,7 @@ export const EditorArea = ({
               
               const activeRowTop = (rowRects[activeRowIdx] && rowRects[activeRowIdx].top) ?? tableRect.top;
               const activeRowHeight = (rowRects[activeRowIdx] && rowRects[activeRowIdx].height) ?? 40;
+              const topPosition = activeRowTop + (activeRowHeight / 2) - 14;
               
               let leftPosition = tableRect.left + tableRect.width + 4;
               
@@ -2508,10 +2508,8 @@ export const EditorArea = ({
               }
               
               return {
-                top: activeRowTop,
-                height: activeRowHeight,
-                left: leftPosition,
-              };
+                top: topPosition,
+                left: leftPosition};
             })()}
             onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
           >
@@ -2520,7 +2518,7 @@ export const EditorArea = ({
                 e.preventDefault(); 
                 setDeletePromptInfo({ isOpen: true, targetRow: activeTableRow, targetTable: hoveredTable });
               }}
-              className="p-1.5 text-muted-foreground hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-md transition-colors bg-background/95 backdrop-blur-sm border border-border shadow-[0_2px_10px_rgba(0,0,0,0.05)] cursor-pointer pointer-events-auto"
+              className="p-1.5 text-muted-foreground hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-md transition-colors bg-background/95 backdrop-blur-sm border border-border shadow-[0_2px_10px_rgba(0,0,0,0.05)] cursor-pointer"
               title="Delete Row or Table"
             >
               <Trash2 className="w-4 h-4" />
