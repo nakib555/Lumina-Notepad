@@ -2731,10 +2731,36 @@ export const EditorArea = ({
       {!isViewMode && hoveredSketch && sketchRect && (
         <div 
           className="sketch-floating-toolbar absolute z-50 flex items-center bg-background border border-border shadow-md rounded-lg overflow-hidden print:hidden animate-in fade-in zoom-in-95 duration-200"
-          style={{ 
-            top: Math.max(0, sketchRect.top - 46), 
-            left: Math.max(0, sketchRect.left),
-          }}
+          style={(() => {
+            const parentRect = previewRef.current?.parentElement?.getBoundingClientRect();
+            let topPosition = sketchRect.top - 46;
+            let leftPosition = sketchRect.left;
+            
+            if (parentRect) {
+              let minTop = 0;
+              if (parentRect.top < 0) {
+                minTop = -parentRect.top + 10;
+              }
+              if (topPosition < minTop) {
+                topPosition = minTop;
+              }
+              
+              const scrollLeft = previewRef.current?.parentElement?.scrollLeft || 0;
+              const viewportWidth = parentRect.width;
+              const maxLeft = scrollLeft + viewportWidth - 120 - 16;
+              if (leftPosition > maxLeft) {
+                leftPosition = Math.max(scrollLeft, maxLeft);
+              }
+              if (leftPosition < scrollLeft) {
+                leftPosition = scrollLeft;
+              }
+            }
+            
+            return {
+              top: Math.max(0, topPosition),
+              left: Math.max(0, leftPosition),
+            };
+          })()}
         >
           <button 
             className="p-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
@@ -2763,10 +2789,35 @@ export const EditorArea = ({
         <>
           <div 
             className="image-floating-toolbar absolute z-50 flex items-center justify-center print:hidden"
-            style={{ 
-              top: Math.max(0, imageRect.top - 36), 
-              left: Math.max(0, imageRect.left),
-            }}
+            style={(() => {
+              const parentRect = previewRef.current?.parentElement?.getBoundingClientRect();
+              let topPosition = imageRect.top - 36;
+              let leftPosition = imageRect.left;
+              
+              if (parentRect) {
+                let minTop = 0;
+                if (parentRect.top < 0) {
+                  minTop = -parentRect.top + 10;
+                }
+                if (topPosition < minTop) {
+                  topPosition = minTop;
+                }
+                
+                const scrollLeft = previewRef.current?.parentElement?.scrollLeft || 0;
+                const viewportWidth = parentRect.width;
+                const maxLeft = scrollLeft + viewportWidth - 80 - 16;
+                if (leftPosition > maxLeft) {
+                  leftPosition = Math.max(scrollLeft, maxLeft);
+                }
+                if (leftPosition < scrollLeft) {
+                  leftPosition = scrollLeft;
+                }
+              }
+              return {
+                top: Math.max(0, topPosition),
+                left: Math.max(0, leftPosition),
+              };
+            })()}
           >
             <button 
               onClick={() => setIsImageEditDialogOpen(true)}
@@ -2778,10 +2829,35 @@ export const EditorArea = ({
           </div>
           <div 
             className="image-floating-toolbar absolute z-50 flex items-center justify-center gap-1 print:hidden"
-            style={{ 
-              top: Math.max(0, imageRect.top - 36), 
-              left: Math.max(0, imageRect.left) + 36,
-            }}
+            style={(() => {
+              const parentRect = previewRef.current?.parentElement?.getBoundingClientRect();
+              let topPosition = imageRect.top - 36;
+              let leftPosition = imageRect.left + 36;
+              
+              if (parentRect) {
+                let minTop = 0;
+                if (parentRect.top < 0) {
+                  minTop = -parentRect.top + 10;
+                }
+                if (topPosition < minTop) {
+                  topPosition = minTop;
+                }
+                
+                const scrollLeft = previewRef.current?.parentElement?.scrollLeft || 0;
+                const viewportWidth = parentRect.width;
+                const maxLeft = scrollLeft + viewportWidth - 44 - 16;
+                if (leftPosition > maxLeft) {
+                  leftPosition = Math.max(scrollLeft, maxLeft);
+                }
+                if (leftPosition < scrollLeft + 36) {
+                  leftPosition = scrollLeft + 36;
+                }
+              }
+              return {
+                top: Math.max(0, topPosition),
+                left: Math.max(0, leftPosition),
+              };
+            })()}
           >
             <button 
               onClick={deleteImage}
@@ -2797,10 +2873,36 @@ export const EditorArea = ({
       {!isViewMode && hoveredLink && linkRect && (
         <div 
           className="link-floating-toolbar absolute z-50 flex items-center justify-center gap-1 print:hidden"
-          style={{ 
-            top: Math.max(0, linkRect.top - 36), 
-            left: Math.max(0, linkRect.left),
-          }}
+          style={(() => {
+            const parentRect = previewRef.current?.parentElement?.getBoundingClientRect();
+            let topPosition = linkRect.top - 36;
+            let leftPosition = linkRect.left;
+            
+            if (parentRect) {
+              let minTop = 0;
+              if (parentRect.top < 0) {
+                minTop = -parentRect.top + 10;
+              }
+              if (topPosition < minTop) {
+                topPosition = minTop;
+              }
+              
+              const scrollLeft = previewRef.current?.parentElement?.scrollLeft || 0;
+              const viewportWidth = parentRect.width;
+              const toolbarWidth = 240;
+              const maxLeft = scrollLeft + viewportWidth - toolbarWidth - 16;
+              if (leftPosition > maxLeft) {
+                leftPosition = Math.max(scrollLeft, maxLeft);
+              }
+              if (leftPosition < scrollLeft) {
+                leftPosition = scrollLeft;
+              }
+            }
+            return {
+              top: Math.max(0, topPosition),
+              left: Math.max(0, leftPosition),
+            };
+          })()}
         >
           <button 
             onClick={(e) => { e.preventDefault(); e.stopPropagation(); window.open(hoveredLink.href, '_blank'); }}
