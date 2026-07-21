@@ -6,28 +6,15 @@ import { marked } from 'marked';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { 
-  Trash2, 
+  Trash2,
   Settings2, 
-  ExternalLink, 
-  AlignLeft, 
-  AlignCenter, 
-  AlignRight,
-  ArrowLeftToLine,
-  ArrowRightToLine,
-  ArrowUpToLine,
-  ArrowDownToLine,
-  Copy,
-  Eraser,
-  Trash,
-  Rows3,
-} from "lucide-react";
+  ExternalLink} from "lucide-react";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
+  DialogFooter} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import markedKatex from 'marked-katex-extension';
 import 'katex/dist/katex.min.css';
@@ -115,8 +102,7 @@ const CUSTOM_STYLE = {
   fontSize: '14px',
   lineHeight: '1.5',
   fontFamily: "'JetBrains Mono', ui-monospace, SFMono-Regular, monospace",
-  background: 'transparent',
-};
+  background: 'transparent'};
 
 renderer.code = function(token) {
   const code = token.text.replace(/^[\r\n]+/, '').replace(/[\r\n]+$/, '');
@@ -170,7 +156,7 @@ renderer.code = function(token) {
     }
   }
 
-  return `<div class="code-block-wrapper not-prose my-6" contenteditable="false"><div class="rounded-xl font-sans group transition-colors duration-300 border border-border relative overflow-hidden bg-muted/10"><div class="sticky top-0 z-10 flex justify-between items-center px-5 py-2.5 border-b border-border select-none bg-muted/30"><div class="flex items-center gap-3"><span class="text-[13px] font-semibold text-muted-foreground font-mono capitalize language-label">${displayLang}</span></div><div class="flex items-center gap-4"><button class="flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[13px] font-medium transition-all text-emerald-600 hover:bg-emerald-500/10 hover:text-emerald-700 dark:hover:text-emerald-400" title="Run Code"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>Run</button><button class="flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[13px] font-medium text-purple-600 hover:bg-purple-500/10 hover:text-purple-700 dark:hover:text-purple-400 transition-all" title="Open in Side Panel"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>Open</button><button class="flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[13px] font-medium text-muted-foreground hover:bg-muted/80 hover:text-foreground transition-all active:scale-95 copy-btn" onclick="navigator.clipboard.writeText(this.closest('.code-block-wrapper').querySelector('.code-element').textContent); const span = this.querySelector('.copy-text'); span.textContent='Copied'; setTimeout(() => span.textContent='Copy', 2000);" title="Copy code"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg><span class="copy-text">Copy</span></button><button class="flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[13px] font-medium text-muted-foreground hover:bg-red-500/10 hover:text-red-500 transition-all active:scale-95 delete-btn" onclick="const wrapper = this.closest('.code-block-wrapper'); const next = wrapper.nextElementSibling; if(next && next.tagName === 'P' && next.innerHTML.includes('&#8203;')) next.remove(); wrapper.remove();" title="Delete code block"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg></button></div></div><div class="relative overflow-x-auto text-[14px] leading-relaxed custom-scrollbar bg-transparent code-container whitespace-pre print:whitespace-pre-wrap font-mono m-0 text-slate-800 dark:text-slate-200">${highlightedContent}</div></div></div>`;
+  return `<div class="code-block-wrapper not-prose my-6" contenteditable="false"><div class="rounded-xl font-sans group transition-colors duration-300 border border-border relative overflow-hidden bg-muted/10"><div class="sticky top-0 z-10 flex justify-between items-center px-5 py-2.5 border-b border-border select-none bg-muted/30"><div class="flex items-center gap-3"><span class="text-[13px] font-semibold text-muted-foreground font-mono capitalize language-label">${displayLang}</span></div><div class="flex items-center gap-4"><button class="flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[13px] font-medium transition-all text-emerald-600 hover:bg-emerald-500/10 hover:text-emerald-700 dark:hover:text-emerald-400" title="Run Code"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>Run</button><button class="flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[13px] font-medium text-purple-600 hover:bg-purple-500/10 hover:text-purple-700 dark:hover:text-purple-400 transition-all" title="Open in Side Panel"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>Open</button><button class="flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[13px] font-medium text-muted-foreground hover:bg-muted/80 hover:text-foreground transition-all active:scale-95 copy-btn" onclick="navigator.clipboard.writeText(this.closest('.code-block-wrapper').querySelector('.code-element').textContent); const span = this.querySelector('.copy-text'); span.textContent='Copied'; setTimeout(() => span.textContent='', 2000);" title="code"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg><span class="copy-text"></span></button><button class="flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[13px] font-medium text-muted-foreground hover:bg-red-500/10 hover:text-red-500 transition-all active:scale-95 delete-btn" onclick="const wrapper = this.closest('.code-block-wrapper'); const next = wrapper.nextElementSibling; if(next && next.tagName === 'P' && next.innerHTML.includes('&#8203;')) next.remove(); wrapper.remove();" title="Delete code block"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg></button></div></div><div class="relative overflow-x-auto text-[14px] leading-relaxed custom-scrollbar bg-transparent code-container whitespace-pre print:whitespace-pre-wrap font-mono m-0 text-slate-800 dark:text-slate-200">${highlightedContent}</div></div></div>`;
 };
 renderer.table = function(token: import('marked').Tokens.Table) {
   let html = marked.Renderer.prototype.table.call(this, token);
@@ -442,7 +428,7 @@ interface EditorAreaProps {
   textareaRef?: React.RefObject<HTMLDivElement | null>;
   isAutoMarkdownEnabled?: boolean;
   isViewMode?: boolean;
-  isEraserMode?: boolean;
+  isMode?: boolean;
   powerSaver?: boolean;
   baseFontSize?: string;
 }
@@ -457,10 +443,9 @@ export const EditorArea = ({
   textareaRef,
   isAutoMarkdownEnabled,
   isViewMode,
-  isEraserMode,
+  isMode,
   powerSaver,
-  baseFontSize,
-}: EditorAreaProps) => {
+  baseFontSize}: EditorAreaProps) => {
   const previewRef = useRef<HTMLDivElement>(null);
   const isComposing = useRef(false);
   const [hoveredTable, setHoveredTable] = useState<HTMLTableElement | null>(null);
@@ -488,16 +473,7 @@ export const EditorArea = ({
   const [hoveredLink, setHoveredLink] = useState<HTMLAnchorElement | null>(null);
   const [linkRect, setLinkRect] = useState<{ top: number, left: number, width: number, height: number } | null>(null);
   
-  const [isZebraState, setIsZebraState] = useState(false);
 
-  useEffect(() => {
-    if (hoveredTable) {
-      const wrapper = hoveredTable.closest('.table-wrapper');
-      setIsZebraState(wrapper?.classList.contains('table-zebra') || false);
-    } else {
-      setIsZebraState(false);
-    }
-  }, [hoveredTable]);
 
   // Sync previewRef with textareaRef if provided
   useEffect(() => {
@@ -598,99 +574,106 @@ export const EditorArea = ({
   const lastMouseMoveTime = useRef<number>(0);
 
   useEffect(() => {
+    let ticking = false;
     const handleMouseMove = (e: MouseEvent) => {
-      if (powerSaver) {
-        const now = Date.now();
-        if (now - lastMouseMoveTime.current < 200) return;
-        lastMouseMoveTime.current = now;
-      }
-
-      if (isTableEditDialogOpen || isImageEditDialogOpen || isSketchEditDialogOpen) return;
-      if (!previewRef.current) return;
-      
-      const target = e.target as HTMLElement;
-      const table = target.closest('table');
-      const sketch = target.closest('.sketch-container') as HTMLElement | null;
-      const img = sketch ? null : target.closest('img');
-      const link = target.closest('a');
-      const isHoveringToolbar = target.closest('.table-floating-toolbar') || target.closest('.image-floating-toolbar') || target.closest('.sketch-floating-toolbar') || target.closest('.link-floating-toolbar') || target.closest('[role="dialog"]') || target.closest('.table-overlay-btn');
-      
-      // Inside table checking
-      if (table && previewRef.current.contains(table) && !target.closest('.table-floating-toolbar')) {
-        if (timeoutRef.current) {
-          clearTimeout(timeoutRef.current);
-          timeoutRef.current = null;
-        }
-        // if (hoveredTable !== table) setHoveredTable(table);
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        ticking = false;
         
-        // Update active table row based on mouse cursor position
-        const tr = target.closest('tr');
-        if (tr) {
-          setActiveTableRow(tr as HTMLTableRowElement);
+        if (powerSaver) {
+          const now = Date.now();
+          if (now - lastMouseMoveTime.current < 200) return;
+          lastMouseMoveTime.current = now;
         }
-        
-        // Only update rect if it's already hovered (e.g. from click)
-        if (hoveredTable === table) {
-           updateTableRect(table);
-        }
-        setHoveredImage(null);
-        setHoveredSketch(null);
-        setHoveredLink(null);
-      } else if (sketch && previewRef.current.contains(sketch) && !target.closest('.sketch-floating-toolbar')) {
-        if (timeoutRef.current) {
-          clearTimeout(timeoutRef.current);
-          timeoutRef.current = null;
-        }
-        if (hoveredSketch !== sketch) setHoveredSketch(sketch);
-        updateSketchRect(sketch);
-        setHoveredTable(null);
-        setHoveredImage(null);
-        setHoveredLink(null);
-      } else if (img && previewRef.current.contains(img) && !target.closest('.image-floating-toolbar')) {
-        if (timeoutRef.current) {
-          clearTimeout(timeoutRef.current);
-          timeoutRef.current = null;
-        }
-        if (hoveredImage !== img) setHoveredImage(img as HTMLImageElement);
-        updateImageRect(img as HTMLImageElement);
-        setHoveredTable(null);
-        setHoveredSketch(null);
-        setHoveredLink(null);
-      } else if (link && previewRef.current.contains(link) && !target.closest('.link-floating-toolbar')) {
-        if (timeoutRef.current) {
-          clearTimeout(timeoutRef.current);
-          timeoutRef.current = null;
-        }
-        if (hoveredLink !== link) setHoveredLink(link as HTMLAnchorElement);
-        updateLinkRect(link as HTMLAnchorElement);
-        setHoveredImage(null);
-        setHoveredSketch(null);
-        setHoveredTable(null);
-      } else if (isHoveringToolbar) {
-        if (timeoutRef.current) {
-          clearTimeout(timeoutRef.current);
-          timeoutRef.current = null;
-        }
-      } else {
-        if (!timeoutRef.current && (hoveredTable || hoveredImage || hoveredSketch || hoveredLink)) {
-          timeoutRef.current = setTimeout(() => {
-            const sel = window.getSelection();
-            const caretInsideHoveredTable = hoveredTable && sel && sel.anchorNode && hoveredTable.contains(sel.anchorNode);
-            const focusInsideHoveredTable = hoveredTable && (hoveredTable.contains(document.activeElement) || activeCell !== null);
-            
-            if (caretInsideHoveredTable || focusInsideHoveredTable) {
-              timeoutRef.current = null;
-              return;
-            }
 
-            setHoveredTable(null);
-            setHoveredImage(null);
-            setHoveredSketch(null);
-            setHoveredLink(null);
+        if (isTableEditDialogOpen || isImageEditDialogOpen || isSketchEditDialogOpen) return;
+        if (!previewRef.current) return;
+        
+        const target = e.target as HTMLElement;
+        const table = target.closest('table');
+        const sketch = target.closest('.sketch-container') as HTMLElement | null;
+        const img = sketch ? null : target.closest('img');
+        const link = target.closest('a');
+        const isHoveringToolbar = target.closest('.table-floating-toolbar') || target.closest('.image-floating-toolbar') || target.closest('.sketch-floating-toolbar') || target.closest('.link-floating-toolbar') || target.closest('[role="dialog"]') || target.closest('.table-overlay-btn');
+        
+        // Inside table checking
+        if (table && previewRef.current.contains(table) && !target.closest('.table-floating-toolbar')) {
+          if (timeoutRef.current) {
+            clearTimeout(timeoutRef.current);
             timeoutRef.current = null;
-          }, 150);
+          }
+          // if (hoveredTable !== table) setHoveredTable(table);
+          
+          // Update active table row based on mouse cursor position
+          const tr = target.closest('tr');
+          if (tr) {
+            setActiveTableRow(tr as HTMLTableRowElement);
+          }
+          
+          // Only update rect if it's already hovered (e.g. from click)
+          if (hoveredTable === table) {
+             updateTableRect(table);
+          }
+          setHoveredImage(null);
+          setHoveredSketch(null);
+          setHoveredLink(null);
+        } else if (sketch && previewRef.current.contains(sketch) && !target.closest('.sketch-floating-toolbar')) {
+          if (timeoutRef.current) {
+            clearTimeout(timeoutRef.current);
+            timeoutRef.current = null;
+          }
+          if (hoveredSketch !== sketch) setHoveredSketch(sketch);
+          updateSketchRect(sketch);
+          setHoveredTable(null);
+          setHoveredImage(null);
+          setHoveredLink(null);
+        } else if (img && previewRef.current.contains(img) && !target.closest('.image-floating-toolbar')) {
+          if (timeoutRef.current) {
+            clearTimeout(timeoutRef.current);
+            timeoutRef.current = null;
+          }
+          if (hoveredImage !== img) setHoveredImage(img as HTMLImageElement);
+          updateImageRect(img as HTMLImageElement);
+          setHoveredTable(null);
+          setHoveredSketch(null);
+          setHoveredLink(null);
+        } else if (link && previewRef.current.contains(link) && !target.closest('.link-floating-toolbar')) {
+          if (timeoutRef.current) {
+            clearTimeout(timeoutRef.current);
+            timeoutRef.current = null;
+          }
+          if (hoveredLink !== link) setHoveredLink(link as HTMLAnchorElement);
+          updateLinkRect(link as HTMLAnchorElement);
+          setHoveredImage(null);
+          setHoveredSketch(null);
+          setHoveredTable(null);
+        } else if (isHoveringToolbar) {
+          if (timeoutRef.current) {
+            clearTimeout(timeoutRef.current);
+            timeoutRef.current = null;
+          }
+        } else {
+          if (!timeoutRef.current && (hoveredTable || hoveredImage || hoveredSketch || hoveredLink)) {
+            timeoutRef.current = setTimeout(() => {
+              const sel = window.getSelection();
+              const caretInsideHoveredTable = hoveredTable && sel && sel.anchorNode && hoveredTable.contains(sel.anchorNode);
+              const focusInsideHoveredTable = hoveredTable && (hoveredTable.contains(document.activeElement) || activeCell !== null);
+              
+              if (caretInsideHoveredTable || focusInsideHoveredTable) {
+                timeoutRef.current = null;
+                return;
+              }
+
+              setHoveredTable(null);
+              setHoveredImage(null);
+              setHoveredSketch(null);
+              setHoveredLink(null);
+              timeoutRef.current = null;
+            }, 150);
+          }
         }
-      }
+      });
     };
 
     window.addEventListener('mousemove', handleMouseMove);
@@ -813,13 +796,18 @@ export const EditorArea = ({
 
   // Update positions of hovered elements on scrolling
   useEffect(() => {
+    let ticking = false;
     const handleScroll = () => {
-      window.requestAnimationFrame(() => {
-        if (hoveredTable) updateTableRect(hoveredTable);
-        if (hoveredImage) updateImageRect(hoveredImage);
-        if (hoveredSketch) updateSketchRect(hoveredSketch);
-        if (hoveredLink) updateLinkRect(hoveredLink);
-      });
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          if (hoveredTable) updateTableRect(hoveredTable);
+          if (hoveredImage) updateImageRect(hoveredImage);
+          if (hoveredSketch) updateSketchRect(hoveredSketch);
+          if (hoveredLink) updateLinkRect(hoveredLink);
+          ticking = false;
+        });
+        ticking = true;
+      }
     };
     
     window.addEventListener('scroll', handleScroll, { capture: true, passive: true });
@@ -868,8 +856,7 @@ export const EditorArea = ({
     const service = new TurndownService({
       headingStyle: 'atx',
       codeBlockStyle: 'fenced',
-      emDelimiter: '*',
-    });
+      emDelimiter: '*'});
     
     service.escape = (string) => {
       // Avoid escaping most markdown characters to allow live markdown typing.
@@ -1212,7 +1199,7 @@ export const EditorArea = ({
     }
   }, [handleContentChange, turndownService]);
 
-  const handleInsertRowAbove = useCallback(() => {
+  /* const handleInsertRowAbove = useCallback(() => {
     if (!hoveredTable) return;
     let rIdx = selectedRowIndex !== null ? selectedRowIndex : (activeCell ? activeCell.r : null);
     if (rIdx === null && activeTableRow) {
@@ -1231,9 +1218,9 @@ export const EditorArea = ({
     if (result.success) {
       renderDOMPatches(hoveredTable, controller, result.domPatches, flushPreviewEdit);
     }
-  }, [hoveredTable, selectedRowIndex, activeCell, activeTableRow, flushPreviewEdit]);
+  }, [hoveredTable, selectedRowIndex, activeCell, activeTableRow, flushPreviewEdit]); */
 
-  const handleInsertRowBelow = useCallback(() => {
+  /* const handleInsertRowBelow = useCallback(() => {
     if (!hoveredTable) return;
     let rIdx = selectedRowIndex !== null ? selectedRowIndex : (activeCell ? activeCell.r : null);
     if (rIdx === null && activeTableRow) {
@@ -1252,9 +1239,9 @@ export const EditorArea = ({
     if (result.success) {
       renderDOMPatches(hoveredTable, controller, result.domPatches, flushPreviewEdit);
     }
-  }, [hoveredTable, selectedRowIndex, activeCell, activeTableRow, flushPreviewEdit]);
+  }, [hoveredTable, selectedRowIndex, activeCell, activeTableRow, flushPreviewEdit]); */
 
-  const handleInsertColLeft = useCallback(() => {
+  /* const handleInsertColLeft = useCallback(() => {
     if (!hoveredTable) return;
     const cIdx = selectedColIndex !== null ? selectedColIndex : (activeCell ? activeCell.c : 0);
 
@@ -1269,9 +1256,9 @@ export const EditorArea = ({
     if (result.success) {
       renderDOMPatches(hoveredTable, controller, result.domPatches, flushPreviewEdit);
     }
-  }, [hoveredTable, selectedColIndex, activeCell, flushPreviewEdit]);
+  }, [hoveredTable, selectedColIndex, activeCell, flushPreviewEdit]); */
 
-  const handleInsertColRight = useCallback(() => {
+  /* const handleInsertColRight = useCallback(() => {
     if (!hoveredTable) return;
     const cIdx = selectedColIndex !== null ? selectedColIndex : (activeCell ? activeCell.c : 0);
 
@@ -1286,9 +1273,9 @@ export const EditorArea = ({
     if (result.success) {
       renderDOMPatches(hoveredTable, controller, result.domPatches, flushPreviewEdit);
     }
-  }, [hoveredTable, selectedColIndex, activeCell, flushPreviewEdit]);
+  }, [hoveredTable, selectedColIndex, activeCell, flushPreviewEdit]); */
 
-  const handleDuplicateRow = useCallback(() => {
+  /* const handleDuplicateRow = useCallback(() => {
     if (!hoveredTable) return;
     let rIdx = selectedRowIndex !== null ? selectedRowIndex : (activeCell ? activeCell.r : null);
     if (rIdx === null && activeTableRow) {
@@ -1307,9 +1294,9 @@ export const EditorArea = ({
     if (result.success) {
       renderDOMPatches(hoveredTable, controller, result.domPatches, flushPreviewEdit);
     }
-  }, [hoveredTable, selectedRowIndex, activeCell, activeTableRow, flushPreviewEdit]);
+  }, [hoveredTable, selectedRowIndex, activeCell, activeTableRow, flushPreviewEdit]); */
 
-  const handleDuplicateCol = useCallback(() => {
+  /* const handleDuplicateCol = useCallback(() => {
     if (!hoveredTable) return;
     const cIdx = selectedColIndex !== null ? selectedColIndex : (activeCell ? activeCell.c : null);
     if (cIdx === null) return;
@@ -1325,9 +1312,9 @@ export const EditorArea = ({
     if (result.success) {
       renderDOMPatches(hoveredTable, controller, result.domPatches, flushPreviewEdit);
     }
-  }, [hoveredTable, selectedColIndex, activeCell, flushPreviewEdit]);
+  }, [hoveredTable, selectedColIndex, activeCell, flushPreviewEdit]); */
 
-  const handleClearRow = useCallback(() => {
+  /* const handleClearRow = useCallback(() => {
     if (!hoveredTable) return;
     let rIdx = selectedRowIndex !== null ? selectedRowIndex : (activeCell ? activeCell.r : null);
     if (rIdx === null && activeTableRow) {
@@ -1346,9 +1333,9 @@ export const EditorArea = ({
     if (result.success) {
       renderDOMPatches(hoveredTable, controller, result.domPatches, flushPreviewEdit);
     }
-  }, [hoveredTable, selectedRowIndex, activeCell, activeTableRow, flushPreviewEdit]);
+  }, [hoveredTable, selectedRowIndex, activeCell, activeTableRow, flushPreviewEdit]); */
 
-  const handleClearCol = useCallback(() => {
+  /* const handleClearCol = useCallback(() => {
     if (!hoveredTable) return;
     const cIdx = selectedColIndex !== null ? selectedColIndex : (activeCell ? activeCell.c : null);
     if (cIdx === null) return;
@@ -1364,9 +1351,9 @@ export const EditorArea = ({
     if (result.success) {
       renderDOMPatches(hoveredTable, controller, result.domPatches, flushPreviewEdit);
     }
-  }, [hoveredTable, selectedColIndex, activeCell, flushPreviewEdit]);
+  }, [hoveredTable, selectedColIndex, activeCell, flushPreviewEdit]); */
 
-  const handleDeleteRow = useCallback(() => {
+  /* const handleDeleteRow = useCallback(() => {
     if (!hoveredTable) return;
     let rIdx = selectedRowIndex !== null ? selectedRowIndex : (activeCell ? activeCell.r : null);
     if (rIdx === null && activeTableRow) {
@@ -1395,9 +1382,9 @@ export const EditorArea = ({
       }
     }
     setSelectedRowIndex(null);
-  }, [hoveredTable, selectedRowIndex, activeCell, activeTableRow, flushPreviewEdit]);
+  }, [hoveredTable, selectedRowIndex, activeCell, activeTableRow, flushPreviewEdit]); */
 
-  const handleDeleteCol = useCallback(() => {
+  /* const handleDeleteCol = useCallback(() => {
     if (!hoveredTable) return;
     const cIdx = selectedColIndex !== null ? selectedColIndex : (activeCell ? activeCell.c : null);
     if (cIdx === null) return;
@@ -1423,9 +1410,9 @@ export const EditorArea = ({
       }
     }
     setSelectedColIndex(null);
-  }, [hoveredTable, selectedColIndex, activeCell, flushPreviewEdit]);
+  }, [hoveredTable, selectedColIndex, activeCell, flushPreviewEdit]); */
 
-  const handleSetColAlign = useCallback((align: 'left' | 'center' | 'right') => {
+  /* const handleSetColAlign = useCallback((align: 'left' | 'center' | 'right') => {
     if (!hoveredTable) return;
     const cIdx = selectedColIndex !== null ? selectedColIndex : (activeCell ? activeCell.c : null);
     if (cIdx === null) return;
@@ -1441,9 +1428,9 @@ export const EditorArea = ({
     if (result.success) {
       renderDOMPatches(hoveredTable, controller, result.domPatches, flushPreviewEdit);
     }
-  }, [hoveredTable, selectedColIndex, activeCell, flushPreviewEdit]);
+  }, [hoveredTable, selectedColIndex, activeCell, flushPreviewEdit]); */
 
-  const handleToggleZebra = useCallback(() => {
+  /* const handleToggleZebra = useCallback(() => {
     if (!hoveredTable) return;
     const wrapper = hoveredTable.closest('.table-wrapper');
     if (wrapper) {
@@ -1457,7 +1444,7 @@ export const EditorArea = ({
       }
       flushPreviewEdit();
     }
-  }, [hoveredTable, flushPreviewEdit]);
+  }, [hoveredTable, flushPreviewEdit]); */
 
 
 
@@ -1695,8 +1682,8 @@ export const EditorArea = ({
       const mouseEvent = e as React.MouseEvent<HTMLDivElement>;
       const target = mouseEvent.target as HTMLElement;
       
-      // Handle Eraser Mode
-      if (isEraserMode) {
+      // Handle Mode
+      if (isMode) {
         mouseEvent.preventDefault();
         mouseEvent.stopPropagation();
 
@@ -1809,7 +1796,7 @@ export const EditorArea = ({
         return;
       }
     }
-  }, [isEraserMode, flushPreviewEdit]);
+  }, [isMode, flushPreviewEdit]);
 
   // Sync content when it changes externally (e.g. Undo/Redo)
   useEffect(() => {
@@ -2111,17 +2098,24 @@ export const EditorArea = ({
   }, [isAutoMarkdownEnabled, content, flushPreviewEdit, turndownService]);
 
   const lastSelectionChangeTime = useRef<number>(0);
+  const selectionChangeTicking = useRef<boolean>(false);
   const handleSelectionChange = useCallback(() => {
     if (!previewRef.current || isViewMode) return;
     
-    if (powerSaver) {
-       const now = Date.now();
-       if (now - lastSelectionChangeTime.current < 250) return;
-       lastSelectionChangeTime.current = now;
-    }
+    if (selectionChangeTicking.current) return;
+    selectionChangeTicking.current = true;
 
-    setSelectedColIndex(null);
-    setSelectedRowIndex(null);
+    requestAnimationFrame(() => {
+      selectionChangeTicking.current = false;
+      
+      if (powerSaver) {
+         const now = Date.now();
+         if (now - lastSelectionChangeTime.current < 250) return;
+         lastSelectionChangeTime.current = now;
+      }
+
+      setSelectedColIndex(null);
+      setSelectedRowIndex(null);
     
     // Process active table row for floating delete icon
     const sel = window.getSelection();
@@ -2219,7 +2213,7 @@ export const EditorArea = ({
         }
       }
     }
-
+    });
   }, [isViewMode, powerSaver, hoveredTable, updateTableRect]);
 
   useEffect(() => {
@@ -2404,7 +2398,7 @@ export const EditorArea = ({
           baseFontSize === 'text-xl' ? 'prose-xl' :
           'prose-base',
           "pt-0 pb-[60vh] print:py-0 print:block",
-          isEraserMode && "cursor-[url('data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"%23f43f5e\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21\"/><path d=\"M22 21H7\"/><path d=\"m5 11 9 9\"/></svg>'),_crosshair]"
+          isMode && "cursor-[url('data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"%23f43f5e\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21\"/><path d=\"M22 21H7\"/><path d=\"m5 11 9 9\"/></svg>'),_crosshair]"
         )}
         role="textbox"
         aria-multiline="true"
@@ -2451,211 +2445,88 @@ export const EditorArea = ({
          </>
       )}
       {!isViewMode && hoveredTable && tableRect && (
-        <div 
-          className="table-floating-toolbar absolute z-30 flex flex-wrap sm:flex-nowrap items-center gap-0.5 sm:gap-1 bg-background/95 backdrop-blur-sm border border-border rounded-lg shadow-[0_4px_20px_rgba(0,0,0,0.1)] pointer-events-auto p-1 sm:p-1.5 transition-all duration-150 animate-in fade-in zoom-in-95 print:hidden select-none max-w-[calc(100vw-32px)]"
-          style={(() => {
-            let activeRowIdx: number | null = null;
-            if (activeTableRow && hoveredTable && hoveredTable.contains(activeTableRow)) {
-              activeRowIdx = Array.from(hoveredTable.querySelectorAll('tr')).indexOf(activeTableRow);
-            }
-            if (activeRowIdx === null || activeRowIdx < 0) {
-              activeRowIdx = selectedRowIndex !== null ? selectedRowIndex : (activeCell ? activeCell.r : null);
-            }
-            if (activeRowIdx === null || activeRowIdx < 0) activeRowIdx = 0;
-            
-            const activeRowTop = (rowRects[activeRowIdx] && rowRects[activeRowIdx].top) ?? tableRect.top;
-            
-            // Calculate viewport constraints
-            const parentRect = previewRef.current?.parentElement?.getBoundingClientRect();
-            let minTop = 0;
-            if (parentRect && parentRect.top < 0) {
-              // If the container is scrolled up, keep the toolbar visible
-              minTop = -parentRect.top + 10; 
-            }
-            
-            // Adjust position so it doesn't clip off screen
-            let topPosition = activeRowTop - 54;
-            if (topPosition < minTop) {
-              topPosition = minTop; // stick to top of screen
-            }
-            // Keep it within the table bounds (don't go below the table)
-            const maxTop = tableRect.top + tableRect.height - 40;
-            if (topPosition > maxTop) {
-              topPosition = maxTop;
-            }
-
-            // Horizontal position: center it above the table if possible, or align with table left,
-            // but keep it within the visible screen area
-            let leftPosition = tableRect.left;
-            if (parentRect) {
-              const scrollLeft = previewRef.current?.parentElement?.scrollLeft || 0;
-              const viewportWidth = parentRect.width;
-              const isMobile = viewportWidth < 640;
-              const toolbarWidth = isMobile ? 320 : 620; // compact width for mobile, full width for desktop
+        <>
+          {/* Left formatting icon */}
+          <div 
+            className="table-floating-toolbar absolute z-30 flex items-center justify-center print:hidden pointer-events-none"
+            style={(() => {
+              let activeRowIdx = null;
+              if (activeTableRow && hoveredTable && hoveredTable.contains(activeTableRow)) {
+                activeRowIdx = Array.from(hoveredTable.querySelectorAll('tr')).indexOf(activeTableRow);
+              }
+              if (activeRowIdx === null || activeRowIdx < 0) {
+                activeRowIdx = selectedRowIndex !== null ? selectedRowIndex : (activeCell ? activeCell.r : null);
+              }
+              if (activeRowIdx === null || activeRowIdx < 0) activeRowIdx = 0;
               
-              if (leftPosition < scrollLeft) {
-                leftPosition = scrollLeft;
+              const activeRowTop = (rowRects[activeRowIdx] && rowRects[activeRowIdx].top) ?? tableRect.top;
+              const activeRowHeight = (rowRects[activeRowIdx] && rowRects[activeRowIdx].height) ?? 40;
+              const leftPosition = Math.max(0, tableRect.left - 32);
+              
+              return {
+                top: activeRowTop,
+                height: activeRowHeight,
+                left: leftPosition,
+              };
+            })()}
+            onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+          >
+            <button 
+              onClick={(e) => { e.preventDefault(); setIsTableEditDialogOpen(true); }}
+              className="p-1.5 text-muted-foreground hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 rounded-md transition-colors bg-background/95 backdrop-blur-sm border border-border shadow-[0_2px_10px_rgba(0,0,0,0.05)] cursor-pointer pointer-events-auto"
+              title="Table Styling & Settings"
+            >
+              <Settings2 className="w-4 h-4" />
+            </button>
+          </div>
+          
+          {/* Right delete icon */}
+          <div 
+            className="table-floating-toolbar absolute z-30 flex items-center justify-center print:hidden pointer-events-none"
+            style={(() => {
+              let activeRowIdx = null;
+              if (activeTableRow && hoveredTable && hoveredTable.contains(activeTableRow)) {
+                activeRowIdx = Array.from(hoveredTable.querySelectorAll('tr')).indexOf(activeTableRow);
               }
-              const maxLeft = scrollLeft + viewportWidth - toolbarWidth - 16;
-              if (leftPosition > maxLeft) {
-                leftPosition = Math.max(scrollLeft, maxLeft);
+              if (activeRowIdx === null || activeRowIdx < 0) {
+                activeRowIdx = selectedRowIndex !== null ? selectedRowIndex : (activeCell ? activeCell.r : null);
               }
-            }
-
-            return {
-              top: topPosition,
-              left: Math.max(0, leftPosition),
-            };
-          })()}
-          onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
-        >
-          {/* Section 1: Table Global Settings */}
-          <button 
-            onClick={(e) => { e.preventDefault(); setIsTableEditDialogOpen(true); }}
-            className="p-1 sm:p-1.5 text-muted-foreground hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 rounded-md transition-colors flex items-center gap-1 text-xs font-semibold cursor-pointer"
-            title="Table Styling & Settings"
+              if (activeRowIdx === null || activeRowIdx < 0) activeRowIdx = 0;
+              
+              const activeRowTop = (rowRects[activeRowIdx] && rowRects[activeRowIdx].top) ?? tableRect.top;
+              const activeRowHeight = (rowRects[activeRowIdx] && rowRects[activeRowIdx].height) ?? 40;
+              
+              let leftPosition = tableRect.left + tableRect.width + 4;
+              
+              const parentRect = previewRef.current?.parentElement?.getBoundingClientRect();
+              if (parentRect) {
+                const scrollLeft = previewRef.current?.parentElement?.scrollLeft || 0;
+                const maxLeft = scrollLeft + parentRect.width - 32;
+                if (leftPosition > maxLeft) {
+                  leftPosition = maxLeft;
+                }
+              }
+              
+              return {
+                top: activeRowTop,
+                height: activeRowHeight,
+                left: leftPosition,
+              };
+            })()}
+            onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
           >
-            <Settings2 className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Format</span>
-          </button>
-
-          <div className="w-px h-5 bg-border mx-0.5 sm:mx-1" />
-
-          {/* Section 1.5: Zebra Striping */}
-          <button 
-            onClick={(e) => { e.preventDefault(); handleToggleZebra(); }}
-            className={cn(
-              "p-1 sm:p-1.5 rounded-md transition-colors flex items-center gap-1 text-xs font-semibold cursor-pointer border",
-              isZebraState
-                ? "text-indigo-600 bg-indigo-50 border-indigo-200/50 dark:text-indigo-400 dark:bg-indigo-950/40 dark:border-indigo-800/40 font-bold"
-                : "text-muted-foreground hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 border-transparent"
-            )}
-            title="Toggle Zebra-Striping (Alternate Row background)"
-          >
-            <Rows3 className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Zebra</span>
-          </button>
-
-          <div className="w-px h-5 bg-border mx-0.5 sm:mx-1" />
-
-          {/* Section 2: Row Actions */}
-          <div className="flex items-center gap-0.5">
-            <span className="text-[10px] uppercase tracking-wider text-muted-foreground/60 font-bold px-1 hidden md:inline">Row</span>
-            <button
-              onClick={(e) => { e.preventDefault(); handleInsertRowAbove(); }}
-              className="p-0.5 sm:p-1 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors cursor-pointer"
-              title="Insert Row Above"
+            <button 
+              onClick={(e) => { 
+                e.preventDefault(); 
+                setDeletePromptInfo({ isOpen: true, targetRow: activeTableRow, targetTable: hoveredTable });
+              }}
+              className="p-1.5 text-muted-foreground hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-md transition-colors bg-background/95 backdrop-blur-sm border border-border shadow-[0_2px_10px_rgba(0,0,0,0.05)] cursor-pointer pointer-events-auto"
+              title="Delete Row or Table"
             >
-              <ArrowUpToLine className="w-3.5 h-3.5" />
-            </button>
-            <button
-              onClick={(e) => { e.preventDefault(); handleInsertRowBelow(); }}
-              className="p-0.5 sm:p-1 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors cursor-pointer"
-              title="Insert Row Below"
-            >
-              <ArrowDownToLine className="w-3.5 h-3.5" />
-            </button>
-            <button
-              onClick={(e) => { e.preventDefault(); handleDuplicateRow(); }}
-              className="p-0.5 sm:p-1 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors cursor-pointer"
-              title="Duplicate Current Row"
-            >
-              <Copy className="w-3.5 h-3.5" />
-            </button>
-            <button
-              onClick={(e) => { e.preventDefault(); handleClearRow(); }}
-              className="p-0.5 sm:p-1 text-muted-foreground hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-950/20 rounded-md transition-colors cursor-pointer"
-              title="Clear Row Content"
-            >
-              <Eraser className="w-3.5 h-3.5" />
-            </button>
-            <button
-              onClick={(e) => { e.preventDefault(); handleDeleteRow(); }}
-              className="p-0.5 sm:p-1 text-muted-foreground hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-md transition-colors cursor-pointer"
-              title="Delete Row"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
+              <Trash2 className="w-4 h-4" />
             </button>
           </div>
-
-          <div className="w-px h-5 bg-border mx-0.5 sm:mx-1" />
-
-          {/* Section 3: Column Actions */}
-          <div className="flex items-center gap-0.5">
-            <span className="text-[10px] uppercase tracking-wider text-muted-foreground/60 font-bold px-1 hidden md:inline">Col</span>
-            <button
-              onClick={(e) => { e.preventDefault(); handleInsertColLeft(); }}
-              className="p-0.5 sm:p-1 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors cursor-pointer"
-              title="Insert Column Left"
-            >
-              <ArrowLeftToLine className="w-3.5 h-3.5" />
-            </button>
-            <button
-              onClick={(e) => { e.preventDefault(); handleInsertColRight(); }}
-              className="p-0.5 sm:p-1 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors cursor-pointer"
-              title="Insert Column Right"
-            >
-              <ArrowRightToLine className="w-3.5 h-3.5" />
-            </button>
-            <button
-              onClick={(e) => { e.preventDefault(); handleDuplicateCol(); }}
-              className="p-0.5 sm:p-1 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors cursor-pointer"
-              title="Duplicate Current Column"
-            >
-              <Copy className="w-3.5 h-3.5 rotate-90" />
-            </button>
-            <button
-              onClick={(e) => { e.preventDefault(); handleClearCol(); }}
-              className="p-0.5 sm:p-1 text-muted-foreground hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-950/20 rounded-md transition-colors cursor-pointer"
-              title="Clear Column Content"
-            >
-              <Eraser className="w-3.5 h-3.5" />
-            </button>
-            <button
-              onClick={(e) => { e.preventDefault(); handleDeleteCol(); }}
-              className="p-0.5 sm:p-1 text-muted-foreground hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-md transition-colors cursor-pointer"
-              title="Delete Column"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-            </button>
-          </div>
-
-          <div className="w-px h-5 bg-border mx-0.5 sm:mx-1" />
-
-          {/* Section 4: Alignments */}
-          <div className="flex items-center gap-0.5">
-            {['left', 'center', 'right'].map(align => (
-              <button
-                key={align}
-                onClick={(e) => { e.preventDefault(); handleSetColAlign(align as 'left'|'center'|'right'); }}
-                className="p-0.5 sm:p-1 text-muted-foreground hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/20 rounded-md transition-colors cursor-pointer"
-                title={`Align Column ${align}`}
-              >
-                {align === 'left' && <AlignLeft className="w-3.5 h-3.5" />}
-                {align === 'center' && <AlignCenter className="w-3.5 h-3.5" />}
-                {align === 'right' && <AlignRight className="w-3.5 h-3.5" />}
-              </button>
-            ))}
-          </div>
-
-          <div className="w-px h-5 bg-border mx-0.5 sm:mx-1" />
-
-          {/* Section 5: Table Delete */}
-          <button
-            onClick={(e) => {
-              e.preventDefault();
-              const wrapper = hoveredTable.closest('.table-wrapper');
-              if (wrapper) wrapper.remove();
-              else hoveredTable.remove();
-              setHoveredTable(null);
-              flushPreviewEdit();
-            }}
-            className="p-1 sm:p-1.5 text-muted-foreground hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-md transition-colors cursor-pointer"
-            title="Delete Entire Table"
-          >
-            <Trash className="w-3.5 h-3.5 text-rose-500" />
-          </button>
-        </div>
+        </>
       )}
 
 
@@ -2697,8 +2568,7 @@ export const EditorArea = ({
             
             return {
               top: Math.max(0, topPosition),
-              left: Math.max(0, leftPosition),
-            };
+              left: Math.max(0, leftPosition)};
           })()}
         >
           <button 
@@ -2754,8 +2624,7 @@ export const EditorArea = ({
               }
               return {
                 top: Math.max(0, topPosition),
-                left: Math.max(0, leftPosition),
-              };
+                left: Math.max(0, leftPosition)};
             })()}
           >
             <button 
@@ -2794,8 +2663,7 @@ export const EditorArea = ({
               }
               return {
                 top: Math.max(0, topPosition),
-                left: Math.max(0, leftPosition),
-              };
+                left: Math.max(0, leftPosition)};
             })()}
           >
             <button 
@@ -2839,8 +2707,7 @@ export const EditorArea = ({
             }
             return {
               top: Math.max(0, topPosition),
-              left: Math.max(0, leftPosition),
-            };
+              left: Math.max(0, leftPosition)};
           })()}
         >
           <button 
