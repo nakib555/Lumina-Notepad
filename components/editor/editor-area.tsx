@@ -2462,7 +2462,7 @@ export const EditorArea = ({
               const activeRowTop = (rowRects[activeRowIdx] && rowRects[activeRowIdx].top) ?? tableRect.top;
               const activeRowHeight = (rowRects[activeRowIdx] && rowRects[activeRowIdx].height) ?? 40;
               const topPosition = activeRowTop + (activeRowHeight / 2) - 14;
-              const leftPosition = Math.max(0, tableRect.left - 32);
+              const leftPosition = tableRect.left + 6;
               
               return {
                 top: topPosition,
@@ -2473,6 +2473,7 @@ export const EditorArea = ({
             <button 
               onClick={(e) => { e.preventDefault(); setIsTableEditDialogOpen(true); }}
               className="p-1.5 text-muted-foreground hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 rounded-md transition-colors bg-background/95 backdrop-blur-sm border border-border shadow-[0_2px_10px_rgba(0,0,0,0.05)] cursor-pointer"
+              style={{ marginLeft: '-10px' }}
               title="Table Styling & Settings"
             >
               <Settings2 className="w-4 h-4" />
@@ -2496,16 +2497,7 @@ export const EditorArea = ({
               const activeRowHeight = (rowRects[activeRowIdx] && rowRects[activeRowIdx].height) ?? 40;
               const topPosition = activeRowTop + (activeRowHeight / 2) - 14;
               
-              let leftPosition = tableRect.left + tableRect.width + 4;
-              
-              const parentRect = previewRef.current?.parentElement?.getBoundingClientRect();
-              if (parentRect) {
-                const scrollLeft = previewRef.current?.parentElement?.scrollLeft || 0;
-                const maxLeft = scrollLeft + parentRect.width - 32;
-                if (leftPosition > maxLeft) {
-                  leftPosition = maxLeft;
-                }
-              }
+              const leftPosition = tableRect.left + tableRect.width - 34;
               
               return {
                 top: topPosition,
@@ -2519,6 +2511,7 @@ export const EditorArea = ({
                 setDeletePromptInfo({ isOpen: true, targetRow: activeTableRow, targetTable: hoveredTable });
               }}
               className="p-1.5 text-muted-foreground hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-md transition-colors bg-background/95 backdrop-blur-sm border border-border shadow-[0_2px_10px_rgba(0,0,0,0.05)] cursor-pointer"
+              style={{ marginLeft: '10px' }}
               title="Delete Row or Table"
             >
               <Trash2 className="w-4 h-4" />
