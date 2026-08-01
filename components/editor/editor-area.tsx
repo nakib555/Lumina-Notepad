@@ -192,11 +192,16 @@ export const parseMarkdown = (text: string) => {
   // \u200B: Zero-width space, \u2061: Function application
   // Also convert non-breaking spaces to standard spaces or marked won't parse headings/lists correctly
   const cleanText = text.replace(/[\u200B\u2061]/g, '').replace(/\xA0/g, ' ');
-  // Append zero-width non-joiner so marked doesn't strip trailing newlines
-  const html = marked.parse(cleanText + '\u200C', { renderer, breaks: true, gfm: true }) as string;
   
-  // Replace the zero-width non-joiner
-  let finalHtml = html.replace('\u200C', '');
+  // Count trailing newlines
+  const trailingNewlinesMatch = cleanText.match(/\n*$/);
+  const trailingNewlinesCount = trailingNewlinesMatch ? trailingNewlinesMatch[0].length : 0;
+  
+  // Trim trailing newlines before parsing so marked doesn't do weird things
+  const textToParse = cleanText.replace(/\n+$/, '');
+  
+  const html = marked.parse(textToParse, { renderer, breaks: true, gfm: true }) as string;
+  let finalHtml = html;
   
   // Natively in Chromium/Firefox empty <p></p> collapses to 0 height, making trailing newlines disappear visually.
   // We insert a <br> inside empty paragraphs so they render visually exactly as a newline.
@@ -206,10 +211,18 @@ export const parseMarkdown = (text: string) => {
   finalHtml = finalHtml.replace(/<td([^>]*)>\s*<\/td>/gi, '<td$1><br></td>');
   finalHtml = finalHtml.replace(/<th([^>]*)>\s*<\/th>/gi, '<th$1><br></th>');
   
-  // To ensure the cursor can always explicitly leave a completely trailing contenteditable="false" block (like CodeBlock or Table)
-  // We forcibly append an editable empty paragraph at the very end if the html does not end with one.
-  if (!finalHtml.trim().endsWith('</p>')) {
-      finalHtml += '<p><br></p>';
+  // Append trailing newlines as empty paragraphs to preserve spacing at the end of the document
+  if (trailingNewlinesCount > 0) {
+      for (let i = 0; i < trailingNewlinesCount; i++) {
+          finalHtml += '<p><br></p>';
+      }
+  } else {
+      // To ensure the cursor can always explicitly leave a completely trailing contenteditable="false" block (like CodeBlock or Table)
+      // We forcibly append an editable empty paragraph at the very end only if the HTML ends with a block wrapper.
+      const trimmed = finalHtml.trim();
+      if (trimmed.endsWith('</div>')) {
+          finalHtml += '<p><br></p>';
+      }
   }
   
   return finalHtml;
@@ -2373,18 +2386,25 @@ export const EditorArea = ({
 
       e.preventDefault();
       
+      // Trim trailing carriage returns/newlines to prevent unnecessary blank lines/paragraphs at the end of paste.
+      // We keep original text if it consists ONLY of newlines.
+      let cleanedText = text.replace(/[\r\n]+$/, '');
+      if (!cleanedText && text) {
+         cleanedText = text;
+      }
+      
       const node = window.getSelection()?.anchorNode;
       const isInsideCodeBlock = (node instanceof Element ? node : node?.parentElement)?.closest('.code-block-wrapper');
 
       if (isInsideCodeBlock) {
-          document.execCommand('insertText', false, text.replace(/\r\n/g, '\n'));
+          document.execCommand('insertText', false, cleanedText.replace(/\r\n/g, '\n'));
       } else if (isAutoMarkdownEnabled) {
           // Parse pasted text for all markdown, including tables
-          const finalHtml = parseMarkdown(text);
+          const finalHtml = parseMarkdown(cleanedText);
           document.execCommand('insertHTML', false, finalHtml);
       } else {
           // If auto markdown is off, just paste as plain text (but keep spaces using nbsp to prevent collapse)
-          const paragraphs = text.split(/\r?\n\r?\n/);
+          const paragraphs = cleanedText.split(/\r?\n\r?\n/);
           let htmlText = '';
           if (paragraphs.length === 1) {
               const inner = paragraphs[0]
@@ -2409,10 +2429,12 @@ export const EditorArea = ({
       }
       
       if (isAutoMarkdownEnabled) {
-        flushPreviewEdit();
+         // Let the debounced handleInput take care of state update and markdown parsing smoothly,
+         // rather than blocking the UI with synchronous flushPreviewEdit immediately.
+         handleInput();
       }
     }
-  }, [isAutoMarkdownEnabled, flushPreviewEdit]);
+  }, [isAutoMarkdownEnabled, flushPreviewEdit, handleInput]);
 
   return (
     <div className="relative w-full max-w-full group/editor">
