@@ -18,6 +18,7 @@ import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { EditorAreaSkeleton } from "@/components/ui/skeleton-loaders";
 import { FontPickerDialog } from "./editor/font-picker-dialog";
+import { CodeSandbox } from "./editor/code-sandbox";
 
 const SketchDialog = lazy(() => import('./editor/sketch-dialog').then(module => ({ default: module.SketchDialog })));
 const ImageInsertDialog = lazy(() => import('./editor/image-insert-dialog').then(module => ({ default: module.ImageInsertDialog })));
@@ -74,6 +75,31 @@ export function Editor({
 
   const [showAiDialog, setShowAiDialog] = useState(false);
   const [selectedAiText, setSelectedAiText] = useState("");
+
+  const [sandboxCode, setSandboxCode] = useState<string | null>(null);
+  const [sandboxLang, setSandboxLang] = useState<string>("");
+  const [isSandboxOpen, setIsSandboxOpen] = useState(false);
+
+  useEffect(() => {
+    const handleRun = (e: Event) => {
+      const customEvent = e as CustomEvent<{ code: string, language: string }>;
+      setSandboxCode(customEvent.detail.code);
+      setSandboxLang(customEvent.detail.language);
+      setIsSandboxOpen(true);
+    };
+    const handleOpen = (e: Event) => {
+      const customEvent = e as CustomEvent<{ code: string, language: string }>;
+      setSandboxCode(customEvent.detail.code);
+      setSandboxLang(customEvent.detail.language);
+      setIsSandboxOpen(true);
+    };
+    window.addEventListener('run-code-block', handleRun);
+    window.addEventListener('open-code-block', handleOpen);
+    return () => {
+      window.removeEventListener('run-code-block', handleRun);
+      window.removeEventListener('open-code-block', handleOpen);
+    };
+  }, []);
 
   const [isNoteTransitioning, setIsNoteTransitioning] = useState(false);
   const [displayNoteId, setDisplayNoteId] = useState(note?.id);
@@ -437,100 +463,112 @@ export function Editor({
         onFontFamilyChange={onFontFamilyChange}
       />
 
-      {/* Editor Area */}
-      <div className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar print:overflow-visible print:bg-white print:text-black flex print:block justify-center">
-        <div 
-          className={cn(
-            "flex-1 w-full max-w-4xl px-8 pt-10 pb-24 md:px-12 md:pt-16 md:pb-32 print:p-0 flex print:block flex-col gap-4 md:gap-5 min-h-full",
-            fontFamily === "poppins" ? "font-poppins" :
-            fontFamily === "inter" ? "font-inter" :
-            fontFamily === "lora" ? "font-lora" :
-            fontFamily === "jetbrains" ? "font-jetbrains" :
-            fontFamily === "serif" ? "font-serif" :
-            fontFamily === "mono" ? "font-mono" : "font-sans"
-          )}
-          style={{
-            fontFamily: !['poppins', 'inter', 'lora', 'jetbrains', 'sans', 'serif', 'mono'].includes(fontFamily.toLowerCase())
-              ? `"${fontFamily}", sans-serif`
-              : undefined
-          }}
-        >
-          <TextareaAutosize
-            value={note.title}
-            onChange={handleTitleChange}
-            placeholder="Note Title"
-            autoComplete="off"
-            readOnly={isViewMode}
-            className={cn("w-full text-4xl md:text-5xl font-bold text-foreground placeholder:text-muted-foreground/30 border-none outline-none bg-transparent tracking-tight print:text-black print:text-center resize-none p-0 m-0 leading-tight shrink-0 whitespace-pre-wrap break-words overflow-hidden", isViewMode && "cursor-default")}
-          />
-          
-          {/* Tag Management */}
-          {!isViewMode && (
-            <div className="shrink-0 flex justify-center w-full">
-              <MetadataBar 
-                note={note}
-                tagInput={tagInput}
-                setTagInput={setTagInput}
-                onTagKeyDown={onTagKeyDown}
-                handleAddTag={handleAddTag}
-                removeTag={removeTag}
-                folderInput={folderInput}
-                setFolderInput={setFolderInput}
-                updateFolder={updateFolder}
-                onSetReminder={(schedTime) => {
-                   onUpdateNote(note.id, { reminderAt: schedTime.getTime() });
-                   toast.success(`Reminder set for ${schedTime.toLocaleTimeString()}`);
-                   // Actual capacitor notification schedule
-                   import('@capacitor/local-notifications').then(async ({ LocalNotifications }) => {
-                      const perm = await LocalNotifications.checkPermissions();
-                      if (perm.display !== 'granted') {
-                         await LocalNotifications.requestPermissions();
-                      }
-                      LocalNotifications.schedule({
-                        notifications: [
-                          {
-                            title: `Reminder: ${note.title}`,
-                            body: 'Time to check your note!',
-                            id: Math.floor(Math.random() * 100000),
-                            schedule: { at: schedTime }
-                          }
-                        ]
-                      }).catch(err => console.error("Could not schedule notification:", err));
-                   }).catch(err => console.error(err));
-                }}
-              />
-            </div>
-          )}
-          
+      {/* Editor Content & Sandbox Container */}
+      <div className="flex-1 flex overflow-hidden relative print:block print:h-auto">
+        {/* Editor Area */}
+        <div className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar print:overflow-visible print:bg-white print:text-black flex print:block justify-center">
           <div 
-            className={cn("flex-1 mt-2 transition-all duration-200", 
-              isNoteTransitioning ? "opacity-0 scale-[0.98]" : "opacity-100 scale-100",
-              pendingSketchSvg && !showSketchConfirm && "cursor-crosshair ring-2 ring-primary/50 ring-offset-2 rounded-xl border border-primary border-dashed p-2 bg-primary/5")}
-            onMouseUp={pendingSketchSvg && !showSketchConfirm ? handleEditorClickForSketch : undefined}
-          >
-            {showLoading ? (
-              <div className="w-full h-full min-h-[500px] flex flex-col items-center justify-center animate-in fade-in zoom-in-95 duration-200">
-                <EditorAreaSkeleton />
-              </div>
-            ) : (
-              <EditorArea 
-                editorAreaRef={editorAreaRef}
-                content={note.content}
-                theme={theme}
-                handleContentChange={handleContentChange}
-                handleDrop={handleDrop}
-                handleDragOver={handleDragOver}
-                noteId={note.id}
-                textareaRef={textareaRef}
-                isAutoMarkdownEnabled={isAutoMarkdownEnabled}
-                isViewMode={isViewMode}
-                isEraserMode={isEraserMode}
-                powerSaver={powerSaver}
-                baseFontSize={baseFontSize}
-              />
+            className={cn(
+              "flex-1 w-full max-w-4xl px-8 pt-10 pb-24 md:px-12 md:pt-16 md:pb-32 print:p-0 flex print:block flex-col gap-4 md:gap-5 min-h-full",
+              fontFamily === "poppins" ? "font-poppins" :
+              fontFamily === "inter" ? "font-inter" :
+              fontFamily === "lora" ? "font-lora" :
+              fontFamily === "jetbrains" ? "font-jetbrains" :
+              fontFamily === "serif" ? "font-serif" :
+              fontFamily === "mono" ? "font-mono" : "font-sans"
             )}
+            style={{
+              fontFamily: !['poppins', 'inter', 'lora', 'jetbrains', 'sans', 'serif', 'mono'].includes(fontFamily.toLowerCase())
+                ? `"${fontFamily}", sans-serif`
+                : undefined
+            }}
+          >
+            <TextareaAutosize
+              value={note.title}
+              onChange={handleTitleChange}
+              placeholder="Note Title"
+              autoComplete="off"
+              readOnly={isViewMode}
+              className={cn("w-full text-4xl md:text-5xl font-bold text-foreground placeholder:text-muted-foreground/30 border-none outline-none bg-transparent tracking-tight print:text-black print:text-center resize-none p-0 m-0 leading-tight shrink-0 whitespace-pre-wrap break-words overflow-hidden", isViewMode && "cursor-default")}
+            />
+            
+            {/* Tag Management */}
+            {!isViewMode && (
+              <div className="shrink-0 flex justify-center w-full">
+                <MetadataBar 
+                  note={note}
+                  tagInput={tagInput}
+                  setTagInput={setTagInput}
+                  onTagKeyDown={onTagKeyDown}
+                  handleAddTag={handleAddTag}
+                  removeTag={removeTag}
+                  folderInput={folderInput}
+                  setFolderInput={setFolderInput}
+                  updateFolder={updateFolder}
+                  onSetReminder={(schedTime) => {
+                     onUpdateNote(note.id, { reminderAt: schedTime.getTime() });
+                     toast.success(`Reminder set for ${schedTime.toLocaleTimeString()}`);
+                     // Actual capacitor notification schedule
+                     import('@capacitor/local-notifications').then(async ({ LocalNotifications }) => {
+                        const perm = await LocalNotifications.checkPermissions();
+                        if (perm.display !== 'granted') {
+                           await LocalNotifications.requestPermissions();
+                        }
+                        LocalNotifications.schedule({
+                          notifications: [
+                            {
+                              title: `Reminder: ${note.title}`,
+                              body: 'Time to check your note!',
+                              id: Math.floor(Math.random() * 100000),
+                              schedule: { at: schedTime }
+                            }
+                          ]
+                        }).catch(err => console.error("Could not schedule notification:", err));
+                     }).catch(err => console.error(err));
+                  }}
+                />
+              </div>
+            )}
+            
+            <div 
+              className={cn("flex-1 mt-2 transition-all duration-200", 
+                isNoteTransitioning ? "opacity-0 scale-[0.98]" : "opacity-100 scale-100",
+                pendingSketchSvg && !showSketchConfirm && "cursor-crosshair ring-2 ring-primary/50 ring-offset-2 rounded-xl border border-primary border-dashed p-2 bg-primary/5")}
+              onMouseUp={pendingSketchSvg && !showSketchConfirm ? handleEditorClickForSketch : undefined}
+            >
+              {showLoading ? (
+                <div className="w-full h-full min-h-[500px] flex flex-col items-center justify-center animate-in fade-in zoom-in-95 duration-200">
+                  <EditorAreaSkeleton />
+                </div>
+              ) : (
+                <EditorArea 
+                  editorAreaRef={editorAreaRef}
+                  content={note.content}
+                  theme={theme}
+                  handleContentChange={handleContentChange}
+                  handleDrop={handleDrop}
+                  handleDragOver={handleDragOver}
+                  noteId={note.id}
+                  textareaRef={textareaRef}
+                  isAutoMarkdownEnabled={isAutoMarkdownEnabled}
+                  isViewMode={isViewMode}
+                  isEraserMode={isEraserMode}
+                  powerSaver={powerSaver}
+                  baseFontSize={baseFontSize}
+                />
+              )}
+            </div>
           </div>
         </div>
+
+        {/* Code Sandbox Side Panel */}
+        <CodeSandbox
+          isOpen={isSandboxOpen}
+          onClose={() => setIsSandboxOpen(false)}
+          code={sandboxCode}
+          language={sandboxLang}
+          theme={theme}
+        />
       </div>
 
       {/* Bottom Formatting Bar */}
