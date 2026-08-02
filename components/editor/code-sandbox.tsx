@@ -25,13 +25,23 @@ export const CodeSandbox = ({ isOpen, onClose, code, language, theme }: CodeSand
   const [runTrigger, setRunTrigger] = useState(0);
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
-  // Clear logs when code or language changes
   useEffect(() => {
     setLogs([]);
     if (code) {
       // Auto switch to preview for visual languages, or console for scripts
       const lowerLang = language.toLowerCase();
-      if (['js', 'javascript', 'ts', 'typescript', 'py', 'python', 'sql'].includes(lowerLang)) {
+      const isHtmlCode = ['html', 'xml', 'svg'].includes(lowerLang) || 
+                         code.toLowerCase().includes('<html') || 
+                         code.toLowerCase().includes('<body') || 
+                         code.trim().startsWith('<div') || 
+                         code.trim().startsWith('<svg') ||
+                         code.trim().startsWith('<h1') ||
+                         code.trim().startsWith('<p>') ||
+                         code.trim().startsWith('<!doctype');
+      
+      if (isHtmlCode) {
+        setActiveTab('preview');
+      } else if (['js', 'javascript', 'ts', 'typescript', 'py', 'python', 'sql'].includes(lowerLang)) {
         setActiveTab('console');
       } else {
         setActiveTab('preview');
@@ -84,6 +94,14 @@ export const CodeSandbox = ({ isOpen, onClose, code, language, theme }: CodeSand
     void runTrigger;
 
     const lowerLang = language.toLowerCase();
+    const isHtmlCode = ['html', 'xml', 'svg'].includes(lowerLang) || 
+                       code.toLowerCase().includes('<html') || 
+                       code.toLowerCase().includes('<body') || 
+                       code.trim().startsWith('<div') || 
+                       code.trim().startsWith('<svg') ||
+                       code.trim().startsWith('<h1') ||
+                       code.trim().startsWith('<p>') ||
+                       code.trim().startsWith('<!doctype');
 
     // Capturing console events script
     const consoleCaptureScript = `
@@ -171,7 +189,7 @@ export const CodeSandbox = ({ isOpen, onClose, code, language, theme }: CodeSand
       </style>
     `;
 
-    if (['html', 'xml', 'svg'].includes(lowerLang)) {
+    if (isHtmlCode) {
       // Check if it already has body/html
       if (code.toLowerCase().includes('<html') || code.toLowerCase().includes('<body')) {
         // Inject our capturing console script inside the head or body

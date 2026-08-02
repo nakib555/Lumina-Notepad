@@ -98,7 +98,7 @@ const renderer = new marked.Renderer();
 
 const CUSTOM_STYLE = {
   margin: '0',
-  padding: '0.5rem 1.5rem 0.5rem 1.25rem',
+  padding: '1rem 1.5rem',
   fontSize: '14px',
   lineHeight: '1.5',
   fontFamily: "'JetBrains Mono', ui-monospace, SFMono-Regular, monospace",
@@ -128,7 +128,7 @@ renderer.code = function(token) {
     };
     
     // Fallback style converted to inline CSS for the pre tag
-    const inlineStyle = "margin:0;padding:0.5rem 1.5rem 0.5rem 1.25rem;font-size: 14px;line-height:1.5;font-family:'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;background:transparent;";
+    const inlineStyle = "margin:0;padding:1rem 1.5rem;font-size: 14px;line-height:1.5;font-family:'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;background:transparent;";
     
     highlightedContent = `<pre style="${inlineStyle}"><code class="code-element outline-none block min-h-[20px] whitespace-pre print:whitespace-pre-wrap [font-variant-ligatures:none] font-mono" contenteditable="plaintext-only">${escapeHtml(code)}</code></pre>`;
   } else {
@@ -150,7 +150,7 @@ renderer.code = function(token) {
       // Inject contenteditable into the code tag after generation
       highlightedContent = highlightedContent.replace('<code', '<code contenteditable="plaintext-only"');
     } catch {
-      const inlineStyle = "margin:0;padding:0.5rem 1.5rem 0.5rem 1.25rem;font-size: 14px;line-height:1.5;font-family:'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;background:transparent;";
+      const inlineStyle = "margin:0;padding:1rem 1.5rem;font-size: 14px;line-height:1.5;font-family:'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;background:transparent;";
       const escapeHtml = (unsafe: string) => unsafe.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
       highlightedContent = `<pre style="${inlineStyle}"><code class="code-element outline-none block min-h-[20px] whitespace-pre print:whitespace-pre-wrap [font-variant-ligatures:none] font-mono" contenteditable="plaintext-only">${escapeHtml(code)}</code></pre>`;
     }
@@ -2460,7 +2460,7 @@ export const EditorArea = ({
           }
         }}
         className={cn(
-          "prose prose-slate dark:prose-invert w-full min-w-0 max-w-none px-1 print:overflow-visible break-words prose-code:text-slate-800 dark:prose-code:text-slate-200 prose-code:bg-slate-100 dark:prose-code:bg-slate-800/80 prose-code:border prose-code:border-slate-200 dark:prose-code:border-slate-700 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md prose-code:font-mono prose-code:text-[0.85em] prose-code:font-medium prose-code:shadow-[0_1px_2px_rgba(0,0,0,0.05)] prose-code:before:content-none prose-code:after:content-none prose-pre:p-0 prose-pre:bg-transparent prose-img:rounded-xl prose-table:border-collapse prose-table:w-full prose-table:m-0 prose-th:border prose-th:border-border prose-th:p-3 prose-th:bg-muted/50 prose-th:font-semibold prose-td:border prose-td:border-border prose-td:p-3 outline-none focus:ring-0 min-h-[500px] print:min-h-0 print:prose-pre:break-inside-avoid print:prose-table:break-inside-avoid print:prose-img:break-inside-avoid print:prose-code:break-inside-avoid print:prose-headings:break-after-avoid transition-[padding] duration-500",
+          "prose prose-slate dark:prose-invert w-full min-w-0 max-w-none print:overflow-visible break-words prose-code:text-slate-800 dark:prose-code:text-slate-200 prose-code:bg-slate-100 dark:prose-code:bg-slate-800/80 prose-code:border prose-code:border-slate-200 dark:prose-code:border-slate-700 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md prose-code:font-mono prose-code:text-[0.85em] prose-code:font-medium prose-code:shadow-[0_1px_2px_rgba(0,0,0,0.05)] prose-code:before:content-none prose-code:after:content-none prose-pre:p-0 prose-pre:bg-transparent prose-img:rounded-xl prose-table:border-collapse prose-table:w-full prose-table:m-0 prose-th:border prose-th:border-border prose-th:p-3 prose-th:bg-muted/50 prose-th:font-semibold prose-td:border prose-td:border-border prose-td:p-3 outline-none focus:ring-0 min-h-[500px] print:min-h-0 print:prose-pre:break-inside-avoid print:prose-table:break-inside-avoid print:prose-img:break-inside-avoid print:prose-code:break-inside-avoid print:prose-headings:break-after-avoid transition-[padding] duration-500",
           baseFontSize === 'text-sm' ? 'prose-sm' :
           baseFontSize === 'text-lg' ? 'prose-lg' :
           baseFontSize === 'text-xl' ? 'prose-xl' :
