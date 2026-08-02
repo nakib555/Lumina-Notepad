@@ -469,7 +469,7 @@ export function Editor({
         <div className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar print:overflow-visible print:bg-white print:text-black flex print:block justify-center">
           <div 
             className={cn(
-              "flex-1 w-full max-w-4xl px-8 pt-10 pb-24 md:px-12 md:pt-16 md:pb-32 print:p-0 flex print:block flex-col gap-4 md:gap-5 min-h-full",
+              "flex-1 w-full max-w-4xl px-5 sm:px-8 pt-6 sm:pt-10 pb-24 md:px-12 md:pt-16 md:pb-32 print:p-0 flex print:block flex-col gap-4 md:gap-5 min-h-full",
               fontFamily === "poppins" ? "font-poppins" :
               fontFamily === "inter" ? "font-inter" :
               fontFamily === "lora" ? "font-lora" :

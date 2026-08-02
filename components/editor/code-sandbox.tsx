@@ -39,7 +39,11 @@ export const CodeSandbox = ({ isOpen, onClose, code, language, theme }: CodeSand
                          code.trim().startsWith('<p>') ||
                          code.trim().startsWith('<!doctype');
       
-      if (isHtmlCode) {
+      const isReactCode = ['js', 'javascript', 'ts', 'typescript', 'jsx', 'tsx'].includes(lowerLang) && (
+        code.includes('import React') || code.includes('export default') || lowerLang.includes('jsx') || lowerLang.includes('tsx') || (code.includes('<') && code.includes('/>'))
+      );
+
+      if (isHtmlCode || isReactCode || ['css'].includes(lowerLang)) {
         setActiveTab('preview');
       } else if (['js', 'javascript', 'ts', 'typescript', 'py', 'python', 'sql'].includes(lowerLang)) {
         setActiveTab('console');
@@ -249,7 +253,45 @@ export const CodeSandbox = ({ isOpen, onClose, code, language, theme }: CodeSand
       `;
     }
 
-    if (['js', 'javascript', 'ts', 'typescript'].includes(lowerLang)) {
+    if (['js', 'javascript', 'ts', 'typescript', 'jsx', 'tsx'].includes(lowerLang)) {
+      const isReact = code.includes('import React') || code.includes('export default') || lowerLang.includes('jsx') || lowerLang.includes('tsx') || (code.includes('<') && code.includes('/>'));
+      
+      if (isReact) {
+        return `
+          <!DOCTYPE html>
+          <html>
+            <head>
+              <meta charset="UTF-8">
+              ${commonStyle}
+              ${consoleCaptureScript}
+              <script src="https://cdn.tailwindcss.com"></script>
+              <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+              <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+              <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+            </head>
+            <body>
+              <div id="root"></div>
+              <script type="text/babel" data-type="module">
+                try {
+                  ${code.replace(/import\s+.*\s+from\s+['"].*['"];?/g, '')}
+                  
+                  // Render App or default export if present
+                  const root = ReactDOM.createRoot(document.getElementById('root'));
+                  if (typeof App !== 'undefined') {
+                    root.render(<App />);
+                  } else if (typeof Example !== 'undefined') {
+                    root.render(<Example />);
+                  }
+                } catch(err) {
+                  console.error(err.message);
+                  document.getElementById('root').innerHTML = '<div style="color:red;padding:20px;">' + err.message + '</div>';
+                }
+              </script>
+            </body>
+          </html>
+        `;
+      }
+
       return `
         <!DOCTYPE html>
         <html>
