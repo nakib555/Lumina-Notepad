@@ -3,17 +3,67 @@
 @import "tw-animate-css";
 @plugin "@tailwindcss/typography";
 
+/* Sutonny MJ (CDN Web Fonts) - Default Bangla Typography */
+@font-face {
+  font-family: 'Sutonny OMJ';
+  src: local('Sutonny OMJ'), local('SutonnyOMJ'),
+       url('https://cdn.jsdelivr.net/gh/tazihad/bangla-fonts@main/Sutonny%20OMJ.ttf') format('truetype');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0980-09FF, U+200C-200D;
+}
+
+@font-face {
+  font-family: 'Sutonny MJ';
+  src: local('Sutonny OMJ'), local('SutonnyOMJ'), local('Sutonny MJ'), local('SutonnyMJ'),
+       url('https://cdn.jsdelivr.net/gh/tazihad/bangla-fonts@main/Sutonny%20OMJ.ttf') format('truetype'),
+       url('https://cdn.jsdelivr.net/gh/tazihad/bangla-fonts@main/Sutonny%20MJ.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Sutonny MJ';
+  src: local('Sutonny MJ Bold'), local('SutonnyMJ Bold'),
+       url('https://cdn.jsdelivr.net/gh/tazihad/bangla-fonts@main/Sutonny%20MJ%20Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Sutonny MJ';
+  src: local('Sutonny MJ Italic'), local('SutonnyMJ Italic'),
+       url('https://cdn.jsdelivr.net/gh/tazihad/bangla-fonts@main/Sutonny%20MJ%20Italic.ttf') format('truetype');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'SutonnyMJ';
+  src: local('Sutonny OMJ'), local('SutonnyOMJ'), local('Sutonny MJ'), local('SutonnyMJ'),
+       url('https://cdn.jsdelivr.net/gh/tazihad/bangla-fonts@main/Sutonny%20OMJ.ttf') format('truetype'),
+       url('https://cdn.jsdelivr.net/gh/tazihad/bangla-fonts@main/Sutonny%20MJ.ttf') format('truetype');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
 @custom-variant dark (&:is(.dark *, .dracula *, .nord *));
 
 @theme {
-  --font-sans: "Poppins", "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-serif: "Lora", ui-serif, Georgia, serif;
-  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  --font-sans: "Poppins", "Inter", "Sutonny OMJ", "Sutonny MJ", "SutonnyMJ", "SolaimanLipi", "Kalpurush", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Lora", "Sutonny OMJ", "Sutonny MJ", "SutonnyMJ", ui-serif, Georgia, serif;
+  --font-mono: "JetBrains Mono", "Sutonny OMJ", "Sutonny MJ", "SutonnyMJ", ui-monospace, SFMono-Regular, monospace;
 
-  --font-poppins: "Poppins", "Inter", sans-serif;
-  --font-inter: "Inter", sans-serif;
-  --font-lora: "Lora", serif;
-  --font-jetbrains: "JetBrains Mono", monospace;
+  --font-poppins: "Poppins", "Inter", "Sutonny OMJ", "Sutonny MJ", "SutonnyMJ", sans-serif;
+  --font-inter: "Inter", "Sutonny OMJ", "Sutonny MJ", "SutonnyMJ", sans-serif;
+  --font-lora: "Lora", "Sutonny OMJ", "Sutonny MJ", "SutonnyMJ", serif;
+  --font-jetbrains: "JetBrains Mono", "Sutonny OMJ", "Sutonny MJ", "SutonnyMJ", monospace;
+  --font-sutonny: "Sutonny MJ", "Sutonny OMJ", "SutonnyMJ", sans-serif;
 
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
@@ -351,15 +401,18 @@ body.search-is-active *::selection {
 
 @media print {
   @page {
-    size: A4 portrait;
-    margin: 20mm;
+    size: auto;
+    margin: 12mm 15mm 12mm 15mm;
   }
 
   html, body, #root {
     overflow: visible !important;
     height: auto !important;
+    min-height: 0 !important;
     background: white !important;
     color: black !important;
+    margin: 0 !important;
+    padding: 0 !important;
   }
 
   /* Reset dark mode prose colors for print */
@@ -371,53 +424,189 @@ body.search-is-active *::selection {
     --tw-prose-bold: black !important;
     --tw-prose-counters: black !important;
     --tw-prose-bullets: black !important;
-    --tw-prose-hr: #e5e7eb !important;
+    --tw-prose-hr: #e2e8f0 !important;
     --tw-prose-quotes: black !important;
-    --tw-prose-quote-borders: #e5e7eb !important;
+    --tw-prose-quote-borders: #cbd5e1 !important;
     --tw-prose-captions: black !important;
     --tw-prose-code: black !important;
     --tw-prose-pre-code: black !important;
     --tw-prose-pre-bg: transparent !important;
-    --tw-prose-th-borders: #e5e7eb !important;
-    --tw-prose-td-borders: #e5e7eb !important;
+    --tw-prose-th-borders: #cbd5e1 !important;
+    --tw-prose-td-borders: #cbd5e1 !important;
   }
 
   body {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
-    font-size: 12pt;
+    font-size: 11pt;
+    line-height: 1.5;
+  }
+
+  /* Remove excessive gaps inside prose content */
+  .prose {
+    max-width: 100% !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .prose p {
+    margin-top: 0 !important;
+    margin-bottom: 0.5rem !important;
+    line-height: 1.55 !important;
+  }
+
+  .prose h1, .prose h2, .prose h3, .prose h4, .prose h5, .prose h6 {
+    text-align: left !important;
+    margin-top: 0.9rem !important;
+    margin-bottom: 0.35rem !important;
+    break-after: avoid !important;
+    page-break-after: avoid !important;
+    color: black !important;
+  }
+
+  .prose h1:first-child, .prose h2:first-child, .prose p:first-child {
+    margin-top: 0 !important;
+  }
+
+  .prose ul, .prose ol {
+    margin-top: 0.25rem !important;
+    margin-bottom: 0.5rem !important;
+    padding-left: 1.5rem !important;
+  }
+
+  .prose li {
+    margin-top: 0.1rem !important;
+    margin-bottom: 0.1rem !important;
+  }
+
+  .prose blockquote {
+    margin-top: 0.5rem !important;
+    margin-bottom: 0.5rem !important;
+    padding: 0.25rem 0.75rem !important;
+    border-left: 3px solid #cbd5e1 !important;
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  /* Code blocks inside print */
+  .code-block-wrapper {
+    margin: 0.6rem 0 !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 6px !important;
+    background: #f8fafc !important;
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+    box-shadow: none !important;
+    overflow: visible !important;
+  }
+
+  .code-block-wrapper > div:first-child {
+    position: static !important;
+    border-bottom: 1px solid #e2e8f0 !important;
+    background: #f1f5f9 !important;
+    padding: 0.3rem 0.6rem !important;
+  }
+
+  /* Hide interactive code buttons in print */
+  .code-block-wrapper button,
+  .code-block-wrapper .run-code-btn,
+  .code-block-wrapper .open-panel-btn,
+  .code-block-wrapper .copy-btn,
+  .code-block-wrapper .delete-btn {
+    display: none !important;
+  }
+
+  .code-block-wrapper .code-container {
+    background: transparent !important;
+    padding: 0.5rem 0.75rem !important;
+    overflow: visible !important;
+    max-height: none !important;
+  }
+
+  .code-block-wrapper pre,
+  .code-block-wrapper code {
+    white-space: pre-wrap !important;
+    word-break: break-word !important;
+    font-size: 9.5pt !important;
+    line-height: 1.45 !important;
+    background: transparent !important;
+  }
+
+  /* Tables in print: wrap at word boundaries, repeat header */
+  .table-wrapper {
+    margin: 0.6rem 0 !important;
+    overflow: visible !important;
+    break-inside: auto !important;
+    page-break-inside: auto !important;
+    box-shadow: none !important;
+    border: none !important;
   }
 
   table {
-    table-layout: fixed !important;
+    table-layout: auto !important;
     width: 100% !important;
+    border-collapse: collapse !important;
+    margin: 0 !important;
+    border: 1px solid #cbd5e1 !important;
+  }
+
+  thead {
+    display: table-header-group !important;
   }
 
   th, td {
     white-space: pre-wrap !important;
     word-wrap: break-word !important;
     overflow-wrap: break-word !important;
-    word-break: break-all !important;
+    word-break: normal !important;
+    border: 1px solid #cbd5e1 !important;
+    padding: 0.4rem 0.6rem !important;
+    font-size: 9.5pt !important;
+    background-color: transparent !important;
+  }
+
+  th {
+    background-color: #f1f5f9 !important;
+    font-weight: 600 !important;
   }
 
   tr {
     page-break-inside: avoid !important;
+    break-inside: avoid !important;
   }
 
-  .prose h1 {
-    text-align: center !important;
-  }
-
-  .sketch-container {
+  /* Sketches and images in print */
+  .sketch-container, img {
     page-break-inside: avoid !important;
     break-inside: avoid !important;
     overflow: visible !important;
     background: white !important;
+    margin: 0.5rem auto !important;
+    max-width: 100% !important;
   }
   
   .sketch-container svg {
     max-width: 100% !important;
     height: auto !important;
+  }
+
+  /* Hide all interactive floating toolbars, resizers and side panels in print */
+  .table-floating-toolbar,
+  .sketch-floating-toolbar,
+  .image-floating-toolbar,
+  .link-floating-toolbar,
+  .table-resizer-handle,
+  .table-resizer-line,
+  .code-sandbox-drawer,
+  [data-print-hidden="true"] {
+    display: none !important;
+  }
+
+  /* Suppress trailing empty spacer paragraphs that cause blank trailing print pages */
+  .prose > p:last-child:has(> br:only-child),
+  .prose > p:last-child:empty {
+    display: none !important;
   }
 }
 
@@ -433,6 +622,31 @@ td:empty::before, th:empty::before {
 }
 .table-zebra tbody tr:nth-child(even) td {
   background-color: var(--muted) !important;
+}
+
+/* Custom Highlight.js Code Highlighting Theme */
+.code-container {
+  .hljs-comment, .hljs-quote { color: #6a737d; font-style: italic; }
+  .hljs-keyword, .hljs-selector-tag, .hljs-subst { color: #d73a49; font-weight: bold; }
+  .hljs-string, .hljs-regexp, .hljs-addition { color: #032f62; }
+  .hljs-title, .hljs-section, .hljs-name, .hljs-selector-id { color: #6f42c1; }
+  .hljs-number, .hljs-literal { color: #005cc5; }
+  .hljs-built_in, .hljs-class, .hljs-type { color: #e36209; }
+  .hljs-params, .hljs-variable { color: #24292e; }
+  .hljs-attr, .hljs-attribute { color: #005cc5; }
+  .hljs-meta { color: #6f42c1; }
+}
+
+.dark .code-container {
+  .hljs-comment, .hljs-quote { color: #8b949e; }
+  .hljs-keyword, .hljs-selector-tag, .hljs-subst { color: #ff7b72; font-weight: bold; }
+  .hljs-string, .hljs-regexp, .hljs-addition { color: #a5d6ff; }
+  .hljs-title, .hljs-section, .hljs-name, .hljs-selector-id { color: #d2a8ff; }
+  .hljs-number, .hljs-literal { color: #79c0ff; }
+  .hljs-built_in, .hljs-class, .hljs-type { color: #ffa657; }
+  .hljs-params, .hljs-variable { color: #c9d1d9; }
+  .hljs-attr, .hljs-attribute { color: #79c0ff; }
+  .hljs-meta { color: #d2a8ff; }
 }
 
 

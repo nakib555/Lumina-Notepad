@@ -469,17 +469,18 @@ export function Editor({
         <div className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar print:overflow-visible print:bg-white print:text-black flex print:block justify-center">
           <div 
             className={cn(
-              "flex-1 w-full max-w-4xl px-5 sm:px-8 pt-6 sm:pt-10 pb-24 md:px-12 md:pt-16 md:pb-32 print:p-0 flex print:block flex-col gap-4 md:gap-5 min-h-full",
+              "flex-1 w-full max-w-4xl px-5 sm:px-8 pt-6 sm:pt-10 pb-24 md:px-12 md:pt-16 md:pb-32 print:p-0 print:m-0 print:max-w-none print:w-full print:gap-0 flex print:block flex-col gap-4 md:gap-5 min-h-full",
               fontFamily === "poppins" ? "font-poppins" :
               fontFamily === "inter" ? "font-inter" :
               fontFamily === "lora" ? "font-lora" :
               fontFamily === "jetbrains" ? "font-jetbrains" :
+              fontFamily.toLowerCase().includes("sutonny") ? "font-sutonny" :
               fontFamily === "serif" ? "font-serif" :
               fontFamily === "mono" ? "font-mono" : "font-sans"
             )}
             style={{
               fontFamily: !['poppins', 'inter', 'lora', 'jetbrains', 'sans', 'serif', 'mono'].includes(fontFamily.toLowerCase())
-                ? `"${fontFamily}", sans-serif`
+                ? `"${fontFamily}", "Sutonny OMJ", "Sutonny MJ", "SutonnyMJ", sans-serif`
                 : undefined
             }}
           >
@@ -489,12 +490,12 @@ export function Editor({
               placeholder="Note Title"
               autoComplete="off"
               readOnly={isViewMode}
-              className={cn("w-full text-4xl md:text-5xl font-bold text-foreground placeholder:text-muted-foreground/30 border-none outline-none bg-transparent tracking-tight print:text-black print:text-center resize-none p-0 m-0 leading-tight shrink-0 whitespace-pre-wrap break-words overflow-hidden", isViewMode && "cursor-default")}
+              className={cn("w-full text-4xl md:text-5xl font-bold text-foreground placeholder:text-muted-foreground/30 border-none outline-none bg-transparent tracking-tight print:text-black print:text-left print:text-2xl sm:print:text-3xl print:font-bold print:m-0 print:mb-2 print:p-0 print:border-none print:shadow-none print:leading-tight resize-none p-0 m-0 leading-tight shrink-0 whitespace-pre-wrap break-words overflow-hidden", isViewMode && "cursor-default")}
             />
             
             {/* Tag Management */}
             {!isViewMode && (
-              <div className="shrink-0 flex justify-center w-full">
+              <div className="shrink-0 flex justify-center w-full print:hidden">
                 <MetadataBar 
                   note={note}
                   tagInput={tagInput}
@@ -531,7 +532,7 @@ export function Editor({
             )}
             
             <div 
-              className={cn("flex-1 mt-2 transition-all duration-200", 
+              className={cn("flex-1 mt-2 transition-all duration-200 print:mt-0 print:m-0 print:p-0", 
                 isNoteTransitioning ? "opacity-0 scale-[0.98]" : "opacity-100 scale-100",
                 pendingSketchSvg && !showSketchConfirm && "cursor-crosshair ring-2 ring-primary/50 ring-offset-2 rounded-xl border border-primary border-dashed p-2 bg-primary/5")}
               onMouseUp={pendingSketchSvg && !showSketchConfirm ? handleEditorClickForSketch : undefined}
@@ -562,18 +563,20 @@ export function Editor({
         </div>
 
         {/* Code Sandbox Side Panel */}
-        <CodeSandbox
-          isOpen={isSandboxOpen}
-          onClose={() => setIsSandboxOpen(false)}
-          code={sandboxCode}
-          language={sandboxLang}
-          theme={theme}
-        />
+        <div className="print:hidden">
+          <CodeSandbox
+            isOpen={isSandboxOpen}
+            onClose={() => setIsSandboxOpen(false)}
+            code={sandboxCode}
+            language={sandboxLang}
+            theme={theme}
+          />
+        </div>
       </div>
 
       {/* Bottom Formatting Bar */}
       {!isViewMode && (
-        <div>
+        <div className="print:hidden">
           <BottomBar 
             symbolMenuRef={symbolMenuRef}
             showSymbolMenu={showSymbolMenu}

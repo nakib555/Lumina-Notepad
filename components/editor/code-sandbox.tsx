@@ -404,7 +404,7 @@ export const CodeSandbox = ({ isOpen, onClose, code, language, theme }: CodeSand
 
   return (
     <div className={cn(
-      "w-full md:w-[480px] lg:w-[540px] xl:w-[600px] border-l border-border h-full flex flex-col bg-background relative shrink-0 z-40 transition-all duration-300 animate-in slide-in-from-right",
+      "w-full md:w-[480px] lg:w-[540px] xl:w-[600px] border-l border-border h-full flex flex-col bg-background relative shrink-0 z-40 transition-all duration-300 animate-in slide-in-from-right print:hidden",
       "max-md:fixed max-md:inset-y-0 max-md:right-0 max-md:shadow-2xl"
     )}>
       {/* Header */}

@@ -50,24 +50,24 @@ export const useEditorExport = (note: Note | null) => {
                   margin: 0 auto;
                 }
                 h1, h2, h3, h4, h5, h6 { 
-                  margin-top: 1.5em; 
-                  margin-bottom: 0.5em; 
+                  margin-top: 1em; 
+                  margin-bottom: 0.35em; 
                   font-weight: 600;
                   line-height: 1.25;
                   break-after: avoid;
                   page-break-after: avoid;
                 }
-                h1 { font-size: 2.25em; text-align: center; margin-bottom: 1em; }
-                p, ul, ol { margin-top: 0; margin-bottom: 1em; white-space: pre-wrap; }
+                h1.note-title { font-size: 2em; text-align: left; margin-top: 0; margin-bottom: 0.75em; }
+                p, ul, ol { margin-top: 0; margin-bottom: 0.6em; white-space: pre-wrap; }
                 ul, ol { padding-left: 1.5em; }
-                li { margin-bottom: 0.25em; }
+                li { margin-bottom: 0.2em; }
                 img, .sketch-container { 
                   max-width: 100%; 
                   height: auto; 
-                  border-radius: 8px; 
+                  border-radius: 6px; 
                   break-inside: avoid;
                   page-break-inside: avoid;
-                  margin: 1.5em 0;
+                  margin: 0.75em 0;
                 }
                 .sketch-container {
                    background: white !important;
@@ -78,13 +78,15 @@ export const useEditorExport = (note: Note | null) => {
                 }
                 pre { 
                   background: var(--color-bg-muted); 
-                  padding: 16px; 
-                  border-radius: 8px; 
+                  padding: 12px 14px; 
+                  border-radius: 6px; 
                   overflow-x: auto; 
                   break-inside: avoid;
                   page-break-inside: avoid;
                   border: 1px solid var(--color-border);
-                  white-space: pre;
+                  white-space: pre-wrap;
+                  word-break: break-word;
+                  margin: 0.75em 0;
                 }
                 code { 
                   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
@@ -104,22 +106,31 @@ export const useEditorExport = (note: Note | null) => {
                 }
                 blockquote { 
                   border-left: 4px solid var(--color-border); 
-                  padding-left: 16px; 
+                  padding-left: 14px; 
                   color: var(--color-muted); 
-                  margin: 1.5em 0; 
+                  margin: 0.75em 0; 
                   font-style: italic;
                 }
                 table { 
                   width: 100%; 
                   border-collapse: collapse; 
-                  margin: 1.5em 0; 
-                  break-inside: avoid;
+                  margin: 0.75em 0; 
+                  break-inside: auto;
+                  page-break-inside: auto;
+                }
+                tr {
                   page-break-inside: avoid;
+                  break-inside: avoid;
+                }
+                thead {
+                  display: table-header-group;
                 }
                 th, td { 
                   border: 1px solid var(--color-border); 
-                  padding: 8px 12px; 
+                  padding: 6px 10px; 
                   text-align: left; 
+                  word-break: normal;
+                  overflow-wrap: break-word;
                 }
                 th { 
                   background-color: var(--color-bg-muted); 
@@ -130,7 +141,7 @@ export const useEditorExport = (note: Note | null) => {
                 }
                 @media print {
                   body { padding: 0; margin: 0; }
-                  @page { margin: 20mm; }
+                  @page { margin: 12mm 15mm; }
                 }
               </style>
             </head>

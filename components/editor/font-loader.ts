@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 
 // Top 200 most popular Google/Fontsource Fonts as an offline fallback
 export const POPULAR_FONTS = [
-  "Roboto", "Open Sans", "Lato", "Montserrat", "Poppins", "Oswald", "Source Sans Pro", "Slabo 27px", "Raleway", "PT Sans",
+  "Sutonny MJ", "Roboto", "Open Sans", "Lato", "Montserrat", "Poppins", "Oswald", "Source Sans Pro", "Slabo 27px", "Raleway", "PT Sans",
   "Merriweather", "Noto Sans", "Nutanix", "Ubuntu", "Lora", "Playfair Display", "Roboto Condensed", "Nunito", "Rubik", "Amatic SC",
   "Josefin Sans", "Bebas Neue", "Arimo", "Quicksand", "Dancing Script", "Pacifico", "Fira Sans", "PT Serif", "Kanit", "Mukta",
   "Titillium Web", "Bitter", "Muli", "Oxygen", "Nanum Gothic", "Hind", "Heebo", "Source Serif Pro", "Work Sans", "Arvo",
@@ -35,8 +35,8 @@ export function getFontId(fontName: string): string {
 export function loadGoogleFont(fontName: string) {
   if (!fontName) return;
   
-  // Ignore system defaults
-  const defaults = ["sans", "serif", "mono", "inter", "poppins", "lora", "jetbrains", "system-ui", "sans-serif", "monospace"];
+  // Ignore system defaults and pre-configured CDN fonts
+  const defaults = ["sans", "serif", "mono", "inter", "poppins", "lora", "jetbrains", "sutonny", "sutonny mj", "sutonnymj", "sutonny omj", "system-ui", "sans-serif", "monospace"];
   if (defaults.includes(fontName.toLowerCase())) return;
 
   const fontId = getFontId(fontName);

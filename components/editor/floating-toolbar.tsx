@@ -106,6 +106,7 @@ const getSelectedFontLabel = (font: string) => {
   if (lower === 'sans') return 'Sans (Default)';
   if (lower === 'serif') return 'Serif (Default)';
   if (lower === 'mono') return 'Mono (Default)';
+  if (lower === 'sutonny mj' || lower === 'sutonny' || lower === 'sutonnymj') return 'Sutonny MJ';
   return font.split(/[\s_-]+/)
     .map(word => word.charAt(0).toUpperCase() + word.slice(1))
     .join(' ');
@@ -936,7 +937,7 @@ export const FloatingToolbar = ({
       {/* Font Style & Size Group */}
       <div className="flex items-center gap-0.5 px-1 border-r border-border">
         <select
-          value={['poppins', 'inter', 'lora', 'jetbrains', 'sans', 'serif', 'mono'].includes(fontFamily.toLowerCase()) ? fontFamily : fontFamily}
+          value={['poppins', 'inter', 'lora', 'jetbrains', 'sans', 'serif', 'mono', 'sutonny mj', 'sutonny'].includes(fontFamily.toLowerCase()) ? (fontFamily.toLowerCase().startsWith('sutonny') ? 'Sutonny MJ' : fontFamily) : fontFamily}
           onMouseDown={saveSelection}
           onTouchStart={saveSelection}
           onChange={(e) => {
@@ -952,10 +953,11 @@ export const FloatingToolbar = ({
           <option value="inter" className="bg-background text-foreground font-inter">Inter</option>
           <option value="lora" className="bg-background text-foreground font-lora">Lora</option>
           <option value="jetbrains" className="bg-background text-foreground font-mono">JetBrains Mono</option>
+          <option value="Sutonny MJ" className="bg-background text-foreground font-semibold">Sutonny MJ (Bangla)</option>
           <option value="sans" className="bg-background text-foreground">Sans (Default)</option>
           <option value="serif" className="bg-background text-foreground">Serif (Default)</option>
           <option value="mono" className="bg-background text-foreground">Mono (Default)</option>
-          {!['poppins', 'inter', 'lora', 'jetbrains', 'sans', 'serif', 'mono'].includes(fontFamily.toLowerCase()) && (
+          {!['poppins', 'inter', 'lora', 'jetbrains', 'sans', 'serif', 'mono', 'sutonny mj', 'sutonny'].includes(fontFamily.toLowerCase()) && (
             <option value={fontFamily} className="bg-background text-indigo-600 font-semibold">{fontFamily}</option>
           )}
           <option value="custom_picker" className="bg-background text-indigo-600 font-semibold">🔍 More Fonts (2,000+)...</option>

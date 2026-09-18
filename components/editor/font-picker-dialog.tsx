@@ -35,7 +35,7 @@ export function FontPickerDialog({
   const getFontCategory = (font: string): "sans" | "serif" | "mono" | "handwriting" | "display" | "other" => {
     const lower = font.toLowerCase();
     if (lower.includes("mono") || lower.includes("code") || lower.includes("console") || lower.includes("jetbrains")) return "mono";
-    if (lower.includes("sans") || lower.includes("inter") || lower.includes("poppins") || lower.includes("roboto") || lower.includes("helvetica") || lower.includes("lato")) return "sans";
+    if (lower.includes("sans") || lower.includes("inter") || lower.includes("poppins") || lower.includes("roboto") || lower.includes("helvetica") || lower.includes("lato") || lower.includes("sutonny")) return "sans";
     if (lower.includes("serif") || lower.includes("slab") || lower.includes("lora") || lower.includes("merriweather") || lower.includes("baskerville") || lower.includes("garamond")) return "serif";
     if (lower.includes("script") || lower.includes("hand") || lower.includes("brush") || lower.includes("cursive") || lower.includes("signature") || lower.includes("drawing") || lower.includes("write")) return "handwriting";
     if (lower.includes("display") || lower.includes("black") || lower.includes("one") || lower.includes("neue") || lower.includes("grotesk") || lower.includes("headline") || lower.includes("bebas") || lower.includes("play")) return "display";
@@ -195,7 +195,7 @@ export function FontPickerDialog({
                           isSelected && "text-indigo-600 dark:text-indigo-400 font-medium"
                         )}
                       >
-                        Sample Style
+                        {font.toLowerCase().includes("sutonny") ? "আমার সোনার বাংলা 123" : "Sample Style"}
                       </span>
                     </div>
                     

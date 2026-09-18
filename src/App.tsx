@@ -100,7 +100,7 @@ export default function App() {
     localStorage.setItem('lumina-font', fontFamily);
     
     const lowerFont = fontFamily.toLowerCase();
-    const isStandard = ['poppins', 'inter', 'lora', 'jetbrains', 'sans', 'serif', 'mono'].includes(lowerFont);
+    const isStandard = ['poppins', 'inter', 'lora', 'jetbrains', 'sans', 'serif', 'mono', 'sutonny', 'sutonny mj', 'sutonnymj'].includes(lowerFont);
 
     if (!isStandard) {
       // Dynamic Google Font selected! Trigger font loading
