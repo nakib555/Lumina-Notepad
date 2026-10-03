@@ -44,7 +44,7 @@ export function CommandPalette({ notes, onSelectNote, onCreateNote, onThemeChang
             <Command.Empty className="p-4 text-center text-muted-foreground text-sm">No results found.</Command.Empty>
 
             <Command.Group heading="Notes" className="text-xs font-medium text-muted-foreground px-2 py-1.5">
-              {notes.map(note => (
+              {notes.filter(n => Boolean(n && n.id)).map(note => (
                 <Command.Item 
                   key={note.id} 
                   onSelect={() => { onSelectNote(note.id); setOpen(false); }}

@@ -96,7 +96,12 @@ export interface ITableSerializer {
 }
 
 export interface ITablePasteProvider {
-  parseClipboard(text: string, currentModel: ITableModel, selection: ITableSelection): {
+  parseClipboard(
+    text: string,
+    currentModel: ITableModel,
+    selection: ITableSelection,
+    htmlContent?: string
+  ): {
     patches: ITablePatch[];
     newSelection: ITableSelection;
   } | null;
@@ -124,8 +129,8 @@ export interface ITableRecovery {
 export class TableModelValidator {
   static validate(model: ITableModel): { isValid: boolean; errors: string[] } {
     const errors: string[] = [];
-    if (!model.id) {
-      errors.push("Missing table ID.");
+    if (!model || !model.id) {
+      return { isValid: false, errors: ["Missing or invalid table model ID."] };
     }
     if (model.rowCount < 0 || model.colCount < 0) {
       errors.push("Row and column counts must be non-negative.");
@@ -147,6 +152,7 @@ export class TableModelValidator {
   }
 
   static validatePatch(model: ITableModel, patch: ITablePatch): boolean {
+    if (!model || !patch) return false;
     switch (patch.type) {
       case PatchType.SET_CELL: {
         const { r, c } = patch.payload;
@@ -264,18 +270,144 @@ export class MarkdownTableSerializer implements ITableSerializer {
   }
 }
 
-// --- 7. Concrete Paste Provider ---
+// --- 7. Concrete Paste Provider & Clipboard Utilities ---
+
+export const serializeCellsToTSV = (grid: string[][]): string => {
+  return grid.map(row => 
+    row.map(cell => {
+      let text = cell;
+      if (typeof document !== 'undefined') {
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = cell;
+        text = tempDiv.textContent || tempDiv.innerText || '';
+      }
+      if (text.includes('\t') || text.includes('\n') || text.includes('"')) {
+        return `"${text.replace(/"/g, '""')}"`;
+      }
+      return text;
+    }).join('\t')
+  ).join('\n');
+};
+
+export const serializeCellsToHTML = (grid: string[][], alignments?: (string | null | undefined)[]): string => {
+  if (grid.length === 0) return '';
+  const rowsHtml = grid.map((row, rIdx) => {
+    const isHeader = rIdx === 0;
+    const tag = isHeader ? 'th' : 'td';
+    const cellsHtml = row.map((cell, cIdx) => {
+      const align = alignments?.[cIdx] ? ` align="${alignments[cIdx]}" style="text-align: ${alignments[cIdx]};"` : '';
+      return `<${tag}${align}>${cell || '<br>'}</${tag}>`;
+    }).join('');
+    return `<tr>${cellsHtml}</tr>`;
+  }).join('');
+  return `<table><tbody>${rowsHtml}</tbody></table>`;
+};
+
+export const serializeCellsToMarkdown = (grid: string[][], alignments?: (string | null | undefined)[]): string => {
+  if (grid.length === 0) return '';
+  const colCount = Math.max(...grid.map(r => r.length));
+  const rows: string[] = [];
+  
+  const headerRow = grid[0] || [];
+  const headerLine = '| ' + Array.from({ length: colCount }).map((_, c) => (headerRow[c] || '').replace(/\|/g, '\\|') || ' ').join(' | ') + ' |';
+  rows.push(headerLine);
+  
+  const delimiterLine = '| ' + Array.from({ length: colCount }).map((_, c) => {
+    const align = alignments?.[c];
+    if (align === 'center') return ':---:';
+    if (align === 'right') return '---:';
+    return '---';
+  }).join(' | ') + ' |';
+  rows.push(delimiterLine);
+  
+  for (let r = 1; r < grid.length; r++) {
+    const row = grid[r];
+    const dataLine = '| ' + Array.from({ length: colCount }).map((_, c) => (row[c] || '').replace(/\|/g, '\\|') || ' ').join(' | ') + ' |';
+    rows.push(dataLine);
+  }
+  return rows.join('\n');
+};
 
 export class DeterministicTablePasteProvider implements ITablePasteProvider {
-  parseClipboard(text: string, currentModel: ITableModel, selection: ITableSelection): {
+  parseClipboard(
+    text: string,
+    currentModel: ITableModel,
+    selection: ITableSelection,
+    htmlContent?: string
+  ): {
     patches: ITablePatch[];
     newSelection: ITableSelection;
   } | null {
-    if (!text) return null;
+    if (!text && !htmlContent) return null;
 
-    // TSV/CSV parsing with support for basic quoted fields, commas, etc.
+    // Helper 1: HTML table parser (Excel, Google Sheets, LibreOffice, web pages)
+    const parseHTMLTable = (html: string): string[][] | null => {
+      if (!html || !html.includes('<table')) return null;
+      try {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+        const table = doc.querySelector('table');
+        if (!table) return null;
+        
+        const rows = Array.from(table.querySelectorAll('tr'));
+        if (rows.length === 0) return null;
+        
+        const grid: string[][] = [];
+        rows.forEach(tr => {
+          const cells = Array.from(tr.querySelectorAll('th, td'));
+          if (cells.length > 0) {
+            grid.push(cells.map(cell => {
+              const inner = cell.innerHTML.trim();
+              if (inner === '<br>' || inner === '') return '';
+              return cell.textContent?.trim() || '';
+            }));
+          }
+        });
+        return grid.length > 0 ? grid : null;
+      } catch {
+        return null;
+      }
+    };
+
+    // Helper 2: Markdown table parser
+    const parseMarkdownTable = (rawText: string): string[][] | null => {
+      const lines = rawText.trim().split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
+      if (lines.length < 2) return null;
+      
+      const pipeLines = lines.filter(l => l.startsWith('|') || l.includes('|'));
+      if (pipeLines.length < 2) return null;
+
+      const isDelimiter = (line: string) => /^\|?(\s*:?-+:?\s*\|)+\s*:?-+:?\s*\|?$/.test(line.trim());
+      const delimiterIndex = pipeLines.findIndex((line, idx) => idx > 0 && isDelimiter(line));
+      if (delimiterIndex === -1) return null;
+
+      const parseRow = (line: string): string[] => {
+        const trimmed = line.trim();
+        // Remove leading and trailing pipes safely even if whitespace precedes/follows
+        const cleaned = trimmed.replace(/^\|\s*/, '').replace(/\s*\|$/, '');
+        const cells = cleaned.split('|').map(s => s.trim());
+        // Clean trailing empty cells caused by extra delimiters
+        while (cells.length > 0 && !cells[cells.length - 1]) {
+          cells.pop();
+        }
+        return cells;
+      };
+
+      const grid: string[][] = [];
+      pipeLines.forEach((line, idx) => {
+        if (idx === delimiterIndex) return;
+        const row = parseRow(line);
+        if (row.length > 0) {
+          grid.push(row);
+        }
+      });
+
+      return grid.length > 0 ? grid : null;
+    };
+
+    // Helper 3: TSV parsing with support for quoted fields (Tabs only; never split on commas)
     const parseGrid = (tsv: string): string[][] => {
-      const delimiter = tsv.includes('\t') ? '\t' : ',';
+      const delimiter = '\t';
       const rows: string[][] = [];
       let currentRow: string[] = [];
       let currentField = '';
@@ -289,7 +421,7 @@ export class DeterministicTablePasteProvider implements ITablePasteProvider {
           if (char === '"') {
             if (nextChar === '"') {
               currentField += '"';
-              i++; // skip next double quote
+              i++;
             } else {
               inQuotes = false;
             }
@@ -307,7 +439,7 @@ export class DeterministicTablePasteProvider implements ITablePasteProvider {
             rows.push(currentRow);
             currentRow = [];
             currentField = '';
-            if (char === '\r') i++; // skip extra LF
+            if (char === '\r') i++;
           } else if (char === '\r') {
             currentRow.push(currentField);
             rows.push(currentRow);
@@ -324,11 +456,50 @@ export class DeterministicTablePasteProvider implements ITablePasteProvider {
         rows.push(currentRow);
       }
 
-      return rows.map(r => r.map(c => c.trim()));
+      // Strip trailing empty cells on each row caused by trailing tabs
+      const cleanRows = rows.map(r => {
+        const row = [...r];
+        while (row.length > 1 && !row[row.length - 1].trim()) {
+          row.pop();
+        }
+        return row.map(c => c.trim());
+      });
+
+      // Strip trailing empty rows caused by trailing newlines
+      while (cleanRows.length > 1 && cleanRows[cleanRows.length - 1].every(cell => !cell || !cell.trim())) {
+        cleanRows.pop();
+      }
+
+      return cleanRows;
     };
 
-    const grid = parseGrid(text);
-    if (grid.length === 0 || grid[0].length === 0) return null;
+    let grid: string[][] | null = null;
+    if (htmlContent) {
+      grid = parseHTMLTable(htmlContent);
+    }
+    if (!grid && text) {
+      grid = parseMarkdownTable(text);
+    }
+    if (!grid && text) {
+      grid = parseGrid(text);
+    }
+
+    if (grid) {
+      // Strip trailing empty cells from all rows
+      grid = grid.map(row => {
+        const r = [...row];
+        while (r.length > 1 && !r[r.length - 1].trim()) {
+          r.pop();
+        }
+        return r;
+      });
+
+      while (grid.length > 1 && grid[grid.length - 1].every(cell => !cell || !cell.trim())) {
+        grid.pop();
+      }
+    }
+
+    if (!grid || grid.length === 0 || grid[0].length === 0) return null;
 
     const patches: ITablePatch[] = [];
     const startRow = selection.startRow;
@@ -337,11 +508,9 @@ export class DeterministicTablePasteProvider implements ITablePasteProvider {
     const sourceRows = grid.length;
     const sourceCols = Math.max(...grid.map(r => r.length));
 
-    // Support deterministic expand boundaries
+    // Support deterministic expand boundaries (rows only; strictly NEVER add or expand table columns)
     const targetMaxRows = startRow + sourceRows;
-    const targetMaxCols = startCol + sourceCols;
 
-    // Generate insert structural patches if we overflow current model limits
     if (targetMaxRows > currentModel.rowCount) {
       const rowsToAdd = targetMaxRows - currentModel.rowCount;
       patches.push({
@@ -352,27 +521,21 @@ export class DeterministicTablePasteProvider implements ITablePasteProvider {
       });
     }
 
-    if (targetMaxCols > currentModel.colCount) {
-      const colsToAdd = targetMaxCols - currentModel.colCount;
-      patches.push({
-        patchId: 'patch_' + Math.random().toString(36).substring(2, 9),
-        type: PatchType.INSERT_COL,
-        timestamp: Date.now(),
-        payload: { count: colsToAdd, at: currentModel.colCount }
-      });
-    }
-
-    // Generate value modifications
+    // Generate value modifications, strictly constrained within current table columns
     grid.forEach((rowVals, dr) => {
       rowVals.forEach((val, dc) => {
         const r = startRow + dr;
         const c = startCol + dc;
-        patches.push({
-          patchId: 'patch_' + Math.random().toString(36).substring(2, 9),
-          type: PatchType.SET_CELL,
-          timestamp: Date.now(),
-          payload: { r, c, value: val }
-        });
+        if (c < currentModel.colCount) {
+          // Escape any pipe character to ensure markdown tables never split on cell contents
+          const safeVal = val.replace(/\|/g, '\\|');
+          patches.push({
+            patchId: 'patch_' + Math.random().toString(36).substring(2, 9),
+            type: PatchType.SET_CELL,
+            timestamp: Date.now(),
+            payload: { r, c, value: safeVal }
+          });
+        }
       });
     });
 
@@ -381,7 +544,7 @@ export class DeterministicTablePasteProvider implements ITablePasteProvider {
       startRow,
       startCol,
       endRow: targetMaxRows - 1,
-      endCol: targetMaxCols - 1
+      endCol: Math.min(startCol + sourceCols - 1, currentModel.colCount - 1)
     };
 
     return { patches, newSelection };
@@ -491,6 +654,9 @@ export class TableRecoveryManager implements ITableRecovery {
 
   diagnose(model: ITableModel): string[] {
     this.diagnosticsLog = [];
+    if (!model) {
+      return ["Model is undefined or null."];
+    }
     const validation = TableModelValidator.validate(model);
     if (!validation.isValid) {
       this.diagnosticsLog.push(...validation.errors);
@@ -792,10 +958,17 @@ export class TableController {
     }
   }
 
-  handlePaste(text: string): { domPatches: ITableDOMPatch[]; success: boolean } {
+  handlePaste(
+    text: string,
+    targetSelection?: ITableSelection | null,
+    htmlContent?: string
+  ): { domPatches: ITableDOMPatch[]; success: boolean } {
+    if (targetSelection) {
+      this.selection = targetSelection;
+    }
     if (!this.selection) return { domPatches: [], success: false };
     
-    const pasteResult = this.pasteProvider.parseClipboard(text, this.currentModel, this.selection);
+    const pasteResult = this.pasteProvider.parseClipboard(text, this.currentModel, this.selection, htmlContent);
     if (!pasteResult) return { domPatches: [], success: false };
 
     return this.applyPatches(pasteResult.patches, pasteResult.newSelection);

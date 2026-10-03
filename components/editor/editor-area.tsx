@@ -25,7 +25,10 @@ import {
   PatchType,
   ITableDOMPatch,
   TableController,
-  ITableSelection
+  ITableSelection,
+  SelectionType,
+  serializeCellsToTSV,
+  serializeCellsToHTML
 } from './table-model';
 
 const SketchDialog = lazy(() => import('./sketch-dialog').then(module => ({ default: module.SketchDialog })));
@@ -236,17 +239,26 @@ const getCellIndices = (cell: HTMLElement) => {
   const tr = cell.closest('tr');
   const table = cell.closest('table');
   if (!tr || !table) return null;
-  const allRows = Array.from(table.querySelectorAll('tr'));
+  const allRows = Array.from(table.querySelectorAll('tr')).filter(r => r.closest('table') === table);
   const r = allRows.indexOf(tr);
-  const cells = Array.from(tr.children);
+  const cells = Array.from(tr.querySelectorAll('th, td')).filter(c => c.closest('tr') === tr);
   const c = cells.indexOf(cell);
   return { r, c, table, tr };
 };
 
 const parseTableDOM = (table: HTMLTableElement): ITableModel => {
-  const rows = Array.from(table.querySelectorAll('tr'));
+  if (!table) {
+    return {
+      id: 'table_' + Math.random().toString(36).substring(2, 9),
+      cells: [],
+      rowCount: 0,
+      colCount: 0
+    };
+  }
+  const rows = Array.from(table.querySelectorAll('tr')).filter(tr => tr.closest('table') === table);
   const cells: ITableCell[][] = rows.map((tr) => {
-    return Array.from(tr.children).map((cell) => {
+    const directCells = Array.from(tr.querySelectorAll('th, td')).filter(cell => cell.closest('tr') === tr);
+    return directCells.map((cell) => {
       const alignment = cell.getAttribute('align') as 'left' | 'center' | 'right' | null || 'left';
       return {
         value: cell.innerHTML === '<br>' ? '' : cell.innerHTML,
@@ -255,7 +267,7 @@ const parseTableDOM = (table: HTMLTableElement): ITableModel => {
     });
   });
   return {
-    id: table.id || 'table_' + Math.random().toString(36).substring(2, 9),
+    id: table?.id || 'table_' + Math.random().toString(36).substring(2, 9),
     cells,
     rowCount: cells.length,
     colCount: cells[0]?.length || 0
@@ -870,6 +882,19 @@ export const EditorArea = ({
     };
 
     service.use(gfm as import('turndown').Plugin);
+
+    // Override tableCell rule to guarantee all pipe characters inside cells are escaped
+    service.addRule('tableCellEscapePipes', {
+      filter: ['th', 'td'],
+      replacement: function (content, node) {
+        // Escape pipes inside table cells so they never produce sudden extra columns when parsed as markdown
+        const escaped = content.replace(/\|/g, '\\|').replace(/[\r\n]+/g, ' ');
+        const parentTr = node.parentNode;
+        const index = parentTr ? Array.prototype.indexOf.call(parentTr.childNodes, node) : 0;
+        const prefix = index === 0 ? '| ' : ' ';
+        return prefix + (escaped.trim() || ' ') + ' |';
+      }
+    });
 
     service.addRule('caretMarker', {
       filter: function (node) {
@@ -1563,7 +1588,7 @@ export const EditorArea = ({
       });
 
       const model: ITableModel = {
-        id: hoveredTable.id || 'table_' + Math.random().toString(36).substring(2, 9),
+        id: hoveredTable?.id || 'table_' + Math.random().toString(36).substring(2, 9),
         cells,
         rowCount: cells.length,
         colCount: cells[0]?.length || 0
@@ -2022,12 +2047,79 @@ export const EditorArea = ({
               return;
             }
           }
+        } else if (e.key === 'Enter') {
+          if (!e.shiftKey) {
+            e.preventDefault();
+            if (r === maxRows - 1) {
+              const controller = getTableController(table);
+              const result = controller.applyPatches([{
+                patchId: 'patch_' + Math.random().toString(36).substring(2, 9),
+                type: PatchType.INSERT_ROW,
+                timestamp: Date.now(),
+                payload: { count: 1, at: r + 1 }
+              }]);
+              if (result.success) {
+                renderDOMPatches(table, controller, result.domPatches, flushPreviewEdit);
+                setTimeout(() => {
+                  const addedCell = getCellAt(r + 1, c);
+                  if (addedCell) focusCell(addedCell, true);
+                }, 50);
+              }
+            } else {
+              const targetCell = getCellAt(r + 1, c);
+              if (targetCell) {
+                focusCell(targetCell, true);
+              }
+            }
+            return;
+          }
         } else if (e.key === 'Escape') {
           e.preventDefault();
           cell.blur();
           setActiveCell(null);
           return;
         }
+      }
+    }
+
+    if (hoveredTable && (selectedRowIndex !== null || selectedColIndex !== null)) {
+      if (e.key === 'Backspace' || e.key === 'Delete') {
+        e.preventDefault();
+        const controller = getTableController(hoveredTable);
+        if (selectedColIndex !== null) {
+          const colCount = hoveredTable.querySelectorAll('tr')[0]?.children.length || 0;
+          const patchType = colCount > 1 ? PatchType.DELETE_COL : PatchType.CLEAR_COL;
+          const res = controller.applyPatches([{
+            patchId: 'patch_' + Math.random().toString(36).substring(2, 9),
+            type: patchType,
+            timestamp: Date.now(),
+            payload: { c: selectedColIndex }
+          }]);
+          if (res.success) {
+            renderDOMPatches(hoveredTable, controller, res.domPatches, () => flushPreviewEdit(true));
+            setSelectedColIndex(null);
+          }
+        } else if (selectedRowIndex !== null) {
+          const rowCount = hoveredTable.querySelectorAll('tr').length;
+          const patchType = rowCount > 1 && selectedRowIndex > 0 ? PatchType.DELETE_ROW : PatchType.CLEAR_ROW;
+          const res = controller.applyPatches([{
+            patchId: 'patch_' + Math.random().toString(36).substring(2, 9),
+            type: patchType,
+            timestamp: Date.now(),
+            payload: { r: selectedRowIndex }
+          }]);
+          if (res.success) {
+            renderDOMPatches(hoveredTable, controller, res.domPatches, () => flushPreviewEdit(true));
+            setSelectedRowIndex(null);
+          }
+        }
+        return;
+      }
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        setSelectedColIndex(null);
+        setSelectedRowIndex(null);
+        return;
       }
     }
 
@@ -2095,7 +2187,7 @@ export const EditorArea = ({
         // Let the auto-update happen via the oninput handler on the code tag itself
       }
     }
-  }, [flushPreviewEdit]);
+  }, [flushPreviewEdit, hoveredTable, selectedColIndex, selectedRowIndex]);
 
   const prevAutoMarkdown = useRef(isAutoMarkdownEnabled);
   
@@ -2327,24 +2419,272 @@ export const EditorArea = ({
     return () => el.removeEventListener('beforeinput', handleBeforeInput as EventListener);
   }, [flushPreviewEdit]);
 
+  const handleCopy = useCallback((e: React.ClipboardEvent<HTMLDivElement>) => {
+    const sel = window.getSelection();
+    const selNode = sel?.anchorNode;
+    const activeCellEl = (selNode instanceof Element ? selNode : selNode?.parentElement)?.closest('td, th') as HTMLElement | null;
+    const targetTable = (activeCellEl?.closest('table') || hoveredTable) as HTMLTableElement | null;
+
+    if (!targetTable) return;
+
+    // Case A: User has selected a specific column via column handle
+    if (selectedColIndex !== null) {
+      e.preventDefault();
+      const allRows = Array.from(targetTable.querySelectorAll('tr'));
+      const colValues: string[][] = [];
+      allRows.forEach(tr => {
+        const cell = tr.children[selectedColIndex] as HTMLElement | null;
+        if (cell) {
+          const val = cell.innerHTML === '<br>' ? '' : cell.innerText.trim();
+          colValues.push([val]);
+        }
+      });
+      if (colValues.length > 0) {
+        const tsv = serializeCellsToTSV(colValues);
+        const html = serializeCellsToHTML(colValues);
+        e.clipboardData.setData('text/plain', tsv);
+        e.clipboardData.setData('text/html', html);
+      }
+      return;
+    }
+
+    // Case B: User has selected a specific row via row handle
+    if (selectedRowIndex !== null) {
+      e.preventDefault();
+      const allRows = Array.from(targetTable.querySelectorAll('tr'));
+      const targetRow = allRows[selectedRowIndex];
+      if (targetRow) {
+        const cells = Array.from(targetRow.children) as HTMLElement[];
+        const rowValues: string[][] = [cells.map(c => c.innerHTML === '<br>' ? '' : c.innerText.trim())];
+        const tsv = serializeCellsToTSV(rowValues);
+        const html = serializeCellsToHTML(rowValues);
+        e.clipboardData.setData('text/plain', tsv);
+        e.clipboardData.setData('text/html', html);
+      }
+      return;
+    }
+
+    // Case C: Active cell or selection within table
+    if (activeCellEl) {
+      if (sel && !sel.isCollapsed && activeCellEl.contains(sel.anchorNode) && activeCellEl.contains(sel.focusNode)) {
+        return;
+      }
+
+      const selRange = sel && sel.rangeCount > 0 ? sel.getRangeAt(0) : null;
+      if (selRange && !sel.isCollapsed) {
+        const commonAncestor = selRange.commonAncestorContainer;
+        const commonEl = commonAncestor instanceof Element ? commonAncestor : commonAncestor.parentElement;
+        if (commonEl && targetTable.contains(commonEl) && commonEl !== activeCellEl) {
+          e.preventDefault();
+          const allRows = Array.from(targetTable.querySelectorAll('tr'));
+          const grid: string[][] = [];
+          allRows.forEach(tr => {
+            const rowCells: string[] = [];
+            Array.from(tr.children).forEach(cell => {
+              if (sel.containsNode(cell, true)) {
+                rowCells.push(cell.innerHTML === '<br>' ? '' : (cell as HTMLElement).innerText.trim());
+              }
+            });
+            if (rowCells.length > 0) {
+              grid.push(rowCells);
+            }
+          });
+
+          if (grid.length > 0) {
+            e.clipboardData.setData('text/plain', serializeCellsToTSV(grid));
+            e.clipboardData.setData('text/html', serializeCellsToHTML(grid));
+            return;
+          }
+        }
+      }
+
+      if (sel?.isCollapsed || !sel || activeCellEl.contains(sel.anchorNode)) {
+        e.preventDefault();
+        const cellText = activeCellEl.innerHTML === '<br>' ? '' : activeCellEl.innerText.trim();
+        const grid = [[cellText]];
+        e.clipboardData.setData('text/plain', serializeCellsToTSV(grid));
+        e.clipboardData.setData('text/html', serializeCellsToHTML(grid));
+      }
+    }
+  }, [selectedColIndex, selectedRowIndex, hoveredTable]);
+
+  const handleCut = useCallback((e: React.ClipboardEvent<HTMLDivElement>) => {
+    const sel = window.getSelection();
+    const selNode = sel?.anchorNode;
+    const activeCellEl = (selNode instanceof Element ? selNode : selNode?.parentElement)?.closest('td, th') as HTMLElement | null;
+    const targetTable = (activeCellEl?.closest('table') || hoveredTable) as HTMLTableElement | null;
+
+    if (!targetTable) return;
+
+    // Case A: Selected column cut
+    if (selectedColIndex !== null) {
+      e.preventDefault();
+      const allRows = Array.from(targetTable.querySelectorAll('tr'));
+      const colValues: string[][] = [];
+      allRows.forEach(tr => {
+        const cell = tr.children[selectedColIndex] as HTMLElement | null;
+        if (cell) {
+          colValues.push([cell.innerHTML === '<br>' ? '' : cell.innerText.trim()]);
+        }
+      });
+      if (colValues.length > 0) {
+        e.clipboardData.setData('text/plain', serializeCellsToTSV(colValues));
+        e.clipboardData.setData('text/html', serializeCellsToHTML(colValues));
+      }
+
+      const colCount = targetTable.querySelectorAll('tr')[0]?.children.length || 0;
+      const controller = getTableController(targetTable);
+      const patchType = colCount > 1 ? PatchType.DELETE_COL : PatchType.CLEAR_COL;
+      const res = controller.applyPatches([{
+        patchId: 'patch_' + Math.random().toString(36).substring(2, 9),
+        type: patchType,
+        timestamp: Date.now(),
+        payload: { c: selectedColIndex }
+      }]);
+      if (res.success) {
+        renderDOMPatches(targetTable, controller, res.domPatches, () => flushPreviewEdit(true));
+        setSelectedColIndex(null);
+      }
+      return;
+    }
+
+    // Case B: Selected row cut
+    if (selectedRowIndex !== null) {
+      e.preventDefault();
+      const allRows = Array.from(targetTable.querySelectorAll('tr'));
+      const targetRow = allRows[selectedRowIndex];
+      if (targetRow) {
+        const cells = Array.from(targetRow.children) as HTMLElement[];
+        const rowValues: string[][] = [cells.map(c => c.innerHTML === '<br>' ? '' : c.innerText.trim())];
+        e.clipboardData.setData('text/plain', serializeCellsToTSV(rowValues));
+        e.clipboardData.setData('text/html', serializeCellsToHTML(rowValues));
+
+        const controller = getTableController(targetTable);
+        const rowCount = allRows.length;
+        const patchType = rowCount > 1 && selectedRowIndex > 0 ? PatchType.DELETE_ROW : PatchType.CLEAR_ROW;
+        const res = controller.applyPatches([{
+          patchId: 'patch_' + Math.random().toString(36).substring(2, 9),
+          type: patchType,
+          timestamp: Date.now(),
+          payload: { r: selectedRowIndex }
+        }]);
+        if (res.success) {
+          renderDOMPatches(targetTable, controller, res.domPatches, () => flushPreviewEdit(true));
+          setSelectedRowIndex(null);
+        }
+      }
+      return;
+    }
+
+    // Case C: Active cell cut
+    if (activeCellEl) {
+      if (sel && !sel.isCollapsed && activeCellEl.contains(sel.anchorNode) && activeCellEl.contains(sel.focusNode)) {
+        setTimeout(() => {
+          if (!activeCellEl.innerHTML || activeCellEl.innerHTML === '') {
+            activeCellEl.innerHTML = '<br>';
+          }
+          flushPreviewEdit(true);
+        }, 10);
+        return;
+      }
+
+      e.preventDefault();
+      const cellText = activeCellEl.innerHTML === '<br>' ? '' : activeCellEl.innerText.trim();
+      const grid = [[cellText]];
+      e.clipboardData.setData('text/plain', serializeCellsToTSV(grid));
+      e.clipboardData.setData('text/html', serializeCellsToHTML(grid));
+      activeCellEl.innerHTML = '<br>';
+      focusCell(activeCellEl, true);
+      flushPreviewEdit(true);
+    }
+  }, [selectedColIndex, selectedRowIndex, hoveredTable, flushPreviewEdit]);
+
   const handlePaste = useCallback((e: React.ClipboardEvent<HTMLDivElement>) => {
     const textData = e.clipboardData.getData('text/plain');
+    const htmlData = e.clipboardData.getData('text/html');
     const selNode = window.getSelection()?.anchorNode;
     const activeCellEl = (selNode instanceof Element ? selNode : selNode?.parentElement)?.closest('td, th') as HTMLElement | null;
 
-    if (activeCellEl && textData && (textData.includes('\t') || textData.includes('\n'))) {
-      e.preventDefault();
+    if (activeCellEl) {
       const table = activeCellEl.closest('table');
       if (table) {
         const indices = getCellIndices(activeCellEl);
         if (indices) {
           const { r: startRow, c: startCol } = indices;
-          const controller = getTableController(table);
-          const result = controller.handlePaste(textData, startRow, startCol);
-          if (result && result.success) {
-            renderDOMPatches(table, controller, result.domPatches, () => flushPreviewEdit(true));
+
+          const hasTabs = Boolean(textData && textData.includes('\t'));
+          const isMarkdownTable = Boolean(
+            textData && 
+            (/^\|?(\s*:?-+:?\s*\|)+\s*:?-+:?\s*\|?$/m.test(textData) || 
+             (textData.trim().startsWith('|') && textData.includes('\n')))
+          );
+          const isTableHTML = Boolean(htmlData && htmlData.includes('<table'));
+
+          const isGridPaste = hasTabs || isMarkdownTable || isTableHTML;
+
+          if (isGridPaste) {
+            e.preventDefault();
+            const targetSelection: ITableSelection = {
+              type: SelectionType.CELL,
+              startRow,
+              startCol,
+              endRow: startRow,
+              endCol: startCol
+            };
+            const controller = getTableController(table, targetSelection);
+            const result = controller.handlePaste(textData, targetSelection, htmlData);
+            if (result && result.success) {
+              renderDOMPatches(table, controller, result.domPatches, () => {
+                flushPreviewEdit(true);
+                setTimeout(() => {
+                  const directRows = Array.from(table.querySelectorAll('tr')).filter(tr => tr.closest('table') === table);
+                  const targetRow = directRows[startRow];
+                  const directCells = targetRow ? Array.from(targetRow.querySelectorAll('th, td')).filter(c => c.closest('tr') === targetRow) : [];
+                  const targetCell = directCells[startCol] as HTMLElement | null;
+                  if (targetCell) {
+                    focusCell(targetCell, true);
+                  }
+                }, 50);
+              });
+              return;
+            }
           }
-          return;
+
+          // Single-value plain text inside table cell: clean inline text paste without removing existing content
+          if (textData) {
+            e.preventDefault();
+            // Sanitize: collapse newlines/tabs to space and escape pipe symbols so columns aren't split
+            const inlineText = textData
+              .replace(/[\r\n]+/g, ' ')
+              .replace(/\t/g, ' ')
+              .replace(/\|/g, '\\|')
+              .trim();
+            if (!inlineText) return;
+
+            const sel = window.getSelection();
+            if (sel && sel.rangeCount > 0 && activeCellEl.contains(sel.anchorNode)) {
+              const range = sel.getRangeAt(0);
+              range.deleteContents();
+              if (activeCellEl.innerHTML === '<br>') {
+                activeCellEl.innerHTML = '';
+              }
+              const textNode = document.createTextNode(inlineText);
+              range.insertNode(textNode);
+              range.setStartAfter(textNode);
+              range.setEndAfter(textNode);
+              sel.removeAllRanges();
+              sel.addRange(range);
+            } else {
+              if (activeCellEl.innerHTML === '<br>' || !activeCellEl.textContent?.trim()) {
+                activeCellEl.textContent = inlineText;
+              } else {
+                activeCellEl.textContent = (activeCellEl.textContent || '') + inlineText;
+              }
+              focusCell(activeCellEl, true);
+            }
+            flushPreviewEdit(true);
+            return;
+          }
         }
       }
     }
@@ -2421,8 +2761,6 @@ export const EditorArea = ({
       }
       
       if (isAutoMarkdownEnabled) {
-         // Let the debounced handleInput take care of state update and markdown parsing smoothly,
-         // rather than blocking the UI with synchronous flushPreviewEdit immediately.
          handleInput();
       }
     }
@@ -2445,6 +2783,8 @@ export const EditorArea = ({
         onKeyDown={handleKeyDown}
         onKeyUp={handleCursorMove}
         onClick={handleCursorMove}
+        onCopy={handleCopy}
+        onCut={handleCut}
         onPaste={handlePaste}
         onDragStart={(e) => {
           if ((e.target as HTMLElement).tagName === 'IMG') {

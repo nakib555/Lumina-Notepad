@@ -18,7 +18,7 @@ export const useEditorHistory = (note: Note | null, onUpdateNote: (id: string, u
 
   // Reset history when note changes
   useEffect(() => {
-    if (note && (history.length === 0 || history[historyIndex]?.title !== note.title)) {
+    if (note && note.id && (history.length === 0 || history[historyIndex]?.title !== note.title)) {
       const initialHistory = [{ title: note.title, content: note.content }];
       setHistory(initialHistory);
       setHistoryIndex(0);

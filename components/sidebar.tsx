@@ -63,7 +63,7 @@ export function Sidebar({
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
   useEffect(() => {
-    const activeNoteObj = notes.find(n => n.id === activeNoteId);
+    const activeNoteObj = notes.find(n => Boolean(n && n.id && n.id === activeNoteId));
     if (activeNoteObj?.date) {
       setSelectedDate(new Date(activeNoteObj.date));
     }
@@ -80,7 +80,9 @@ export function Sidebar({
   const allTags = useMemo(() => {
     const tags = new Set<string>();
     notes.forEach(note => {
-      note.tags?.forEach(tag => tags.add(tag));
+      if (note && note.id) {
+        note.tags?.forEach(tag => tags.add(tag));
+      }
     });
     return Array.from(tags).sort();
   }, [notes]);
@@ -92,8 +94,11 @@ export function Sidebar({
   const filteredNotes = useMemo(() => {
     const q = searchQuery.toLowerCase();
     return notes.filter(note => {
-      const matchesSearch = !q || note.title.toLowerCase().includes(q) || 
-                           note.content.toLowerCase().includes(q);
+      if (!note || !note.id) return false;
+      const title = note.title || "";
+      const content = note.content || "";
+      const matchesSearch = !q || title.toLowerCase().includes(q) || 
+                           content.toLowerCase().includes(q);
       const matchesTags = selectedTags.length === 0 || selectedTags.every(tag => note.tags?.includes(tag));
       return matchesSearch && matchesTags;
     });
@@ -273,12 +278,13 @@ export function Sidebar({
             <div className="mt-6 w-full px-2">
               <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Timeline</h3>
               <div className="space-y-4 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-border before:to-transparent">
-                  {notes
-                      .sort((a, b) => b.updatedAt - a.updatedAt)
+                  {[...notes]
+                      .filter(Boolean)
+                      .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))
                       .slice(0, 10).map((note) => (
-                      <div key={note.id} className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active" onClick={() => {
+                      <div key={note?.id || Math.random()} className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active" onClick={() => {
                         if (Capacitor.isNativePlatform()) Haptics.impact({ style: ImpactStyle.Light }).catch(()=>{});
-                        onSelectNote(note.id);
+                        if (note?.id) onSelectNote(note.id);
                       }}>
                           <div className="flex items-center justify-center w-10 h-10 rounded-full border border-background bg-secondary text-secondary-foreground shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 cursor-pointer hover:scale-105 transition-transform z-10">
                               <FileText className="w-4 h-4" />

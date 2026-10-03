@@ -251,16 +251,18 @@ export default function App() {
         const content = decodeBase64UTF8(fileDetail.base64Content);
         
         // Check if a note with this title already exists to avoid duplicates
-        const existingNote = notes.find(n => n.title === title);
-        if (existingNote) {
+        const existingNote = notes.find(n => Boolean(n && n.id && n.title === title));
+        if (existingNote && existingNote.id) {
            updateNote(existingNote.id, { content });
            handleSelectNote(existingNote.id);
            toast.success(`Updated "${title}"`);
         } else {
            const newId = createNote();
-           updateNote(newId, { title, content });
-           handleSelectNote(newId);
-           toast.success(`Opened "${title}"`);
+           if (newId) {
+             updateNote(newId, { title, content });
+             handleSelectNote(newId);
+             toast.success(`Opened "${title}"`);
+           }
         }
     };
 

@@ -548,6 +548,40 @@ export const FloatingToolbar = ({
       if (navigator.clipboard && navigator.clipboard.readText) {
         try {
           const text = await navigator.clipboard.readText();
+          let html = '';
+          try {
+            if (navigator.clipboard.read) {
+              const items = await navigator.clipboard.read();
+              for (const item of items) {
+                if (item.types.includes('text/html')) {
+                  const blob = await item.getType('text/html');
+                  html = await blob.text();
+                  break;
+                }
+              }
+            }
+          } catch {
+            // ignore clipboard.read permissions fallback
+          }
+
+          const activeCell = (document.activeElement?.closest('td, th') || textareaRef.current?.querySelector('.active-cell')) as HTMLElement | null;
+          if (activeCell) {
+            try {
+              const dt = new DataTransfer();
+              dt.setData('text/plain', text);
+              if (html) dt.setData('text/html', html);
+              const pasteEvent = new ClipboardEvent('paste', {
+                clipboardData: dt,
+                bubbles: true,
+                cancelable: true
+              });
+              activeCell.dispatchEvent(pasteEvent);
+              return;
+            } catch {
+              // fallback
+            }
+          }
+
           document.execCommand('insertText', false, text);
           setTimeout(scrollToSelection, 10);
           return;

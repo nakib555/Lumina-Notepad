@@ -216,7 +216,7 @@ export function SidebarFileTree({
   const isDescendant = (folderId: string, potentialParentId: string | null): boolean => {
     if (!potentialParentId) return false;
     if (folderId === potentialParentId) return true;
-    const parent = folders.find(f => f.id === potentialParentId);
+    const parent = folders.find(f => Boolean(f && f.id && f.id === potentialParentId));
     return parent ? isDescendant(folderId, parent.parentId) : false;
   };
 
@@ -233,14 +233,14 @@ export function SidebarFileTree({
     if (dropTargetType === 'root') {
       targetFolderId = null;
     } else if (dropTargetType === 'note') {
-      const targetNote = notes.find(n => n.id === dropTargetId);
+      const targetNote = notes.find(n => Boolean(n && n.id && n.id === dropTargetId));
       targetFolderId = targetNote?.folderId || null;
       referenceId = dropTargetId !== 'root' ? dropTargetId : undefined;
     } else if (dropTargetType === 'folder' || dropTargetType === 'folder-container') {
       if (pos === 'inside' || dropTargetType === 'folder-container') {
         targetFolderId = dropTargetId !== 'root' ? dropTargetId : null;
       } else {
-        const targetFolder = folders.find(f => f.id === dropTargetId);
+        const targetFolder = folders.find(f => Boolean(f && f.id && f.id === dropTargetId));
         targetFolderId = targetFolder?.parentId || null;
         referenceId = dropTargetId !== 'root' ? dropTargetId : undefined;
       }
@@ -582,7 +582,8 @@ export function SidebarFileTree({
   };
 
   const renderNote = (note: Note, level = 0) => {
-    const text = note.content;
+    if (!note || !note.id) return null;
+    const text = note.content || '';
     const words = text.trim() === '' ? 0 : text.trim().split(/\s+/).length;
     const readingTime = Math.ceil(words / 200);
     
