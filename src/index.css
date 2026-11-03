@@ -368,12 +368,18 @@
 }
 
 .rounded-table th,
-.rounded-table td {
+.rounded-table td,
+.table-wrapper table th,
+.table-wrapper table td {
   padding: 0.65rem 0.9rem !important;
   border-bottom: 1px solid var(--border) !important;
   border-right: 1px solid var(--border) !important;
   line-height: 1.55 !important;
   min-width: 80px;
+  vertical-align: top !important;
+  overflow-wrap: break-word !important;
+  word-break: normal !important;
+  box-sizing: border-box;
 }
 
 .rounded-table th:last-child,
@@ -684,6 +690,20 @@ body.search-is-active *::selection {
     break-inside: avoid !important;
   }
 
+  /* High contrast zebra striping in print */
+  .table-zebra tbody tr:nth-child(even),
+  .table-zebra tbody tr:nth-child(even) td,
+  .table-wrapper.table-zebra tbody tr:nth-child(even),
+  .table-wrapper.table-zebra tbody tr:nth-child(even) td,
+  .rounded-table.table-zebra tbody tr:nth-child(even),
+  .rounded-table.table-zebra tbody tr:nth-child(even) td,
+  .table-wrapper.table-zebra table tbody tr:nth-child(even),
+  .table-wrapper.table-zebra table tbody tr:nth-child(even) td {
+    background-color: #f1f5f9 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
   /* Sketches and images in print */
   .sketch-container, img {
     page-break-inside: avoid !important;
@@ -725,11 +745,31 @@ td:empty::before, th:empty::before {
 }
 
 /* Zebra-striping styles for tables */
-.table-zebra tbody tr:nth-child(even) {
+.table-zebra tbody tr:nth-child(even),
+.table-wrapper.table-zebra tbody tr:nth-child(even),
+.rounded-table.table-zebra tbody tr:nth-child(even),
+.table-wrapper.table-zebra table tbody tr:nth-child(even) {
   background-color: var(--muted) !important;
 }
-.table-zebra tbody tr:nth-child(even) td {
+.table-zebra tbody tr:nth-child(even) td,
+.table-wrapper.table-zebra tbody tr:nth-child(even) td,
+.rounded-table.table-zebra tbody tr:nth-child(even) td,
+.table-wrapper.table-zebra table tbody tr:nth-child(even) td {
   background-color: var(--muted) !important;
+}
+
+/* Subtle hover contrast for zebra tables */
+.table-zebra tbody tr:nth-child(even):hover td,
+.table-wrapper.table-zebra tbody tr:nth-child(even):hover td,
+.rounded-table.table-zebra tbody tr:nth-child(even):hover td,
+.table-wrapper.table-zebra table tbody tr:nth-child(even):hover td {
+  filter: brightness(0.97);
+}
+.dark .table-zebra tbody tr:nth-child(even):hover td,
+.dark .table-wrapper.table-zebra tbody tr:nth-child(even):hover td,
+.dark .rounded-table.table-zebra tbody tr:nth-child(even):hover td,
+.dark .table-wrapper.table-zebra table tbody tr:nth-child(even):hover td {
+  filter: brightness(1.1);
 }
 
 /* Custom Highlight.js Code Highlighting Theme */

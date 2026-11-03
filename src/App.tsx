@@ -70,6 +70,7 @@ export default function App() {
   const [fontFamily, setFontFamily] = useState<string>(() => localStorage.getItem('lumina-font') || 'sans');
   const [baseFontSize, setBaseFontSize] = useState<string>(() => localStorage.getItem('lumina-base-font-size') || 'text-base');
   const [powerSaver, setPowerSaver] = useState<boolean>(() => localStorage.getItem('lumina-power-saver') === 'true');
+  const [zebraTables, setZebraTables] = useState<boolean>(() => localStorage.getItem('lumina-zebra-tables') === 'true');
 
   useEffect(() => {
     localStorage.setItem('lumina-base-font-size', baseFontSize);
@@ -78,6 +79,10 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('lumina-power-saver', powerSaver.toString());
   }, [powerSaver]);
+
+  useEffect(() => {
+    localStorage.setItem('lumina-zebra-tables', zebraTables.toString());
+  }, [zebraTables]);
 
   useEffect(() => {
     localStorage.setItem('lumina-theme', theme);
@@ -344,6 +349,8 @@ export default function App() {
               baseFontSize={baseFontSize}
               onBaseFontSizeChange={setBaseFontSize}
               powerSaver={powerSaver}
+              zebraTables={zebraTables}
+              onZebraTablesChange={setZebraTables}
             />
           </Suspense>
           <Suspense fallback={null}>

@@ -38,6 +38,8 @@ interface EditorProps {
   baseFontSize: string;
   onBaseFontSizeChange: (size: string) => void;
   powerSaver: boolean;
+  zebraTables?: boolean;
+  onZebraTablesChange?: (zebra: boolean) => void;
 }
 
 export function Editor({ 
@@ -50,7 +52,9 @@ export function Editor({
   onFontFamilyChange,
   baseFontSize,
   onBaseFontSizeChange,
-  powerSaver
+  powerSaver,
+  zebraTables,
+  onZebraTablesChange
 }: EditorProps) {
   const exportMenuRef = useRef<HTMLDivElement>(null);
   const symbolMenuRef = useRef<HTMLDivElement>(null);
@@ -461,6 +465,8 @@ export function Editor({
         onBaseFontSizeChange={onBaseFontSizeChange}
         fontFamily={fontFamily}
         onFontFamilyChange={onFontFamilyChange}
+        zebraTables={zebraTables}
+        onZebraTablesChange={onZebraTablesChange}
       />
 
       {/* Editor Content & Sandbox Container */}
@@ -584,6 +590,7 @@ export function Editor({
                   isEraserMode={isEraserMode}
                   powerSaver={powerSaver}
                   baseFontSize={baseFontSize}
+                  defaultZebraTables={zebraTables}
                 />
               )}
             </div>

@@ -70,11 +70,11 @@ export const TableEditDialog = ({ isOpen, onClose, table, onConfirm }: TableEdit
       
       const currentRows = allDirectRows.length || 2;
       
-      const wrapper = table.closest('.overflow-x-auto');
+      const wrapper = table.closest('.table-wrapper') || table.closest('.overflow-x-auto');
       let currentCurveLevel = 0;
-      let currentZebra = false;
+      let currentZebra = table.classList.contains('table-zebra');
       if (wrapper) {
-        currentZebra = wrapper.classList.contains('table-zebra');
+        currentZebra = currentZebra || wrapper.classList.contains('table-zebra');
         const classes = Array.from(wrapper.classList);
         const curveClass = classes.find(c => c.startsWith('rounded-') && c !== 'rounded-table');
         if (curveClass) {

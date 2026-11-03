@@ -7,7 +7,9 @@ import hljs from 'highlight.js';
 import { 
   Trash2,
   Settings2, 
-  ExternalLink} from "lucide-react";
+  ExternalLink,
+  Rows3
+} from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -153,10 +155,16 @@ renderer.code = function(token) {
 
   return `<div class="code-block-wrapper not-prose my-6 print:my-2" contenteditable="false"><div class="rounded-xl font-sans group transition-colors duration-300 border border-border relative overflow-hidden bg-muted/10"><div class="sticky top-0 z-10 flex justify-between items-center px-5 py-2.5 border-b border-border select-none bg-muted/30"><div class="flex items-center gap-3"><span class="text-[13px] font-semibold text-muted-foreground font-mono capitalize language-label">${displayLang}</span></div><div class="flex items-center gap-4"><button class="flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[13px] font-medium transition-all text-emerald-600 hover:bg-emerald-500/10 hover:text-emerald-700 dark:hover:text-emerald-400 run-code-btn" title="Run Code" onclick="window.dispatchEvent(new CustomEvent('run-code-block', { detail: { code: this.closest('.code-block-wrapper').querySelector('.code-element').textContent, language: '${finalLang}' } }));"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>Run</button><button class="flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[13px] font-medium text-purple-600 hover:bg-purple-500/10 hover:text-purple-700 dark:hover:text-purple-400 transition-all open-panel-btn" title="Open in Side Panel" onclick="window.dispatchEvent(new CustomEvent('open-code-block', { detail: { code: this.closest('.code-block-wrapper').querySelector('.code-element').textContent, language: '${finalLang}' } }));"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>Open</button><button class="flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[13px] font-medium text-muted-foreground hover:bg-muted/80 hover:text-foreground transition-all active:scale-95 copy-btn" onclick="navigator.clipboard.writeText(this.closest('.code-block-wrapper').querySelector('.code-element').textContent); const span = this.querySelector('.copy-text'); span.textContent='Copied'; setTimeout(() => span.textContent='', 2000);" title="code"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg><span class="copy-text"></span></button><button class="flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[13px] font-medium text-muted-foreground hover:bg-red-500/10 hover:text-red-500 transition-all active:scale-95 delete-btn" onclick="const wrapper = this.closest('.code-block-wrapper'); const next = wrapper.nextElementSibling; if(next && next.tagName === 'P' && next.innerHTML.includes('&#8203;')) next.remove(); wrapper.remove();" title="Delete code block"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg></button></div></div><div class="relative overflow-x-auto text-[14px] leading-relaxed custom-scrollbar bg-transparent code-container whitespace-pre print:whitespace-pre-wrap font-mono m-0 text-slate-800 dark:text-slate-200">${highlightedContent}</div></div></div>`;
 };
+export let globalDefaultZebra = false;
+export const setGlobalDefaultZebra = (val: boolean) => {
+  globalDefaultZebra = val;
+};
+
 renderer.table = function(token: import('marked').Tokens.Table) {
   let html = marked.Renderer.prototype.table.call(this, token);
   html = html.replace('<table>', '<table class="w-full m-0 table-auto border-separate border-spacing-0">');
-  return `\n<div class="overflow-x-auto w-full table-wrapper my-8 print:my-2 rounded-xl rounded-table border border-[var(--border)] p-[1px] bg-background shadow-xs print:border-none print:shadow-none">\n${html}\n</div>\n`;
+  const zebraClass = globalDefaultZebra ? ' table-zebra' : '';
+  return `\n<div class="overflow-x-auto w-full table-wrapper my-8 print:my-2 rounded-xl rounded-table border border-[var(--border)] p-[1px] bg-background shadow-xs print:border-none print:shadow-none${zebraClass}">\n${html}\n</div>\n`;
 };
 
 renderer.listitem = function(token: import('marked').Tokens.ListItem) {
@@ -449,6 +457,7 @@ interface EditorAreaProps {
   isMode?: boolean;
   powerSaver?: boolean;
   baseFontSize?: string;
+  defaultZebraTables?: boolean;
 }
 
 export const EditorArea = ({
@@ -464,7 +473,8 @@ export const EditorArea = ({
   isEraserMode,
   isMode,
   powerSaver,
-  baseFontSize}: EditorAreaProps) => {
+  baseFontSize,
+  defaultZebraTables}: EditorAreaProps) => {
   const isEraserActive = isEraserMode ?? isMode ?? false;
   const previewRef = useRef<HTMLDivElement>(null);
   const isComposing = useRef(false);
@@ -492,6 +502,11 @@ export const EditorArea = ({
 
   const [hoveredLink, setHoveredLink] = useState<HTMLAnchorElement | null>(null);
   const [linkRect, setLinkRect] = useState<{ top: number, left: number, width: number, height: number } | null>(null);
+  const [, setZebraToggleTick] = useState(0);
+
+  useEffect(() => {
+    setGlobalDefaultZebra(Boolean(defaultZebraTables));
+  }, [defaultZebraTables]);
   
 
 
@@ -1559,7 +1574,23 @@ export const EditorArea = ({
     flushPreviewEdit(true);
   }, [hoveredImage, flushPreviewEdit]);
 
-
+  const handleQuickToggleZebra = useCallback(() => {
+    if (!hoveredTable) return;
+    const wrapper = hoveredTable.closest('.table-wrapper') || hoveredTable.closest('.overflow-x-auto');
+    if (wrapper) {
+      const isZebra = wrapper.classList.contains('table-zebra');
+      if (isZebra) {
+        wrapper.classList.remove('table-zebra');
+      } else {
+        wrapper.classList.add('table-zebra');
+      }
+      if (!wrapper.classList.contains('table-wrapper')) {
+        wrapper.classList.add('table-wrapper');
+      }
+      flushPreviewEdit(true);
+      setZebraToggleTick(t => t + 1);
+    }
+  }, [hoveredTable, flushPreviewEdit]);
 
   const handleTableEditConfirm = useCallback((targetRows: number, targetCols: number, curveClass: string, tableData?: { headers: string[], rows: string[][], alignments?: string[] }, isZebra?: boolean) => {
     if (!hoveredTable) return;
@@ -2857,9 +2888,9 @@ export const EditorArea = ({
       )}
       {!isViewMode && hoveredTable && tableRect && (
         <>
-          {/* Left formatting icon */}
+          {/* Left formatting icon & zebra toggle */}
           <div 
-            className="table-floating-toolbar absolute z-30 flex items-center justify-center print:hidden"
+            className="table-floating-toolbar absolute z-30 flex items-center gap-1 print:hidden"
             style={(() => {
               let activeRowIdx = null;
               if (activeTableRow && hoveredTable && hoveredTable.contains(activeTableRow)) {
@@ -2873,7 +2904,7 @@ export const EditorArea = ({
               const activeRowTop = (rowRects[activeRowIdx] && rowRects[activeRowIdx].top) ?? tableRect.top;
               const activeRowHeight = (rowRects[activeRowIdx] && rowRects[activeRowIdx].height) ?? 40;
               const topPosition = activeRowTop + (activeRowHeight / 2) - 14;
-              const leftPosition = tableRect.left + 6;
+              const leftPosition = Math.max(6, tableRect.left - 54);
               
               return {
                 top: topPosition,
@@ -2881,11 +2912,28 @@ export const EditorArea = ({
             })()}
             onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
           >
+            {/* Quick Zebra Striping Toggle */}
+            <button 
+              onClick={(e) => { 
+                e.preventDefault(); 
+                handleQuickToggleZebra(); 
+              }}
+              className={cn(
+                "p-1.5 rounded-md transition-all backdrop-blur-sm border shadow-[0_2px_10px_rgba(0,0,0,0.05)] cursor-pointer flex items-center justify-center",
+                hoveredTable && (hoveredTable.closest('.table-wrapper') || hoveredTable.closest('.overflow-x-auto'))?.classList.contains('table-zebra')
+                  ? "text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/50 border-indigo-300 dark:border-indigo-800 ring-1 ring-indigo-500/30"
+                  : "text-muted-foreground hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 bg-background/95 border-border"
+              )}
+              title={hoveredTable && (hoveredTable.closest('.table-wrapper') || hoveredTable.closest('.overflow-x-auto'))?.classList.contains('table-zebra') ? "Disable Zebra Striping (Standard Table)" : "Enable Zebra Striping (Dense Data View)"}
+              aria-label="Toggle Zebra Striping"
+            >
+              <Rows3 className="w-4 h-4" />
+            </button>
             <button 
               onClick={(e) => { e.preventDefault(); setIsTableEditDialogOpen(true); }}
               className="p-1.5 text-muted-foreground hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 rounded-md transition-colors bg-background/95 backdrop-blur-sm border border-border shadow-[0_2px_10px_rgba(0,0,0,0.05)] cursor-pointer"
-              style={{ marginLeft: '-20px' }}
               title="Table Styling & Settings"
+              aria-label="Table Styling & Settings"
             >
               <Settings2 className="w-4 h-4" />
             </button>

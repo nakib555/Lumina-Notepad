@@ -32,6 +32,8 @@ interface EditorHeaderProps {
   onBaseFontSizeChange?: (size: string) => void;
   fontFamily: string;
   onFontFamilyChange: (font: string) => void;
+  zebraTables?: boolean;
+  onZebraTablesChange?: (zebra: boolean) => void;
 }
 
 export const EditorHeader = ({
@@ -57,6 +59,8 @@ export const EditorHeader = ({
   onBaseFontSizeChange,
   fontFamily,
   onFontFamilyChange,
+  zebraTables,
+  onZebraTablesChange,
 }: EditorHeaderProps) => {
   const [showSettingsDropdown, setShowSettingsDropdown] = useState(false);
   const settingsButtonRef = useRef<HTMLButtonElement>(null);
@@ -113,6 +117,8 @@ export const EditorHeader = ({
             baseFontSize={baseFontSize || 'text-base'}
             onBaseFontSizeChange={onBaseFontSizeChange || (() => {})}
             triggerRef={settingsButtonRef}
+            zebraTables={zebraTables}
+            onZebraTablesChange={onZebraTablesChange}
           />
         </div>
 

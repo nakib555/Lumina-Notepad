@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Search, X, Check, Loader2, Sliders } from "lucide-react";
+import { Search, X, Check, Loader2, Sliders, Rows3 } from "lucide-react";
 import { useGoogleFonts, POPULAR_FONTS, loadGoogleFont } from "./font-loader";
 import { cn } from "@/lib/utils";
 
@@ -12,6 +12,8 @@ interface EditorSettingsDropdownProps {
   baseFontSize: string;
   onBaseFontSizeChange: (size: string) => void;
   triggerRef: React.RefObject<HTMLButtonElement | null>;
+  zebraTables?: boolean;
+  onZebraTablesChange?: (zebra: boolean) => void;
 }
 
 type FontCategory = "all" | "popular" | "sans" | "serif" | "mono" | "handwriting" | "display";
@@ -24,6 +26,8 @@ export function EditorSettingsDropdown({
   baseFontSize,
   onBaseFontSizeChange,
   triggerRef,
+  zebraTables = false,
+  onZebraTablesChange,
 }: EditorSettingsDropdownProps) {
   const { fonts, isLoading } = useGoogleFonts();
   const [search, setSearch] = useState("");
@@ -143,6 +147,39 @@ export function EditorSettingsDropdown({
                 </button>
               ))}
             </div>
+          </div>
+
+          {/* Zebra-Striping Tables Toggle Section */}
+          <div className="px-3.5 py-2.5 border-b border-border/40 flex items-center justify-between shrink-0 bg-muted/15">
+            <div className="flex flex-col gap-0.5 pr-2">
+              <div className="flex items-center gap-1.5">
+                <Rows3 className="w-3.5 h-3.5 text-indigo-500" />
+                <span className="text-xs font-semibold text-foreground">Zebra-Striped Tables</span>
+              </div>
+              <span className="text-[10px] text-muted-foreground">
+                Alternating row shading for dense data notes
+              </span>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={zebraTables}
+              onClick={() => onZebraTablesChange?.(!zebraTables)}
+              className={cn(
+                "relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-500/40",
+                zebraTables ? "bg-indigo-600" : "bg-muted-foreground/30"
+              )}
+              title={zebraTables ? "Disable Zebra Striping by default" : "Enable Zebra Striping by default"}
+              aria-label="Toggle Zebra-Striped Tables"
+            >
+              <span
+                aria-hidden="true"
+                className={cn(
+                  "pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out",
+                  zebraTables ? "translate-x-4" : "translate-x-0"
+                )}
+              />
+            </button>
           </div>
 
           {/* Search bar & Categories scroll */}

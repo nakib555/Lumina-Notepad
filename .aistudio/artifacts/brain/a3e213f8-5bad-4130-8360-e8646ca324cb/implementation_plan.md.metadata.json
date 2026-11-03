@@ -1,6 +1,6 @@
 {
-  "summary": "Comprehensive engineering plan to fix PDF printing alignment and professional styling across web print and native Capacitor export, featuring clean document headers, balanced typography, auto-fitting tables, orphaned heading protection, and pixel-aligned elements.",
-  "updatedAt": "2026-11-03T03:41:33.242605383Z",
+  "summary": "Toggle between zebra-striping and standard table layouts implemented with zero cell clipping.\n- Added 1-click quick zebra toggle button directly on the editor's floating table toolbar.\n- Integrated persistent 'Zebra-Striped Tables' default toggle in the Editor Typography & Settings dropdown backed by localStorage.\n- Enforced zero cell clipping with minimum column widths, auto-clearing padding (0.65rem 0.9rem), 1.55 line-height, top vertical alignment, and safe word breaking.\n- Added high-contrast zebra row support across all themes and in print/PDF exports.",
+  "updatedAt": "2026-11-03T04:50:43.720314634Z",
   "requestFeedback": true,
   "userFacing": true
 }

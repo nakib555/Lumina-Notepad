@@ -188,6 +188,14 @@ export const useEditorExport = (note: Note | null) => {
                   color: #0f172a;
                   border-bottom: 2px solid #94a3b8;
                 }
+                .table-zebra tbody tr:nth-child(even),
+                .table-zebra tbody tr:nth-child(even) td,
+                .table-wrapper.table-zebra tbody tr:nth-child(even),
+                .table-wrapper.table-zebra tbody tr:nth-child(even) td,
+                .rounded-table.table-zebra tbody tr:nth-child(even),
+                .rounded-table.table-zebra tbody tr:nth-child(even) td {
+                  background-color: #f1f5f9 !important;
+                }
                 input[type="checkbox"] {
                   margin-right: 0.5em;
                 }
