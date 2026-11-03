@@ -322,9 +322,80 @@
   }
 }
 
-.prose > * {
-  content-visibility: auto;
-  contain-intrinsic-size: auto 50px;
+/* Prevent text shaving and ascender/descender clipping */
+.prose {
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+.prose h1, .prose h2, .prose h3, .prose h4, .prose h5, .prose h6 {
+  line-height: 1.35;
+  padding-top: 0.15em;
+  padding-bottom: 0.15em;
+}
+
+.prose p, .prose li {
+  line-height: 1.65;
+  padding-top: 0.05em;
+  padding-bottom: 0.05em;
+}
+
+/* Sutonny & Bengali script diacritic and vertical clearance */
+.font-sutonny, [data-font*="sutonny"], [style*="Sutonny"] {
+  line-height: 1.8 !important;
+}
+.font-sutonny h1, .font-sutonny h2, .font-sutonny h3,
+[data-font*="sutonny"] h1, [data-font*="sutonny"] h2, [data-font*="sutonny"] h3 {
+  line-height: 1.5 !important;
+  padding-top: 0.25em !important;
+  padding-bottom: 0.25em !important;
+}
+
+/* Modern Rounded Table styling with zero edge clipping */
+.table-wrapper {
+  overflow-x: auto;
+  overflow-y: visible;
+  max-width: 100%;
+  scrollbar-width: thin;
+  -webkit-overflow-scrolling: touch;
+}
+
+.rounded-table table {
+  border-collapse: separate !important;
+  border-spacing: 0 !important;
+  border-radius: 0.75rem;
+  width: 100%;
+}
+
+.rounded-table th,
+.rounded-table td {
+  padding: 0.65rem 0.9rem !important;
+  border-bottom: 1px solid var(--border) !important;
+  border-right: 1px solid var(--border) !important;
+  line-height: 1.55 !important;
+  min-width: 80px;
+}
+
+.rounded-table th:last-child,
+.rounded-table td:last-child {
+  border-right: none !important;
+}
+
+.rounded-table tr:last-child td {
+  border-bottom: none !important;
+}
+
+.rounded-table th:first-child {
+  border-top-left-radius: 0.75rem;
+}
+.rounded-table th:last-child {
+  border-top-right-radius: 0.75rem;
+}
+.rounded-table tr:last-child td:first-child {
+  border-bottom-left-radius: 0.75rem;
+}
+.rounded-table tr:last-child td:last-child {
+  border-bottom-right-radius: 0.75rem;
 }
 
 .prose u {
@@ -402,7 +473,7 @@ body.search-is-active *::selection {
 @media print {
   @page {
     size: auto;
-    margin: 12mm 15mm 12mm 15mm;
+    margin: 15mm;
   }
 
   html, body, #root {
@@ -410,26 +481,26 @@ body.search-is-active *::selection {
     height: auto !important;
     min-height: 0 !important;
     background: white !important;
-    color: black !important;
+    color: #0f172a !important;
     margin: 0 !important;
     padding: 0 !important;
   }
 
   /* Reset dark mode prose colors for print */
   .dark .prose, .prose {
-    --tw-prose-body: black !important;
-    --tw-prose-headings: black !important;
-    --tw-prose-lead: black !important;
-    --tw-prose-links: black !important;
-    --tw-prose-bold: black !important;
-    --tw-prose-counters: black !important;
-    --tw-prose-bullets: black !important;
+    --tw-prose-body: #0f172a !important;
+    --tw-prose-headings: #0f172a !important;
+    --tw-prose-lead: #334155 !important;
+    --tw-prose-links: #0f172a !important;
+    --tw-prose-bold: #0f172a !important;
+    --tw-prose-counters: #64748b !important;
+    --tw-prose-bullets: #64748b !important;
     --tw-prose-hr: #e2e8f0 !important;
-    --tw-prose-quotes: black !important;
-    --tw-prose-quote-borders: #cbd5e1 !important;
-    --tw-prose-captions: black !important;
-    --tw-prose-code: black !important;
-    --tw-prose-pre-code: black !important;
+    --tw-prose-quotes: #334155 !important;
+    --tw-prose-quote-borders: #94a3b8 !important;
+    --tw-prose-captions: #64748b !important;
+    --tw-prose-code: #0f172a !important;
+    --tw-prose-pre-code: #0f172a !important;
     --tw-prose-pre-bg: transparent !important;
     --tw-prose-th-borders: #cbd5e1 !important;
     --tw-prose-td-borders: #cbd5e1 !important;
@@ -438,8 +509,9 @@ body.search-is-active *::selection {
   body {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
-    font-size: 11pt;
-    line-height: 1.5;
+    font-size: 10.5pt;
+    line-height: 1.6;
+    color: #0f172a !important;
   }
 
   /* Remove excessive gaps inside prose content */
@@ -452,17 +524,21 @@ body.search-is-active *::selection {
 
   .prose p {
     margin-top: 0 !important;
-    margin-bottom: 0.5rem !important;
-    line-height: 1.55 !important;
+    margin-bottom: 0.6rem !important;
+    line-height: 1.6 !important;
   }
 
-  .prose h1, .prose h2, .prose h3, .prose h4, .prose h5, .prose h6 {
+  .prose h1, .prose h2, .prose h3, .prose h4, .prose h5, .prose h6,
+  h1, h2, h3, h4, h5, h6 {
     text-align: left !important;
-    margin-top: 0.9rem !important;
-    margin-bottom: 0.35rem !important;
+    margin-top: 1.25rem !important;
+    margin-bottom: 0.4rem !important;
     break-after: avoid !important;
     page-break-after: avoid !important;
-    color: black !important;
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+    color: #0f172a !important;
+    font-weight: 700 !important;
   }
 
   .prose h1:first-child, .prose h2:first-child, .prose p:first-child {
@@ -470,28 +546,41 @@ body.search-is-active *::selection {
   }
 
   .prose ul, .prose ol {
-    margin-top: 0.25rem !important;
-    margin-bottom: 0.5rem !important;
-    padding-left: 1.5rem !important;
+    margin-top: 0.35rem !important;
+    margin-bottom: 0.6rem !important;
+    padding-left: 1.6rem !important;
   }
 
   .prose li {
-    margin-top: 0.1rem !important;
-    margin-bottom: 0.1rem !important;
-  }
-
-  .prose blockquote {
-    margin-top: 0.5rem !important;
-    margin-bottom: 0.5rem !important;
-    padding: 0.25rem 0.75rem !important;
-    border-left: 3px solid #cbd5e1 !important;
+    margin-top: 0.15rem !important;
+    margin-bottom: 0.15rem !important;
     break-inside: avoid !important;
     page-break-inside: avoid !important;
   }
 
+  .prose blockquote {
+    margin-top: 0.75rem !important;
+    margin-bottom: 0.75rem !important;
+    padding: 0.4rem 1rem !important;
+    border-left: 3.5px solid #94a3b8 !important;
+    background: #f8fafc !important;
+    border-radius: 0 4px 4px 0 !important;
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+    color: #334155 !important;
+  }
+
+  /* Math KaTeX expressions */
+  .katex-display, .katex {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+    max-width: 100% !important;
+    overflow: visible !important;
+  }
+
   /* Code blocks inside print */
   .code-block-wrapper {
-    margin: 0.6rem 0 !important;
+    margin: 0.75rem 0 !important;
     border: 1px solid #cbd5e1 !important;
     border-radius: 6px !important;
     background: #f8fafc !important;
@@ -505,7 +594,14 @@ body.search-is-active *::selection {
     position: static !important;
     border-bottom: 1px solid #e2e8f0 !important;
     background: #f1f5f9 !important;
-    padding: 0.3rem 0.6rem !important;
+    padding: 0.35rem 0.75rem !important;
+  }
+
+  .code-block-wrapper .language-label {
+    font-size: 8.5pt !important;
+    font-weight: 600 !important;
+    color: #475569 !important;
+    text-transform: uppercase !important;
   }
 
   /* Hide interactive code buttons in print */
@@ -519,7 +615,7 @@ body.search-is-active *::selection {
 
   .code-block-wrapper .code-container {
     background: transparent !important;
-    padding: 0.5rem 0.75rem !important;
+    padding: 0.6rem 0.85rem !important;
     overflow: visible !important;
     max-height: none !important;
   }
@@ -528,27 +624,35 @@ body.search-is-active *::selection {
   .code-block-wrapper code {
     white-space: pre-wrap !important;
     word-break: break-word !important;
-    font-size: 9.5pt !important;
-    line-height: 1.45 !important;
+    font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace !important;
+    font-size: 9pt !important;
+    line-height: 1.5 !important;
     background: transparent !important;
   }
 
-  /* Tables in print: wrap at word boundaries, repeat header */
+  /* Tables in print: auto-fit to page width, balanced sizing, crisp borders */
   .table-wrapper {
-    margin: 0.6rem 0 !important;
+    margin: 0.8rem 0 !important;
     overflow: visible !important;
+    width: 100% !important;
+    max-width: 100% !important;
     break-inside: auto !important;
     page-break-inside: auto !important;
     box-shadow: none !important;
     border: none !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+    background: transparent !important;
   }
 
   table {
     table-layout: auto !important;
     width: 100% !important;
+    max-width: 100% !important;
     border-collapse: collapse !important;
     margin: 0 !important;
     border: 1px solid #cbd5e1 !important;
+    box-shadow: none !important;
   }
 
   thead {
@@ -561,14 +665,18 @@ body.search-is-active *::selection {
     overflow-wrap: break-word !important;
     word-break: normal !important;
     border: 1px solid #cbd5e1 !important;
-    padding: 0.4rem 0.6rem !important;
+    padding: 0.5rem 0.75rem !important;
     font-size: 9.5pt !important;
+    line-height: 1.4 !important;
     background-color: transparent !important;
+    vertical-align: top !important;
   }
 
   th {
-    background-color: #f1f5f9 !important;
+    background-color: #f8fafc !important;
     font-weight: 600 !important;
+    color: #0f172a !important;
+    border-bottom: 2px solid #94a3b8 !important;
   }
 
   tr {
@@ -582,7 +690,7 @@ body.search-is-active *::selection {
     break-inside: avoid !important;
     overflow: visible !important;
     background: white !important;
-    margin: 0.5rem auto !important;
+    margin: 0.75rem auto !important;
     max-width: 100% !important;
   }
   

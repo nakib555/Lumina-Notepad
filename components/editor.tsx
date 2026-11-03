@@ -490,8 +490,36 @@ export function Editor({
               placeholder="Note Title"
               autoComplete="off"
               readOnly={isViewMode}
-              className={cn("w-full text-4xl md:text-5xl font-bold text-foreground placeholder:text-muted-foreground/30 border-none outline-none bg-transparent tracking-tight print:text-black print:text-left print:text-2xl sm:print:text-3xl print:font-bold print:m-0 print:mb-2 print:p-0 print:border-none print:shadow-none print:leading-tight resize-none p-0 m-0 leading-tight shrink-0 whitespace-pre-wrap break-words overflow-hidden", isViewMode && "cursor-default")}
+              className={cn("w-full text-4xl md:text-5xl font-bold text-foreground placeholder:text-muted-foreground/30 border-none outline-none bg-transparent tracking-tight print:hidden resize-none px-1.5 pt-2 pb-2 leading-normal md:leading-[1.3] shrink-0 whitespace-pre-wrap break-words overflow-visible", isViewMode && "cursor-default")}
             />
+
+            {/* Print-only professional document header */}
+            <div className="hidden print:block print:mb-6 print:pb-3 print:border-b print:border-slate-300">
+              <h1 className="text-3xl font-bold tracking-tight text-slate-900 m-0 p-0 leading-tight">
+                {note.title || "Untitled Note"}
+              </h1>
+              <div className="mt-2 text-xs text-slate-500 font-medium flex items-center gap-2">
+                <span>
+                  {new Date(note.updatedAt || note.createdAt || Date.now()).toLocaleDateString(undefined, {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric'
+                  })}
+                </span>
+                {note.folder && (
+                  <>
+                    <span>•</span>
+                    <span className="font-semibold text-slate-700">{note.folder}</span>
+                  </>
+                )}
+                {note.tags && note.tags.length > 0 && (
+                  <>
+                    <span>•</span>
+                    <span>{note.tags.map(t => `#${t}`).join(' ')}</span>
+                  </>
+                )}
+              </div>
+            </div>
             
             {/* Tag Management */}
             {!isViewMode && (

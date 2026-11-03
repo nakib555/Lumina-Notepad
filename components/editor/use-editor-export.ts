@@ -27,6 +27,14 @@ export const useEditorExport = (note: Note | null) => {
             return `<pre><code${langClass}>${code}</code></pre>\n`;
           };
           const contentHTML = await marked.parse(note.content, { renderer: exportRenderer, async: true });
+          
+          const escapeHtml = (str: string) => str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+          const formattedDate = new Date(note.updatedAt || note.createdAt || Date.now()).toLocaleDateString(undefined, {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric'
+          });
+
           const html = `
             <!DOCTYPE html>
             <html>
@@ -37,37 +45,69 @@ export const useEditorExport = (note: Note | null) => {
                 :root {
                   --color-text: #0f172a;
                   --color-muted: #64748b;
-                  --color-border: #e2e8f0;
+                  --color-border: #cbd5e1;
                   --color-bg-muted: #f8fafc;
+                }
+                @page {
+                  size: auto;
+                  margin: 15mm;
                 }
                 body { 
                   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
                   line-height: 1.6; 
-                  padding: 24px; 
+                  padding: 0; 
+                  margin: 0;
                   color: var(--color-text); 
-                  font-size: 16px;
+                  font-size: 10.5pt;
                   max-width: 100%;
-                  margin: 0 auto;
+                  -webkit-print-color-adjust: exact;
+                  print-color-adjust: exact;
+                }
+                .note-header {
+                  margin-bottom: 1.5rem;
+                  padding-bottom: 0.75rem;
+                  border-bottom: 1px solid #cbd5e1;
+                }
+                .note-title { 
+                  font-size: 1.85rem; 
+                  font-weight: 700;
+                  color: #0f172a;
+                  text-align: left; 
+                  margin: 0 0 0.4rem 0; 
+                  line-height: 1.25;
+                }
+                .note-meta {
+                  font-size: 8.5pt;
+                  color: #64748b;
+                  font-weight: 500;
+                  display: flex;
+                  gap: 0.5rem;
+                  align-items: center;
+                }
+                .meta-folder {
+                  font-weight: 600;
+                  color: #334155;
                 }
                 h1, h2, h3, h4, h5, h6 { 
-                  margin-top: 1em; 
-                  margin-bottom: 0.35em; 
-                  font-weight: 600;
+                  margin-top: 1.25rem; 
+                  margin-bottom: 0.4rem; 
+                  font-weight: 700;
                   line-height: 1.25;
+                  color: #0f172a;
                   break-after: avoid;
                   page-break-after: avoid;
+                  break-inside: avoid;
                 }
-                h1.note-title { font-size: 2em; text-align: left; margin-top: 0; margin-bottom: 0.75em; }
-                p, ul, ol { margin-top: 0; margin-bottom: 0.6em; white-space: pre-wrap; }
-                ul, ol { padding-left: 1.5em; }
-                li { margin-bottom: 0.2em; }
+                p, ul, ol { margin-top: 0; margin-bottom: 0.6rem; white-space: pre-wrap; line-height: 1.6; }
+                ul, ol { padding-left: 1.6rem; }
+                li { margin-bottom: 0.15rem; break-inside: avoid; }
                 img, .sketch-container { 
                   max-width: 100%; 
                   height: auto; 
                   border-radius: 6px; 
                   break-inside: avoid;
                   page-break-inside: avoid;
-                  margin: 0.75em 0;
+                  margin: 0.75rem auto;
                 }
                 .sketch-container {
                    background: white !important;
@@ -78,21 +118,24 @@ export const useEditorExport = (note: Note | null) => {
                 }
                 pre { 
                   background: var(--color-bg-muted); 
-                  padding: 12px 14px; 
+                  padding: 10px 14px; 
                   border-radius: 6px; 
-                  overflow-x: auto; 
+                  overflow: visible; 
                   break-inside: avoid;
                   page-break-inside: avoid;
                   border: 1px solid var(--color-border);
                   white-space: pre-wrap;
                   word-break: break-word;
-                  margin: 0.75em 0;
+                  margin: 0.75rem 0;
+                  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+                  font-size: 9pt;
+                  line-height: 1.5;
                 }
                 code { 
-                  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-                  font-size: 0.85em; 
+                  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+                  font-size: 0.9em; 
                   background: var(--color-bg-muted); 
-                  padding: 0.2em 0.4em; 
+                  padding: 0.15em 0.35em; 
                   border-radius: 4px; 
                   border: 1px solid var(--color-border);
                   font-weight: 500;
@@ -105,16 +148,20 @@ export const useEditorExport = (note: Note | null) => {
                   font-weight: 400;
                 }
                 blockquote { 
-                  border-left: 4px solid var(--color-border); 
-                  padding-left: 14px; 
-                  color: var(--color-muted); 
-                  margin: 0.75em 0; 
-                  font-style: italic;
+                  border-left: 3.5px solid #94a3b8; 
+                  padding: 0.4rem 1rem; 
+                  color: #334155; 
+                  background: #f8fafc;
+                  border-radius: 0 4px 4px 0;
+                  margin: 0.75rem 0; 
+                  break-inside: avoid;
                 }
                 table { 
                   width: 100%; 
+                  table-layout: auto;
                   border-collapse: collapse; 
-                  margin: 0.75em 0; 
+                  margin: 0.8rem 0; 
+                  border: 1px solid var(--color-border);
                   break-inside: auto;
                   page-break-inside: auto;
                 }
@@ -127,26 +174,34 @@ export const useEditorExport = (note: Note | null) => {
                 }
                 th, td { 
                   border: 1px solid var(--color-border); 
-                  padding: 6px 10px; 
+                  padding: 0.5rem 0.75rem; 
                   text-align: left; 
+                  vertical-align: top;
                   word-break: normal;
                   overflow-wrap: break-word;
+                  font-size: 9.5pt;
+                  line-height: 1.4;
                 }
                 th { 
                   background-color: var(--color-bg-muted); 
                   font-weight: 600; 
+                  color: #0f172a;
+                  border-bottom: 2px solid #94a3b8;
                 }
                 input[type="checkbox"] {
                   margin-right: 0.5em;
                 }
-                @media print {
-                  body { padding: 0; margin: 0; }
-                  @page { margin: 12mm 15mm; }
-                }
               </style>
             </head>
             <body>
-              <h1 class="note-title">${note.title || 'Untitled Note'}</h1>
+              <div class="note-header">
+                <h1 class="note-title">${escapeHtml(note.title || 'Untitled Note')}</h1>
+                <div class="note-meta">
+                  <span>${formattedDate}</span>
+                  ${note.folder ? `<span>•</span><span class="meta-folder">${escapeHtml(note.folder)}</span>` : ''}
+                  ${note.tags && note.tags.length > 0 ? `<span>•</span><span>${note.tags.map(t => '#' + escapeHtml(t)).join(' ')}</span>` : ''}
+                </div>
+              </div>
               ${contentHTML}
             </body>
             </html>

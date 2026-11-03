@@ -155,8 +155,8 @@ renderer.code = function(token) {
 };
 renderer.table = function(token: import('marked').Tokens.Table) {
   let html = marked.Renderer.prototype.table.call(this, token);
-  html = html.replace('<table>', '<table class="border-hidden m-0 w-full">');
-  return `\n<div class="overflow-x-auto overflow-hidden w-full table-wrapper my-8 print:my-2 rounded-xl rounded-table border border-[var(--border)] print:border-none">\n${html}\n</div>\n`;
+  html = html.replace('<table>', '<table class="w-full m-0 table-auto border-separate border-spacing-0">');
+  return `\n<div class="overflow-x-auto w-full table-wrapper my-8 print:my-2 rounded-xl rounded-table border border-[var(--border)] p-[1px] bg-background shadow-xs print:border-none print:shadow-none">\n${html}\n</div>\n`;
 };
 
 renderer.listitem = function(token: import('marked').Tokens.ListItem) {
@@ -407,12 +407,12 @@ const highlightTableCells = (
         'bg-blue-50/10', 'dark:bg-blue-950/10',
         'bg-slate-200/50', 'dark:bg-slate-700/50',
         'bg-blue-100/20', 'dark:bg-blue-900/20',
-        'ring-2', 'ring-blue-500', 'z-10', 'relative', 'active-cell'
+        'ring-2', 'ring-blue-500', 'ring-inset', 'z-10', 'relative', 'active-cell'
       );
 
       // 1. Active Cell
       if (active && active.r === rIndex && active.c === cIndex) {
-        cell.classList.add('ring-2', 'ring-blue-500', 'z-10', 'relative', 'active-cell');
+        cell.classList.add('ring-2', 'ring-blue-500', 'ring-inset', 'z-10', 'relative', 'active-cell');
       }
       // 2. Active Row / Column
       else if (active && active.r === rIndex) {
@@ -445,6 +445,7 @@ interface EditorAreaProps {
   textareaRef?: React.RefObject<HTMLDivElement | null>;
   isAutoMarkdownEnabled?: boolean;
   isViewMode?: boolean;
+  isEraserMode?: boolean;
   isMode?: boolean;
   powerSaver?: boolean;
   baseFontSize?: string;
@@ -460,9 +461,11 @@ export const EditorArea = ({
   textareaRef,
   isAutoMarkdownEnabled,
   isViewMode,
+  isEraserMode,
   isMode,
   powerSaver,
   baseFontSize}: EditorAreaProps) => {
+  const isEraserActive = isEraserMode ?? isMode ?? false;
   const previewRef = useRef<HTMLDivElement>(null);
   const isComposing = useRef(false);
   const [hoveredTable, setHoveredTable] = useState<HTMLTableElement | null>(null);
@@ -1758,13 +1761,21 @@ export const EditorArea = ({
       const mouseEvent = e as React.MouseEvent<HTMLDivElement>;
       const target = mouseEvent.target as HTMLElement;
       
-      // Handle Mode
-      if (isMode) {
+      // Handle Eraser Mode
+      if (isEraserActive) {
         mouseEvent.preventDefault();
         mouseEvent.stopPropagation();
 
         const editor = previewRef.current;
         if (!editor || !editor.contains(target)) return;
+
+        // If clicked on an image, code block, table, or sketch directly, delete it cleanly
+        const mediaOrWidget = target.closest('.code-block-wrapper, .table-wrapper, .sketch-container, img');
+        if (mediaOrWidget && editor.contains(mediaOrWidget)) {
+          mediaOrWidget.remove();
+          flushPreviewEdit();
+          return;
+        }
 
         let didChange = false;
 
@@ -1872,7 +1883,7 @@ export const EditorArea = ({
         return;
       }
     }
-  }, [isMode, flushPreviewEdit]);
+  }, [isEraserActive, flushPreviewEdit]);
 
   // Sync content when it changes externally (e.g. Undo/Redo)
   useEffect(() => {
@@ -2792,13 +2803,13 @@ export const EditorArea = ({
           }
         }}
         className={cn(
-          "prose prose-slate dark:prose-invert w-full min-w-0 max-w-none print:overflow-visible break-words leading-relaxed prose-p:my-2 prose-headings:mt-6 prose-headings:mb-3 prose-ul:my-2 prose-ol:my-2 prose-li:my-0.5 prose-blockquote:my-4 prose-code:text-slate-800 dark:prose-code:text-slate-200 prose-code:bg-slate-100 dark:prose-code:bg-slate-800/80 prose-code:border prose-code:border-slate-200 dark:prose-code:border-slate-700 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md prose-code:font-mono prose-code:text-[0.85em] prose-code:font-medium prose-code:shadow-[0_1px_2px_rgba(0,0,0,0.05)] prose-code:before:content-none prose-code:after:content-none prose-pre:p-0 prose-pre:bg-transparent prose-img:rounded-xl prose-table:border-collapse prose-table:w-full prose-table:m-0 prose-th:border prose-th:border-border prose-th:p-3 prose-th:bg-muted/50 prose-th:font-semibold prose-td:border prose-td:border-border prose-td:p-3 outline-none focus:ring-0 min-h-[500px] print:min-h-0 print:prose-pre:break-inside-avoid print:prose-table:break-inside-avoid print:prose-img:break-inside-avoid print:prose-code:break-inside-avoid print:prose-headings:break-after-avoid transition-[padding] duration-500",
+          "prose prose-slate dark:prose-invert w-full min-w-0 max-w-none px-1.5 sm:px-2 pt-1 print:p-0 print:overflow-visible break-words leading-relaxed prose-p:my-2 prose-headings:mt-6 prose-headings:mb-3 prose-ul:my-2 prose-ol:my-2 prose-li:my-0.5 prose-blockquote:my-4 prose-code:text-slate-800 dark:prose-code:text-slate-200 prose-code:bg-slate-100 dark:prose-code:bg-slate-800/80 prose-code:border prose-code:border-slate-200 dark:prose-code:border-slate-700 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md prose-code:font-mono prose-code:text-[0.85em] prose-code:font-medium prose-code:shadow-[0_1px_2px_rgba(0,0,0,0.05)] prose-code:before:content-none prose-code:after:content-none prose-pre:p-0 prose-pre:bg-transparent prose-img:rounded-xl prose-table:w-full prose-table:m-0 outline-none focus:ring-0 min-h-[500px] print:min-h-0 print:prose-pre:break-inside-avoid print:prose-table:break-inside-avoid print:prose-img:break-inside-avoid print:prose-code:break-inside-avoid print:prose-headings:break-after-avoid transition-[padding] duration-500",
           baseFontSize === 'text-sm' ? 'prose-sm' :
           baseFontSize === 'text-lg' ? 'prose-lg' :
           baseFontSize === 'text-xl' ? 'prose-xl' :
           'prose-base',
-          "pt-0 pb-[60vh] print:py-0 print:block",
-          isMode && "cursor-[url('data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"%23f43f5e\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21\"/><path d=\"M22 21H7\"/><path d=\"m5 11 9 9\"/></svg>'),_crosshair]"
+          "pb-[60vh] print:py-0 print:block",
+          isEraserActive && "cursor-[url('data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"%23f43f5e\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21\"/><path d=\"M22 21H7\"/><path d=\"m5 11 9 9\"/></svg>'),_crosshair]"
         )}
         role="textbox"
         aria-multiline="true"
