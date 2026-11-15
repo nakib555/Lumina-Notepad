@@ -21,6 +21,7 @@ import markedKatex from 'marked-katex-extension';
 import 'katex/dist/katex.min.css';
 import { cn } from "@/lib/utils";
 import { PenTool, Loader2 } from 'lucide-react';
+import { escapeHtml, sanitizeCodeLang, isValidImageUrl } from '@/lib/editor-helpers';
 import {
   ITableCell,
   ITableModel,
@@ -102,7 +103,7 @@ const renderer = new marked.Renderer();
 
 renderer.code = function(token) {
   const code = token.text.replace(/^[\r\n]+/, '').replace(/[\r\n]+$/, '');
-  const rawLang = (token.lang || '').match(/\S*/)?.[0]?.toLowerCase() || '';
+  const rawLang = sanitizeCodeLang(token.lang || '');
   
   let lang = rawLang;
   let isAutoDetected = false;
@@ -111,7 +112,7 @@ renderer.code = function(token) {
     try {
       const result = hljs.highlightAuto(code);
       if (result.language && result.relevance > 0) {
-        lang = result.language;
+        lang = sanitizeCodeLang(result.language);
         isAutoDetected = true;
       }
     } catch (e) {
@@ -120,21 +121,13 @@ renderer.code = function(token) {
   }
   
   const langAliases: Record<string, string> = { text: 'text', plaintext: 'text', txt: 'text', raw: 'text' };
-  const finalLang = langAliases[lang] || lang;
+  const finalLang = sanitizeCodeLang(langAliases[lang] || lang) || 'text';
   
   const displayLangName = !finalLang || finalLang === 'text' ? 'Code' : finalLang.charAt(0).toUpperCase() + finalLang.slice(1);
-  const displayLang = isAutoDetected ? `${displayLangName} (Auto)` : displayLangName;
+  const displayLang = escapeHtml(isAutoDetected ? `${displayLangName} (Auto)` : displayLangName);
 
   let highlightedValue = '';
   if (!finalLang || finalLang === 'text') {
-    const escapeHtml = (unsafe: string) => {
-      return unsafe
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
-    };
     highlightedValue = escapeHtml(code);
   } else {
     try {
@@ -145,7 +138,6 @@ renderer.code = function(token) {
         highlightedValue = autoResult.value;
       }
     } catch {
-      const escapeHtml = (unsafe: string) => unsafe.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
       highlightedValue = escapeHtml(code);
     }
   }
@@ -153,7 +145,7 @@ renderer.code = function(token) {
   const inlineStyle = "margin:0;padding:1rem 1.25rem;font-size: 14px;line-height:1.5;font-family:'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;background:transparent;";
   const highlightedContent = `<pre style="${inlineStyle}"><code class="code-element outline-none block min-h-[20px] whitespace-pre print:whitespace-pre-wrap [font-variant-ligatures:none] font-mono" contenteditable="plaintext-only">${highlightedValue}</code></pre>`;
 
-  return `<div class="code-block-wrapper not-prose my-6 print:my-2" contenteditable="false"><div class="rounded-xl font-sans group transition-colors duration-300 border border-border relative overflow-hidden bg-muted/10"><div class="sticky top-0 z-10 flex justify-between items-center px-5 py-2.5 border-b border-border select-none bg-muted/30"><div class="flex items-center gap-3"><span class="text-[13px] font-semibold text-muted-foreground font-mono capitalize language-label">${displayLang}</span></div><div class="flex items-center gap-4"><button class="flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[13px] font-medium transition-all text-emerald-600 hover:bg-emerald-500/10 hover:text-emerald-700 dark:hover:text-emerald-400 run-code-btn" title="Run Code" onclick="window.dispatchEvent(new CustomEvent('run-code-block', { detail: { code: this.closest('.code-block-wrapper').querySelector('.code-element').textContent, language: '${finalLang}' } }));"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>Run</button><button class="flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[13px] font-medium text-purple-600 hover:bg-purple-500/10 hover:text-purple-700 dark:hover:text-purple-400 transition-all open-panel-btn" title="Open in Side Panel" onclick="window.dispatchEvent(new CustomEvent('open-code-block', { detail: { code: this.closest('.code-block-wrapper').querySelector('.code-element').textContent, language: '${finalLang}' } }));"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>Open</button><button class="flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[13px] font-medium text-muted-foreground hover:bg-muted/80 hover:text-foreground transition-all active:scale-95 copy-btn" onclick="navigator.clipboard.writeText(this.closest('.code-block-wrapper').querySelector('.code-element').textContent); const span = this.querySelector('.copy-text'); span.textContent='Copied'; setTimeout(() => span.textContent='', 2000);" title="code"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg><span class="copy-text"></span></button><button class="flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[13px] font-medium text-muted-foreground hover:bg-red-500/10 hover:text-red-500 transition-all active:scale-95 delete-btn" onclick="const wrapper = this.closest('.code-block-wrapper'); const next = wrapper.nextElementSibling; if(next && next.tagName === 'P' && next.innerHTML.includes('&#8203;')) next.remove(); wrapper.remove();" title="Delete code block"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg></button></div></div><div class="relative overflow-x-auto text-[14px] leading-relaxed custom-scrollbar bg-transparent code-container whitespace-pre print:whitespace-pre-wrap font-mono m-0 text-slate-800 dark:text-slate-200">${highlightedContent}</div></div></div>`;
+  return `<div class="code-block-wrapper not-prose my-6 print:my-2" contenteditable="false"><div class="rounded-xl font-sans group transition-colors duration-300 border border-border relative overflow-hidden bg-muted/10"><div class="sticky top-0 z-10 flex flex-wrap justify-between items-center gap-2 px-3 sm:px-5 py-2 sm:py-2.5 border-b border-border select-none bg-muted/30"><div class="flex items-center gap-2 sm:gap-3 min-w-0"><span class="text-[13px] font-semibold text-muted-foreground font-mono capitalize language-label truncate">${displayLang}</span></div><div class="flex items-center gap-1 sm:gap-2 flex-wrap"><button type="button" aria-label="Run code" class="flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[13px] font-medium transition-all text-emerald-600 hover:bg-emerald-500/10 hover:text-emerald-700 dark:hover:text-emerald-400 run-code-btn whitespace-nowrap" title="Run Code" onclick="window.dispatchEvent(new CustomEvent('run-code-block', { detail: { code: this.closest('.code-block-wrapper').querySelector('.code-element').textContent, language: '${finalLang}' } }));"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>Run</button><button type="button" aria-label="Open code in sandbox" class="flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[13px] font-medium text-purple-600 hover:bg-purple-500/10 hover:text-purple-700 dark:hover:text-purple-400 transition-all open-panel-btn whitespace-nowrap" title="Open in Side Panel" onclick="window.dispatchEvent(new CustomEvent('open-code-block', { detail: { code: this.closest('.code-block-wrapper').querySelector('.code-element').textContent, language: '${finalLang}' } }));"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>Open</button><button type="button" aria-label="Copy code" class="flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[13px] font-medium text-muted-foreground hover:bg-muted/80 hover:text-foreground transition-all active:scale-95 copy-btn whitespace-nowrap" onclick="navigator.clipboard?.writeText(this.closest('.code-block-wrapper').querySelector('.code-element').textContent || ''); const span = this.querySelector('.copy-text'); span.textContent='Copied'; setTimeout(() => span.textContent='', 2000);" title="Copy code"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg><span class="copy-text"></span></button><button type="button" aria-label="Delete code block" class="flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[13px] font-medium text-muted-foreground hover:bg-red-500/10 hover:text-red-500 transition-all active:scale-95 delete-btn whitespace-nowrap" onclick="const wrapper = this.closest('.code-block-wrapper'); const next = wrapper.nextElementSibling; if(next && next.tagName === 'P' && next.innerHTML.includes('&#8203;')) next.remove(); wrapper.remove();" title="Delete code block"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg></button></div></div><div class="relative overflow-x-auto text-[14px] leading-relaxed custom-scrollbar bg-transparent code-container whitespace-pre print:whitespace-pre-wrap font-mono m-0 text-slate-800 dark:text-slate-200">${highlightedContent}</div></div></div>`;
 };
 export let globalDefaultZebra = false;
 export const setGlobalDefaultZebra = (val: boolean) => {
@@ -942,13 +934,6 @@ export const EditorArea = ({
       }
     });
 
-    service.addRule('preserveBr', {
-      filter: 'br',
-      replacement: function () {
-        return '<br>';
-      }
-    });
-
     service.addRule('tableRows', {
       filter: function (node) {
         return (node.nodeName === 'P' || node.nodeName === 'DIV') && 
@@ -1592,7 +1577,7 @@ export const EditorArea = ({
     }
   }, [hoveredTable, flushPreviewEdit]);
 
-  const handleTableEditConfirm = useCallback((targetRows: number, targetCols: number, curveClass: string, tableData?: { headers: string[], rows: string[][], alignments?: string[] }, isZebra?: boolean) => {
+  const handleTableEditConfirm = useCallback((_targetRows: number, _targetCols: number, curveClass: string, tableData?: { headers: string[], rows: string[][], alignments?: string[] }, isZebra?: boolean) => {
     if (!hoveredTable) return;
 
     const applyStyles = (wrapper: Element) => {
@@ -1717,7 +1702,7 @@ export const EditorArea = ({
              mdWithMarker = mdWithMarker.replace(new RegExp(`^(\\s*---)\\s*(${CARET_MARKER})$`, 'gm'), '$1\n$2');
              
              let newHtml = parseMarkdown(mdWithMarker);
-             newHtml = newHtml.replace(CARET_MARKER, '<span id="caret-marker"></span>');
+             newHtml = newHtml.replaceAll(CARET_MARKER, '<span id="caret-marker"></span>');
              newHtml = newHtml.replace(/<([a-z0-9]+)(?: [^>]*)?>\s*<span id="caret-marker"><\/span>\s*<\/\1>/gi, (match) => match.replace('<span id="caret-marker"></span>', '<br><span id="caret-marker"></span>'));
              previewRef.current.innerHTML = newHtml;
              
@@ -1767,8 +1752,7 @@ export const EditorArea = ({
                  sel.addRange(newRange);
              }
              
-             const finalHtml = previewRef.current.innerHTML;
-             const finalMarkdown = turndownService.turndown(finalHtml);
+             const finalMarkdown = mdWithMarker.replaceAll(CARET_MARKER, '');
              lastProcessedContent.current = finalMarkdown;
              handleContentChange(finalMarkdown);
              return;
@@ -2292,6 +2276,8 @@ export const EditorArea = ({
 
     requestAnimationFrame(() => {
       selectionChangeTicking.current = false;
+      const editorEl = previewRef.current;
+      if (!editorEl || isViewMode) return;
       
       if (powerSaver) {
          const now = Date.now();
@@ -2299,25 +2285,25 @@ export const EditorArea = ({
          lastSelectionChangeTime.current = now;
       }
 
-      setSelectedColIndex(null);
-      setSelectedRowIndex(null);
+      setSelectedColIndex(prev => (prev === null ? prev : null));
+      setSelectedRowIndex(prev => (prev === null ? prev : null));
     
     // Process active table row for floating delete icon
     const sel = window.getSelection();
     if (!sel || sel.rangeCount === 0 || !sel.anchorNode) {
-      setActiveTableRow(null);
+      setActiveTableRow(prev => (prev === null ? prev : null));
       return;
     }
     
     const node = sel.anchorNode;
-    if (!previewRef.current.contains(node)) {
+    if (!editorEl.contains(node)) {
       // Don't clear if focus moved to the toolbar itself
       const el = node.nodeType === Node.TEXT_NODE ? node.parentElement : node as Element;
       if (el && (el.closest('.table-floating-toolbar') || el.closest('[role="dialog"]'))) {
         return;
       }
-      setActiveTableRow(null);
-      setHoveredTable(null);
+      setActiveTableRow(prev => (prev === null ? prev : null));
+      setHoveredTable(prev => (prev === null ? prev : null));
       return;
     }
 
@@ -2328,27 +2314,25 @@ export const EditorArea = ({
       if (cell) {
         const indices = getCellIndices(cell as HTMLElement);
         if (indices) {
-          setActiveCell({ r: indices.r, c: indices.c });
-          setActiveTableRow(indices.tr as HTMLTableRowElement);
+          setActiveCell(prev => (prev && prev.r === indices.r && prev.c === indices.c ? prev : { r: indices.r, c: indices.c }));
+          setActiveTableRow(prev => (prev === indices.tr ? prev : (indices.tr as HTMLTableRowElement)));
           if (hoveredTable !== indices.table) {
             setHoveredTable(indices.table);
             updateTableRect(indices.table);
           }
         }
       } else {
-         // Optionally clear activeTableRow if we navigated out of the table entirely
-         // Wait, if we hover over the table, it stays, but if we navigate out with keyboard...
-         setActiveTableRow(null);
-         setHoveredTable(null);
+        setActiveTableRow(prev => (prev === null ? prev : null));
+        setHoveredTable(prev => (prev === null ? prev : null));
       }
     }
 
     // Typewriter mode logic, now permanently enabled
-    if (sel.isCollapsed && previewRef.current.contains(sel.anchorNode)) {
+    if (sel.isCollapsed && editorEl.contains(sel.anchorNode)) {
       const range = sel.getRangeAt(0);
-      const el = range.startContainer.nodeType === Node.TEXT_NODE ? range.startContainer.parentElement : range.startContainer as Element;
+      const startEl = range.startContainer.nodeType === Node.TEXT_NODE ? range.startContainer.parentElement : range.startContainer as Element;
       
-      const isHoveringSpecial = !!document.querySelector('.image-wrapper:hover, img:hover, .sketch-container:hover, .code-block-wrapper:hover, table:hover');
+      const isHoveringSpecial = Boolean(hoveredImage || hoveredTable || hoveredSketch);
       const nodeAfter = range.startContainer.childNodes[range.startOffset];
       const isBeforeSpecial = nodeAfter && nodeAfter.nodeType === Node.ELEMENT_NODE && 
         (
@@ -2358,31 +2342,23 @@ export const EditorArea = ({
           (nodeAfter as Element).classList.contains('code-block-wrapper') ||
           (nodeAfter as Element).tagName === 'TABLE'
         );
-      const isInsideSpecial = el && (el.tagName === 'IMG' || el.closest('figure') || el.closest('.image-wrapper') || el.closest('.code-block-wrapper') || el.closest('.sketch-container') || el.closest('table'));
+      const isInsideSpecial = startEl && (startEl.tagName === 'IMG' || startEl.closest('figure') || startEl.closest('.image-wrapper') || startEl.closest('.code-block-wrapper') || startEl.closest('.sketch-container') || startEl.closest('table'));
 
       // Do not auto-scroll if an image or special element was clicked/selected
       if (!(isInsideSpecial || isBeforeSpecial || isHoveringSpecial)) {
         try {
           if (!range || !range.getBoundingClientRect) return;
-          let rect = range.getBoundingClientRect();
+          const clientRects = typeof range.getClientRects === 'function' ? range.getClientRects() : null;
+          let rect = clientRects && clientRects.length > 0 ? clientRects[0] : range.getBoundingClientRect();
           
-          if (rect.height === 0 || rect.width === 0) {
-            const span = document.createElement('span');
-            span.textContent = '\u200b';
-            try {
-              const cloneRange = range.cloneRange();
-              cloneRange.insertNode(span);
-              rect = span.getBoundingClientRect();
-              span.remove();
-            } catch {
-              if (el) rect = el.getBoundingClientRect();
-            }
+          if ((!rect || (rect.height === 0 && rect.width === 0)) && startEl && startEl.getBoundingClientRect) {
+            rect = startEl.getBoundingClientRect();
           }
           
-          if (rect.top === 0 && rect.bottom === 0) return;
+          if (!rect || (rect.top === 0 && rect.bottom === 0)) return;
           
-          if (rect && rect.height >= 0) { // also allow height 0 when rect is otherwise valid
-            const scrollParent = previewRef.current.closest('.overflow-y-auto') as HTMLElement;
+          if (rect.height >= 0) {
+            const scrollParent = editorEl.closest('.overflow-y-auto') as HTMLElement | null;
             if (scrollParent) {
               const parentRect = scrollParent.getBoundingClientRect();
               const absoluteTop = rect.top + scrollParent.scrollTop - parentRect.top;
@@ -2399,7 +2375,7 @@ export const EditorArea = ({
       }
     }
     });
-  }, [isViewMode, powerSaver, hoveredTable, updateTableRect]);
+  }, [isViewMode, powerSaver, hoveredTable, hoveredImage, hoveredSketch, updateTableRect]);
 
   useEffect(() => {
     document.addEventListener('selectionchange', handleSelectionChange);
@@ -2513,7 +2489,7 @@ export const EditorArea = ({
       }
 
       const selRange = sel && sel.rangeCount > 0 ? sel.getRangeAt(0) : null;
-      if (selRange && !sel.isCollapsed) {
+      if (sel && selRange && !sel.isCollapsed) {
         const commonAncestor = selRange.commonAncestorContainer;
         const commonEl = commonAncestor instanceof Element ? commonAncestor : commonAncestor.parentElement;
         if (commonEl && targetTable.contains(commonEl) && commonEl !== activeCellEl) {
@@ -2751,9 +2727,10 @@ export const EditorArea = ({
     const text = e.clipboardData.getData('text/plain');
     if (text) {
       // Check if it's an image URL
-      if (text.match(/\.(jpeg|jpg|gif|png|webp|avif|svg)$/i) || text.startsWith('data:image/')) {
+      if (isValidImageUrl(text)) {
          e.preventDefault();
-         document.execCommand('insertHTML', false, `<img src="${text}" alt="Pasted Image" style="max-width: 100%;" /><p>&#8203;</p>`);
+         const safeUrl = escapeHtml(text.trim());
+         document.execCommand('insertHTML', false, `<img src="${safeUrl}" alt="Pasted Image" style="max-width: 100%;" /><p>&#8203;</p>`);
          flushPreviewEdit(true);
          return;
       }
@@ -2766,44 +2743,73 @@ export const EditorArea = ({
       if (!cleanedText && text) {
          cleanedText = text;
       }
-      
-      const node = window.getSelection()?.anchorNode;
-      const isInsideCodeBlock = (node instanceof Element ? node : node?.parentElement)?.closest('.code-block-wrapper');
 
+      const editorEl = previewRef.current;
+      const sel = window.getSelection();
+      const selNode = sel?.anchorNode;
+      const isInsideCodeBlock = Boolean((selNode instanceof Element ? selNode : selNode?.parentElement)?.closest('.code-block-wrapper'));
+
+      const frag = document.createDocumentFragment();
       if (isInsideCodeBlock) {
-          document.execCommand('insertText', false, cleanedText.replace(/\r\n/g, '\n'));
+        frag.appendChild(document.createTextNode(cleanedText.replace(/\r\n/g, '\n')));
       } else if (isAutoMarkdownEnabled) {
-          // Parse pasted text for all markdown, including tables
-          const finalHtml = parseMarkdown(cleanedText);
-          document.execCommand('insertHTML', false, finalHtml);
+        const template = document.createElement('template');
+        template.innerHTML = parseMarkdown(cleanedText);
+        frag.appendChild(template.content);
       } else {
-          // If auto markdown is off, just paste as plain text (but keep spaces using nbsp to prevent collapse)
-          const paragraphs = cleanedText.split(/\r?\n\r?\n/);
-          let htmlText = '';
-          if (paragraphs.length === 1) {
-              const inner = paragraphs[0]
-                  .replace(/&/g, '&amp;')
-                  .replace(/</g, '&lt;')
-                  .replace(/>/g, '&gt;')
-                  .replace(/\r?\n/g, '<br>')
-                  .replace(/ {2}/g, '&nbsp; ');
-              htmlText = `<span>${inner || '<br>'}</span>`;
-          } else {
-              htmlText = paragraphs.map(p => {
-                  const inner = p
-                      .replace(/&/g, '&amp;')
-                      .replace(/</g, '&lt;')
-                      .replace(/>/g, '&gt;')
-                      .replace(/\r?\n/g, '<br>')
-                      .replace(/ {2}/g, '&nbsp; ');
-                  return `<p>${inner || '<br>'}</p>`;
-              }).join('');
+        const appendLinesToContainer = (container: HTMLElement, blockText: string) => {
+          if (!blockText) {
+            container.appendChild(document.createElement('br'));
+            return;
           }
-          document.execCommand('insertHTML', false, htmlText);
+          const lines = blockText.split(/\r?\n/);
+          lines.forEach((line, idx) => {
+            if (line) {
+              container.appendChild(document.createTextNode(line.replace(/ {2}/g, '\u00A0 ')));
+            }
+            if (idx < lines.length - 1) {
+              container.appendChild(document.createElement('br'));
+            }
+          });
+          if (container.childNodes.length === 0) {
+            container.appendChild(document.createElement('br'));
+          }
+        };
+
+        const paragraphs = cleanedText.split(/\r?\n\r?\n/);
+        if (paragraphs.length === 1) {
+          const span = document.createElement('span');
+          appendLinesToContainer(span, paragraphs[0]);
+          frag.appendChild(span);
+        } else {
+          paragraphs.forEach((paragraph) => {
+            const p = document.createElement('p');
+            appendLinesToContainer(p, paragraph);
+            frag.appendChild(p);
+          });
+        }
+      }
+
+      const lastInserted = frag.lastChild;
+      if (sel && sel.rangeCount > 0 && editorEl && editorEl.contains(sel.anchorNode)) {
+        const range = sel.getRangeAt(0);
+        range.deleteContents();
+        range.insertNode(frag);
+        if (lastInserted) {
+          const nextRange = document.createRange();
+          nextRange.setStartAfter(lastInserted);
+          nextRange.collapse(true);
+          sel.removeAllRanges();
+          sel.addRange(nextRange);
+        }
+      } else if (editorEl) {
+        editorEl.appendChild(frag);
       }
       
       if (isAutoMarkdownEnabled) {
          handleInput();
+      } else {
+         flushPreviewEdit(true);
       }
     }
   }, [isAutoMarkdownEnabled, flushPreviewEdit, handleInput]);
@@ -2814,6 +2820,9 @@ export const EditorArea = ({
         ref={previewRef}
         contentEditable={!isViewMode}
         suppressContentEditableWarning={true}
+        data-gramm="false"
+        data-gramm_editor="false"
+        data-enable-grammarly="false"
         onInput={handleInput}
         onCompositionStart={() => isComposing.current = true}
         onCompositionEnd={() => {
@@ -2834,7 +2843,7 @@ export const EditorArea = ({
           }
         }}
         className={cn(
-          "prose prose-slate dark:prose-invert w-full min-w-0 max-w-none px-1.5 sm:px-2 pt-1 print:p-0 print:overflow-visible break-words leading-relaxed prose-p:my-2 prose-headings:mt-6 prose-headings:mb-3 prose-ul:my-2 prose-ol:my-2 prose-li:my-0.5 prose-blockquote:my-4 prose-code:text-slate-800 dark:prose-code:text-slate-200 prose-code:bg-slate-100 dark:prose-code:bg-slate-800/80 prose-code:border prose-code:border-slate-200 dark:prose-code:border-slate-700 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md prose-code:font-mono prose-code:text-[0.85em] prose-code:font-medium prose-code:shadow-[0_1px_2px_rgba(0,0,0,0.05)] prose-code:before:content-none prose-code:after:content-none prose-pre:p-0 prose-pre:bg-transparent prose-img:rounded-xl prose-table:w-full prose-table:m-0 outline-none focus:ring-0 min-h-[500px] print:min-h-0 print:prose-pre:break-inside-avoid print:prose-table:break-inside-avoid print:prose-img:break-inside-avoid print:prose-code:break-inside-avoid print:prose-headings:break-after-avoid transition-[padding] duration-500",
+          "prose prose-slate dark:prose-invert w-full min-w-0 max-w-none px-2.5 sm:px-3 pt-2 print:p-0 print:overflow-visible break-words leading-relaxed prose-p:my-2 prose-headings:mt-6 prose-headings:mb-3 prose-ul:my-2 prose-ol:my-2 prose-li:my-0.5 prose-blockquote:my-4 prose-code:text-slate-800 dark:prose-code:text-slate-200 prose-code:bg-slate-100 dark:prose-code:bg-slate-800/80 prose-code:border prose-code:border-slate-200 dark:prose-code:border-slate-700 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md prose-code:font-mono prose-code:text-[0.85em] prose-code:font-medium prose-code:shadow-[0_1px_2px_rgba(0,0,0,0.05)] prose-code:before:content-none prose-code:after:content-none prose-pre:p-0 prose-pre:bg-transparent prose-img:rounded-xl prose-table:w-full prose-table:m-0 outline-none focus:ring-0 min-h-[500px] print:min-h-0 print:prose-pre:break-inside-avoid print:prose-table:break-inside-avoid print:prose-img:break-inside-avoid print:prose-code:break-inside-avoid print:prose-headings:break-after-avoid transition-[padding] duration-500",
           baseFontSize === 'text-sm' ? 'prose-sm' :
           baseFontSize === 'text-lg' ? 'prose-lg' :
           baseFontSize === 'text-xl' ? 'prose-xl' :
@@ -2956,10 +2965,10 @@ export const EditorArea = ({
               const activeRowHeight = (rowRects[activeRowIdx] && rowRects[activeRowIdx].height) ?? 40;
               const topPosition = activeRowTop + (activeRowHeight / 2) - 14;
               
-              const leftPosition = tableRect.left + tableRect.width - 34;
+              const leftPosition = Math.max(8, tableRect.left + tableRect.width - 36);
               
               return {
-                top: topPosition,
+                top: Math.max(4, topPosition),
                 left: leftPosition};
             })()}
             onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
@@ -2970,8 +2979,8 @@ export const EditorArea = ({
                 setDeletePromptInfo({ isOpen: true, targetRow: activeTableRow, targetTable: hoveredTable });
               }}
               className="p-1.5 text-muted-foreground hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-md transition-colors bg-background/95 backdrop-blur-sm border border-border shadow-[0_2px_10px_rgba(0,0,0,0.05)] cursor-pointer"
-              style={{ marginLeft: '20px' }}
               title="Delete Row or Table"
+              aria-label="Delete row or table"
             >
               <Trash2 className="w-4 h-4" />
             </button>
@@ -3024,6 +3033,7 @@ export const EditorArea = ({
           <button 
             className="p-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
             title="Edit Sketch"
+            aria-label="Edit sketch"
             onClick={() => setIsSketchEditDialogOpen(true)}
           >
             <PenTool className="w-4 h-4" />
@@ -3032,6 +3042,7 @@ export const EditorArea = ({
           <button 
             className="p-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
             title="Delete Sketch"
+            aria-label="Delete sketch"
             onClick={() => {
               if (hoveredSketch && previewRef.current) {
                 hoveredSketch.remove();
@@ -3081,6 +3092,7 @@ export const EditorArea = ({
               onClick={() => setIsImageEditDialogOpen(true)}
               className="p-1.5 bg-background border border-border text-muted-foreground hover:text-blue-500 hover:border-blue-200 hover:bg-blue-50 dark:hover:bg-blue-950/30 rounded-md shadow-sm transition-colors"
               title="Edit Image"
+              aria-label="Edit image"
             >
               <Settings2 className="w-4 h-4" />
             </button>
@@ -3120,6 +3132,7 @@ export const EditorArea = ({
               onClick={deleteImage}
               className="p-1.5 bg-background border border-border text-muted-foreground hover:text-red-500 hover:border-red-200 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-md shadow-sm transition-colors"
               title="Delete Image"
+              aria-label="Delete image"
             >
               <Trash2 className="w-4 h-4" />
             </button>
@@ -3161,9 +3174,27 @@ export const EditorArea = ({
           })()}
         >
           <button 
-            onClick={(e) => { e.preventDefault(); e.stopPropagation(); window.open(hoveredLink.href, '_blank'); }}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              try {
+                const parsed = new URL(hoveredLink.href, window.location.href);
+                if (['http:', 'https:', 'mailto:'].includes(parsed.protocol)) {
+                  const a = document.createElement('a');
+                  a.href = parsed.href;
+                  a.target = '_blank';
+                  a.rel = 'noopener noreferrer';
+                  document.body.appendChild(a);
+                  a.click();
+                  document.body.removeChild(a);
+                }
+              } catch {
+                // ignore invalid URLs
+              }
+            }}
             className="px-2 py-1.5 bg-background border border-border text-xs font-medium text-muted-foreground hover:text-cyan-500 hover:border-cyan-200 hover:bg-cyan-50 dark:hover:bg-cyan-950/30 rounded-md shadow-sm transition-colors flex items-center gap-1 cursor-pointer"
             title="Open Link in new tab"
+            aria-label={`Open link ${hoveredLink.href}`}
           >
             <ExternalLink className="w-3 h-3" />
             <span className="max-w-[200px] truncate">{hoveredLink.href}</span>

@@ -50,12 +50,12 @@ export function SplashScreen({ onComplete }: { onComplete: () => void }) {
               <img src="/logo.svg" alt="Lumina Logo" className="w-full h-full object-cover" />
             </motion.div>
             
-            <motion.div className="flex flex-col items-center overflow-hidden">
+            <motion.div className="flex flex-col items-center overflow-hidden px-2 py-1">
               <motion.h1 
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.4, duration: 0.8, ease: "easeOut" }}
-                className="text-4xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/60"
+                className="text-4xl font-bold leading-tight pb-1 px-1 tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/60"
               >
                 Lumina
               </motion.h1>

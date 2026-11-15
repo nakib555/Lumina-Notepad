@@ -111,10 +111,20 @@ export function ImageEditDialog({ isOpen, onClose, image, onConfirm }: ImageEdit
       setHeight(image.style.height || image.getAttribute('height') || 'auto');
       setAlt(image.alt || '');
       
-      const parentStyle = image.parentElement?.style.textAlign || image.parentElement?.style.justifyContent;
-      if (parentStyle === 'left' || parentStyle === 'flex-start') setAlign('left');
-      else if (parentStyle === 'right' || parentStyle === 'flex-end') setAlign('right');
-      else setAlign('center');
+      const marginLeft = image.style.marginLeft;
+      const marginRight = image.style.marginRight;
+      if (marginLeft === 'auto' && marginRight === 'auto') {
+        setAlign('center');
+      } else if (marginLeft === 'auto') {
+        setAlign('right');
+      } else if (marginRight === 'auto') {
+        setAlign('left');
+      } else {
+        const parentStyle = image.parentElement?.style.textAlign || image.parentElement?.style.justifyContent;
+        if (parentStyle === 'left' || parentStyle === 'flex-start') setAlign('left');
+        else if (parentStyle === 'right' || parentStyle === 'flex-end') setAlign('right');
+        else setAlign('center');
+      }
 
       setCrop(undefined);
       setCompletedCrop(undefined);
@@ -297,6 +307,7 @@ export function ImageEditDialog({ isOpen, onClose, image, onConfirm }: ImageEdit
                   type="range" 
                   min="10" 
                   max="100" 
+                  aria-label="Image scale percentage"
                   value={width.endsWith('%') ? width.replace('%', '') : 100} 
                   onChange={(e) => {
                     setWidth(`${e.target.value}%`);

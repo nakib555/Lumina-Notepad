@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef, useMemo } from "react";
-import { X, RefreshCw, Terminal, Eye, Code, Trash2, ExternalLink, Check, Copy } from "lucide-react";
+import { X, RefreshCw, Terminal, Eye, Code, Trash2, Download, Check, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { escapeScriptTagContent } from "@/lib/editor-helpers";
 import { toast } from "sonner";
 
 interface CodeSandboxProps {
@@ -189,6 +190,11 @@ export const CodeSandbox = ({ isOpen, onClose, code, language, theme }: CodeSand
           padding: 12px;
           border-radius: 6px;
           overflow-x: auto;
+          white-space: pre-wrap;
+          overflow-wrap: anywhere;
+          word-break: break-word;
+          max-width: 100%;
+          box-sizing: border-box;
         }
       </style>
     `;
@@ -273,7 +279,7 @@ export const CodeSandbox = ({ isOpen, onClose, code, language, theme }: CodeSand
               <div id="root"></div>
               <script type="text/babel" data-type="module">
                 try {
-                  ${code.replace(/import\s+.*\s+from\s+['"].*['"];?/g, '')}
+                  ${escapeScriptTagContent(code.replace(/import\s+.*\s+from\s+['"].*['"];?/g, ''))}
                   
                   // Render App or default export if present
                   const root = ReactDOM.createRoot(document.getElementById('root'));
@@ -308,7 +314,7 @@ export const CodeSandbox = ({ isOpen, onClose, code, language, theme }: CodeSand
             </div>
             <script>
               try {
-                ${code}
+                ${escapeScriptTagContent(code)}
               } catch(err) {
                 console.error(err.message);
               }
@@ -359,7 +365,7 @@ export const CodeSandbox = ({ isOpen, onClose, code, language, theme }: CodeSand
                     }
                   });
 
-                  await pyodide.runPythonAsync(\`${code.replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\$/g, '\\$')}\`);
+                  await pyodide.runPythonAsync(\`${escapeScriptTagContent(code.replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\$/g, '\\$'))}\`);
                 } catch(err) {
                   statusEl.style.display = 'none';
                   outputEl.style.display = 'block';
@@ -397,7 +403,14 @@ export const CodeSandbox = ({ isOpen, onClose, code, language, theme }: CodeSand
     if (!code) return;
     const blob = new Blob([iframeSrcDoc], { type: 'text/html' });
     const url = URL.createObjectURL(blob);
-    window.open(url, '_blank');
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'sandbox.html';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast.success("Downloaded sandbox.html");
   };
 
   if (!isOpen || !code) return null;
@@ -423,6 +436,7 @@ export const CodeSandbox = ({ isOpen, onClose, code, language, theme }: CodeSand
             className="w-8 h-8 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted" 
             onClick={handleReload}
             title="Reload Sandbox"
+            aria-label="Reload Sandbox"
           >
             <RefreshCw className="w-4 h-4" />
           </Button>
@@ -431,9 +445,10 @@ export const CodeSandbox = ({ isOpen, onClose, code, language, theme }: CodeSand
             size="icon" 
             className="w-8 h-8 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted" 
             onClick={handleOpenExternal}
-            title="Open in New Tab"
+            title="Download HTML Sandbox"
+            aria-label="Download HTML Sandbox"
           >
-            <ExternalLink className="w-4 h-4" />
+            <Download className="w-4 h-4" />
           </Button>
           <Button 
             variant="ghost" 
@@ -441,6 +456,7 @@ export const CodeSandbox = ({ isOpen, onClose, code, language, theme }: CodeSand
             className="w-8 h-8 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted" 
             onClick={onClose}
             title="Close Panel"
+            aria-label="Close Code Sandbox"
           >
             <X className="w-4.5 h-4.5" />
           </Button>
@@ -448,32 +464,32 @@ export const CodeSandbox = ({ isOpen, onClose, code, language, theme }: CodeSand
       </div>
 
       {/* Tabs */}
-      <div className="flex items-center gap-1 px-4 py-2 border-b border-border/60 bg-muted/10">
+      <div className="flex items-center gap-1 px-2 sm:px-4 py-2 border-b border-border/60 bg-muted/10 overflow-x-auto no-scrollbar">
         <button
           onClick={() => setActiveTab('preview')}
           className={cn(
-            "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] font-medium transition-all",
+            "flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg text-xs sm:text-[13px] font-medium transition-all whitespace-nowrap shrink-0",
             activeTab === 'preview' 
               ? "bg-background text-foreground shadow-sm border border-border" 
               : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
           )}
         >
-          <Eye className="w-3.5 h-3.5" />
+          <Eye className="w-3.5 h-3.5 shrink-0" />
           <span>Live Frame</span>
         </button>
         <button
           onClick={() => setActiveTab('console')}
           className={cn(
-            "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] font-medium transition-all relative",
+            "flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg text-xs sm:text-[13px] font-medium transition-all whitespace-nowrap shrink-0",
             activeTab === 'console' 
               ? "bg-background text-foreground shadow-sm border border-border" 
               : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
           )}
         >
-          <Terminal className="w-3.5 h-3.5" />
+          <Terminal className="w-3.5 h-3.5 shrink-0" />
           <span>Console</span>
           {logs.length > 0 && (
-            <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-[9px] font-semibold w-4.5 h-4.5 rounded-full flex items-center justify-center scale-90 border border-background">
+            <span className="bg-primary text-primary-foreground text-[10px] font-semibold min-w-[18px] h-[18px] px-1 rounded-full flex items-center justify-center leading-none">
               {logs.length}
             </span>
           )}
@@ -481,36 +497,40 @@ export const CodeSandbox = ({ isOpen, onClose, code, language, theme }: CodeSand
         <button
           onClick={() => setActiveTab('code')}
           className={cn(
-            "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] font-medium transition-all",
+            "flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg text-xs sm:text-[13px] font-medium transition-all whitespace-nowrap shrink-0",
             activeTab === 'code' 
               ? "bg-background text-foreground shadow-sm border border-border" 
               : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
           )}
         >
-          <Code className="w-3.5 h-3.5" />
+          <Code className="w-3.5 h-3.5 shrink-0" />
           <span>Source</span>
         </button>
 
-        <div className="ml-auto flex items-center gap-1">
+        <div className="ml-auto flex items-center gap-1 shrink-0 pl-1 sm:pl-2">
           {activeTab === 'console' && logs.length > 0 && (
             <Button 
               variant="ghost" 
               size="sm" 
-              className="h-8 text-xs text-muted-foreground hover:text-destructive gap-1 px-2" 
+              className="h-8 text-xs text-muted-foreground hover:text-destructive gap-1 px-2 whitespace-nowrap shrink-0" 
               onClick={clearConsole}
+              title="Clear Console"
+              aria-label="Clear Console"
             >
               <Trash2 className="w-3.5 h-3.5" />
-              <span>Clear</span>
+              <span className="hidden sm:inline">Clear</span>
             </Button>
           )}
           <Button 
             variant="ghost" 
             size="sm" 
-            className="h-8 text-xs text-muted-foreground hover:text-foreground gap-1 px-2" 
+            className="h-8 text-xs text-muted-foreground hover:text-foreground gap-1 px-2 whitespace-nowrap shrink-0" 
             onClick={handleCopy}
+            title={copied ? "Copied" : "Copy Source"}
+            aria-label={copied ? "Copied" : "Copy Source"}
           >
             {copied ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
-            <span>{copied ? "Copied" : "Copy"}</span>
+            <span className="hidden sm:inline">{copied ? "Copied" : "Copy"}</span>
           </Button>
         </div>
       </div>

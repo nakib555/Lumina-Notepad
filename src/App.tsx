@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, lazy, Suspense } from "react";
-import { useNotes } from "@/hooks/use-notes";
+import { useNotes, Note } from "@/hooks/use-notes";
 import { motion, AnimatePresence } from "motion/react";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { AutoUpdater } from "@/components/auto-updater";
@@ -37,10 +37,12 @@ export default function App() {
     isLoaded
   } = useNotes();
 
+  const isAutostart = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('autostart') === '1';
+
   const [hasSeenIntro, setHasSeenIntro] = useState(() => {
-    return localStorage.getItem('lumina-has-seen-intro') === 'true';
+    return isAutostart || localStorage.getItem('lumina-has-seen-intro') === 'true';
   });
-  const [showSplash, setShowSplash] = useState(true);
+  const [showSplash, setShowSplash] = useState(() => !isAutostart);
 
   // Memoize handlers to prevent effect re-runs inside splash/intro
   const handleSplashComplete = useCallback(() => {
@@ -336,6 +338,7 @@ export default function App() {
             <Editor
               note={activeNote}
               notes={notes}
+              folders={folders}
               onSelectNote={handleSelectNote}
               onCreateNote={handleCreateNote}
               onDeleteNote={deleteNote}

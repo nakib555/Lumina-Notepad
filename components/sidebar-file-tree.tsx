@@ -607,13 +607,13 @@ export function SidebarFileTree({
       style={{ paddingLeft: `${ level * 12 + 28 }px` }} // Aligns nicely past the Chevron and Folder icon
       onClick={() => onSelectNote(note.id)}
     >
-      <div className="flex items-center justify-between overflow-hidden w-full pointer-events-none">
-        <div className="flex items-center gap-2 overflow-hidden w-full">
+      <div className="flex items-center justify-between gap-2 w-full min-w-0 pointer-events-none">
+        <div className="flex items-center gap-2 flex-1 min-w-0">
           <span className="text-foreground opacity-60 shrink-0 w-3.5 h-3.5 flex items-center justify-center transition-transform group-hover:scale-110">
               <FileText className={cn("w-3.5 h-3.5 transition-colors", activeNoteId === note.id ? "text-primary drop-shadow-[0_0_4px_rgba(var(--primary),0.3)]" : "text-foreground opacity-60 group-hover:opacity-100")} />
           </span>
           <span className={cn(
-            "text-sm truncate mr-2 transition-colors",
+            "text-sm truncate leading-snug py-0.5 transition-colors min-w-0",
             activeNoteId === note.id ? "text-primary font-medium" : "font-medium text-foreground opacity-70 group-hover:opacity-100"
           )}>
             {note.title || "Untitled Note"}
@@ -622,6 +622,7 @@ export function SidebarFileTree({
         <Button
           variant="ghost"
           size="icon"
+          aria-label={`Delete note ${note.title || 'Untitled Note'}`}
           className="h-6 w-6 shrink-0 text-foreground opacity-50 hover:opacity-100 hover:text-destructive transition-all pointer-events-auto"
           onClick={(e) => {
             e.stopPropagation();
@@ -667,19 +668,19 @@ export function SidebarFileTree({
           style={{ paddingLeft: `${ level * 12 + 8 }px` }}
           onClick={() => toggleFolder(folder.id)}
         >
-          <div className="flex items-center gap-2 overflow-hidden w-full pointer-events-none">
+          <div className="flex items-center gap-2 flex-1 min-w-0 pointer-events-none">
             <span className="text-foreground opacity-60 shrink-0 transition-transform group-hover:opacity-100">
               {isExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
             </span>
             <Folder className="w-4 h-4 text-primary/80 shrink-0" />
-            <span className="text-sm font-medium text-foreground opacity-70 truncate mr-2 w-full group-hover:opacity-100 transition-colors">
+            <span className="text-sm font-medium text-foreground opacity-70 truncate leading-snug py-0.5 min-w-0 flex-1 group-hover:opacity-100 transition-colors">
               {folder.name}
             </span>
           </div>
 
-          <div className="flex items-center gap-1 transition-opacity opacity-50 hover:opacity-100 text-foreground">
+          <div className="flex items-center gap-1 shrink-0 transition-opacity opacity-50 hover:opacity-100 text-foreground">
             <DropdownMenu>
-              <DropdownMenuTrigger className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "h-6 w-6")} onClick={(e) => e.stopPropagation()}>
+              <DropdownMenuTrigger aria-label={`Folder options for ${folder.name}`} className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "h-6 w-6")} onClick={(e) => e.stopPropagation()}>
                 <MoreHorizontal className="w-3 h-3" />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-40">
@@ -802,7 +803,7 @@ export function SidebarFileTree({
         onDragLeave={!isDndLocked ? handleDragLeave : undefined}
         onDrop={(e) => !isDndLocked && handleDrop(e, 'root', 'root')}
       >
-        <div className="sticky top-0 z-20 flex items-center justify-between px-3 py-1.5 mb-2 -mt-2 bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60 -mx-2 rounded-t-md border-b border-border/30">
+        <div className="sticky top-0 z-20 flex items-center justify-between px-2.5 py-2 mb-2 bg-background/85 backdrop-blur-xl supports-[backdrop-filter]:bg-background/70 rounded-lg border-b border-border/30">
           <div className="flex items-center gap-2">
             <div className="w-1 h-3 rounded-full bg-gradient-to-b from-primary/80 to-primary/30" aria-hidden="true" />
             <span className="text-[11px] font-bold text-foreground opacity-70 uppercase tracking-widest">Explorer</span>
@@ -812,13 +813,14 @@ export function SidebarFileTree({
               variant="ghost"
               size="icon"
               title={isDndLocked ? "Unlock Drag & Drop" : "Lock Drag & Drop"}
+              aria-label={isDndLocked ? "Unlock Drag and Drop" : "Lock Drag and Drop"}
               onClick={() => setIsDndLocked(!isDndLocked)}
               className={cn("h-6 w-6 rounded-md transition-colors", isDndLocked ? "text-primary hover:bg-primary/10 hover:text-primary" : "text-muted-foreground hover:bg-muted hover:text-foreground")}
             >
               {isDndLocked ? <Lock className="w-3 h-3" /> : <Unlock className="w-3 h-3" />}
             </Button>
             <DropdownMenu>
-              <DropdownMenuTrigger className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "h-6 w-6 rounded-md text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-0 focus-visible:ring-offset-0 transition-colors")}>
+              <DropdownMenuTrigger aria-label="Create or import note or folder" className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "h-6 w-6 rounded-md text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-0 focus-visible:ring-offset-0 transition-colors")}>
                 <Plus className="w-3.5 h-3.5" />
               </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
@@ -882,6 +884,7 @@ export function SidebarFileTree({
               <Input
                 autoFocus
                 placeholder="Folder name"
+                aria-label="New folder name"
                 value={newFolderName}
                 onChange={(e) => setNewFolderName(e.target.value)}
                 onKeyDown={(e) => {
@@ -912,6 +915,7 @@ export function SidebarFileTree({
               <Input
                 autoFocus
                 placeholder="Folder name"
+                aria-label="Rename folder name"
                 value={editFolderName}
                 onChange={(e) => setEditFolderName(e.target.value)}
                 onKeyDown={(e) => {

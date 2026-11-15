@@ -98,7 +98,7 @@ export function IntroSequence({ onComplete }: { onComplete: () => void }) {
                   })()}
                 </motion.div>
                 
-                <motion.h2 variants={itemVariants} className="text-3xl sm:text-4xl font-bold mb-5 tracking-tight bg-clip-text text-transparent bg-gradient-to-br from-foreground to-foreground/60">
+                <motion.h2 variants={itemVariants} className="text-3xl sm:text-4xl font-bold leading-tight pb-1 px-1 mb-5 tracking-tight bg-clip-text text-transparent bg-gradient-to-br from-foreground to-foreground/60">
                   {INTRO_SLIDES[currentSlide].title}
                 </motion.h2>
                 

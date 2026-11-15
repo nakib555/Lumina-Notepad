@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Note } from '@/hooks/use-notes';
+import { Note, Folder } from '@/hooks/use-notes';
+import { escapeHtml, sanitizeCodeLang } from '@/lib/editor-helpers';
 import { toast } from 'sonner';
 import { Capacitor, registerPlugin } from '@capacitor/core';
 import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
@@ -8,7 +9,7 @@ import { Share } from '@capacitor/share';
 import { Printer } from '@capgo/capacitor-printer';
 import { marked } from 'marked';
 
-export const useEditorExport = (note: Note | null) => {
+export const useEditorExport = (note: Note | null, folders: Folder[] = []) => {
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [showCopyMenu, setShowCopyMenu] = useState(false);
 
@@ -22,14 +23,14 @@ export const useEditorExport = (note: Note | null) => {
           const exportRenderer = new marked.Renderer();
           exportRenderer.code = function(token) {
             const code = token.text.replace(/^[\r\n]+/, '').replace(/[\r\n]+$/, '');
-            const rawLang = (token.lang || '').match(/\S*/)?.[0]?.toLowerCase() || '';
-            const langClass = rawLang ? ` class="language-${rawLang}"` : '';
-            return `<pre><code${langClass}>${code}</code></pre>\n`;
+            const rawLang = sanitizeCodeLang(token.lang || '');
+            const langClass = rawLang ? ` class="language-${escapeHtml(rawLang)}"` : '';
+            return `<pre><code${langClass}>${escapeHtml(code)}</code></pre>\n`;
           };
           const contentHTML = await marked.parse(note.content, { renderer: exportRenderer, async: true });
           
-          const escapeHtml = (str: string) => str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-          const formattedDate = new Date(note.updatedAt || note.createdAt || Date.now()).toLocaleDateString(undefined, {
+          const folderName = note.folderId ? folders.find(f => f.id === note.folderId)?.name : undefined;
+          const formattedDate = new Date(note.updatedAt || Date.now()).toLocaleDateString(undefined, {
             year: 'numeric',
             month: 'short',
             day: 'numeric'
@@ -206,7 +207,7 @@ export const useEditorExport = (note: Note | null) => {
                 <h1 class="note-title">${escapeHtml(note.title || 'Untitled Note')}</h1>
                 <div class="note-meta">
                   <span>${formattedDate}</span>
-                  ${note.folder ? `<span>•</span><span class="meta-folder">${escapeHtml(note.folder)}</span>` : ''}
+                  ${folderName ? `<span>•</span><span class="meta-folder">${escapeHtml(folderName)}</span>` : ''}
                   ${note.tags && note.tags.length > 0 ? `<span>•</span><span>${note.tags.map(t => '#' + escapeHtml(t)).join(' ')}</span>` : ''}
                 </div>
               </div>

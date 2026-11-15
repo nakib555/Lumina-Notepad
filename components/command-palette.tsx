@@ -15,9 +15,11 @@ export function CommandPalette({ notes, onSelectNote, onCreateNote, onThemeChang
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
-      if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
+      if (e.key.toLowerCase() === "k" && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
         setOpen((open) => !open);
+      } else if (e.key === "Escape") {
+        setOpen(false);
       }
     };
 
@@ -28,7 +30,13 @@ export function CommandPalette({ notes, onSelectNote, onCreateNote, onThemeChang
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] bg-background/80 backdrop-blur-sm flex items-start justify-center pt-[20vh] print:hidden" onClick={() => setOpen(false)}>
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Global Command Menu"
+      className="fixed inset-0 z-[100] bg-background/80 backdrop-blur-sm flex items-start justify-center pt-[15vh] sm:pt-[20vh] px-4 print:hidden"
+      onClick={() => setOpen(false)}
+    >
       <div className="w-full max-w-lg bg-popover border border-border rounded-xl shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
         <Command className="w-full h-full flex flex-col" label="Global Command Menu">
           <div className="flex items-center border-b border-border px-3">

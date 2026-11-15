@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -82,9 +82,9 @@ export function FontPickerDialog({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[580px] p-0 overflow-hidden bg-background border border-border flex flex-col h-[85vh] sm:h-[620px]">
         {/* Header */}
-        <div className="p-5 border-b border-border/60 pb-4">
+        <div className="p-5 pr-12 border-b border-border/60 pb-4">
           <DialogTitle className="text-xl font-bold flex items-center gap-2 tracking-tight">
-            <Sparkles className="w-5 h-5 text-indigo-500 fill-indigo-500/10 animate-pulse" />
+            <Sparkles className="w-5 h-5 text-indigo-500 fill-indigo-500/10 animate-pulse shrink-0" />
             Lumina Font Explorer
           </DialogTitle>
           <DialogDescription className="text-muted-foreground text-xs mt-1">
@@ -106,6 +106,7 @@ export function FontPickerDialog({
                 }
               }}
               placeholder="Search font styles (e.g. Montserrat, Playfair, Pacifico)..."
+              aria-label="Search fonts"
               className="pl-9 pr-8 h-10 w-full rounded-lg bg-background border-border/80 focus-visible:ring-indigo-500 text-sm"
             />
             {search && (
@@ -113,6 +114,7 @@ export function FontPickerDialog({
                 onClick={() => setSearch("")}
                 className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 hover:bg-muted text-muted-foreground rounded-full transition-colors"
                 title="Clear search"
+                aria-label="Clear font search"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
@@ -186,12 +188,12 @@ export function FontPickerDialog({
                         : "bg-background border-border/50 hover:bg-muted/50 hover:border-border"
                     )}
                   >
-                    <div className="flex flex-col gap-0.5 min-w-0">
-                      <span className="text-xs font-semibold text-foreground truncate">{font}</span>
+                    <div className="flex flex-col gap-0.5 min-w-0 flex-1 pr-2">
+                      <span className="text-xs font-semibold text-foreground truncate leading-snug py-0.5">{font}</span>
                       <span 
                         style={{ fontFamily: font }}
                         className={cn(
-                          "text-base truncate tracking-tight text-muted-foreground mt-0.5",
+                          "text-base truncate leading-snug py-0.5 tracking-tight text-muted-foreground mt-0.5",
                           isSelected && "text-indigo-600 dark:text-indigo-400 font-medium"
                         )}
                       >
@@ -224,17 +226,18 @@ export function FontPickerDialog({
 
         {/* Live Preview Panel & Quick Input */}
         <div className="p-4 bg-muted/30 border-t border-border/60 flex flex-col gap-3 shrink-0">
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground flex items-center gap-1.5">
-              <SlidersHorizontal className="w-3 h-3 text-indigo-500" />
-              Active Preview: <span className="text-foreground font-semibold font-mono">{activeFontForPreview}</span>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 min-w-0">
+            <span className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground flex items-center gap-1.5 min-w-0 truncate">
+              <SlidersHorizontal className="w-3 h-3 text-indigo-500 shrink-0" />
+              Active Preview: <span className="text-foreground font-semibold font-mono truncate">{activeFontForPreview}</span>
             </span>
             <input
               type="text"
               value={previewText}
               onChange={(e) => setPreviewText(e.target.value)}
-              className="text-[11px] bg-background border border-border/80 rounded px-2 py-0.5 w-[180px] sm:w-[240px] text-muted-foreground focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:text-foreground transition-all truncate"
+              className="text-[11px] bg-background border border-border/80 rounded px-2 py-1 w-full sm:w-[240px] text-muted-foreground focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:text-foreground transition-all"
               title="Edit preview text"
+              aria-label="Edit preview text"
               placeholder="Edit preview text..."
             />
           </div>

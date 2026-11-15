@@ -129,7 +129,7 @@ export function Sidebar({
         <div className="p-5 border-b border-border flex items-center justify-between bg-sidebar">
           <div className="flex items-baseline gap-2">
             <div className="w-8 h-8 rounded-lg overflow-hidden shadow-sm flex items-center justify-center self-center shrink-0">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none" className="w-full h-full" style={{ marginLeft: '-10px' }}>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none" className="w-full h-full">
                 <rect width="512" height="512" rx="128" fill="url(#paint0_linear)"/>
                 <path d="M160 140V372H352" stroke="white" strokeWidth="40" strokeLinecap="round" strokeLinejoin="round"/>
                 <circle cx="352" cy="140" r="40" fill="white">
@@ -148,7 +148,7 @@ export function Sidebar({
           </div>
           <div className="flex items-center gap-1">
             <Button variant="ghost" size="icon" onClick={onClose} className="text-muted-foreground hover:text-foreground hover:bg-muted md:hidden" aria-label="Close sidebar">
-              <X className="w-5 h-5" aria-hidden="true" style={{ marginLeft: '-10px' }} />
+              <X className="w-5 h-5" aria-hidden="true" />
             </Button>
           </div>
         </div>
@@ -290,9 +290,9 @@ export function Sidebar({
                               <FileText className="w-4 h-4" />
                           </div>
                           <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] p-3 rounded-lg border border-border bg-card shadow-sm cursor-pointer hover:border-primary/50 transition-colors">
-                              <div className="flex items-center justify-between mb-1">
-                                  <span className="font-medium text-sm truncate">{note.title}</span>
-                                  <span className="text-xs text-muted-foreground shrink-0 ml-2">{format(note.updatedAt, 'MMM d')}</span>
+                              <div className="flex items-center justify-between gap-2 mb-1 min-w-0">
+                                  <span className="font-medium text-sm truncate leading-snug py-0.5 min-w-0 flex-1">{note.title}</span>
+                                  <span className="text-xs text-muted-foreground shrink-0">{format(note.updatedAt, 'MMM d')}</span>
                               </div>
                               <p className="text-xs text-muted-foreground line-clamp-1">{note.content.replace(/[#*`_]/g, '') || "Empty note"}</p>
                           </div>

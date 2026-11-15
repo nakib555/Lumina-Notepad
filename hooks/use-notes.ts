@@ -120,24 +120,52 @@ export function useNotes() {
   }, []);
 
   useEffect(() => {
-    if (isLoaded && typeof window !== 'undefined') {
-      const timeoutId = setTimeout(async () => {
-        try {
-          const safeNotes = notes.filter((n): n is Note => Boolean(n && n.id));
-          const safeFolders = folders.filter((f): f is Folder => Boolean(f && f.id));
-          await Preferences.set({ key: 'lumina-notes', value: JSON.stringify(safeNotes) });
-          await Preferences.set({ key: 'lumina-folders', value: JSON.stringify(safeFolders) });
-          if (activeNoteId) {
-            await Preferences.set({ key: 'lumina-active-note', value: activeNoteId });
-          }
-        } catch (e) {
-          console.error("Failed to save state to preferences", e);
+    if (!isLoaded || typeof window === 'undefined') return;
+
+    let isDirty = true;
+    const persistNow = () => {
+      if (!isDirty) return;
+      isDirty = false;
+      try {
+        const safeNotes = notes.filter((n): n is Note => Boolean(n && n.id));
+        const safeFolders = folders.filter((f): f is Folder => Boolean(f && f.id));
+        void Preferences.set({ key: 'lumina-notes', value: JSON.stringify(safeNotes) });
+        void Preferences.set({ key: 'lumina-folders', value: JSON.stringify(safeFolders) });
+        if (activeNoteId) {
+          void Preferences.set({ key: 'lumina-active-note', value: activeNoteId });
         }
-      }, 500);
-      
-      return () => clearTimeout(timeoutId);
-    }
+      } catch (e) {
+        console.error("Failed to save state to preferences", e);
+      }
+    };
+
+    const timeoutId = setTimeout(persistNow, 500);
+    const handleFlush = () => persistNow();
+    window.addEventListener('pagehide', handleFlush);
+    window.addEventListener('beforeunload', handleFlush);
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') persistNow();
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      clearTimeout(timeoutId);
+      window.removeEventListener('pagehide', handleFlush);
+      window.removeEventListener('beforeunload', handleFlush);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, [notes, folders, activeNoteId, isLoaded]);
+
+  useEffect(() => {
+    if (!isLoaded) return;
+    if (notes.length === 0) {
+      if (activeNoteId !== null) {
+        setActiveNoteId(null);
+      }
+    } else if (!activeNoteId || !notes.some(n => Boolean(n && n.id && n.id === activeNoteId))) {
+      setActiveNoteId(notes[0]?.id || null);
+    }
+  }, [notes, activeNoteId, isLoaded]);
 
   const activeNote = notes.find(n => Boolean(n && n.id && n.id === activeNoteId)) || (notes.length > 0 && notes[0]?.id ? notes[0] : null);
 
@@ -192,13 +220,7 @@ export function useNotes() {
   };
 
   const deleteNote = (id: string) => {
-    setNotes(prev => {
-      const filtered = prev.filter(n => Boolean(n && n.id && n.id !== id));
-      if (activeNoteId === id) {
-        setActiveNoteId(filtered.length > 0 && filtered[0]?.id ? filtered[0].id : null);
-      }
-      return filtered;
-    });
+    setNotes(prev => prev.filter(n => Boolean(n && n.id && n.id !== id)));
   };
 
   const createFolder = (name: string, parentId: string | null = null) => {
@@ -249,28 +271,29 @@ export function useNotes() {
   };
 
   const deleteFolder = (id: string) => {
-    // Delete the folder and all its contents (nested folders and notes)
-    const getNestedFolderIds = (parentId: string): string[] => {
-      const children = folders.filter(f => Boolean(f && f.id && f.parentId === parentId));
-      return [
-        parentId,
-        ...children.flatMap(child => getNestedFolderIds(child.id))
-      ];
-    };
-    
-    const idsToDelete = new Set(getNestedFolderIds(id));
-
-    setFolders(prev => prev.filter(f => Boolean(f && f.id && !idsToDelete.has(f.id))));
-    
-    setNotes(prev => {
-      const filtered = prev.filter(n => Boolean(n && n.id && !(n.folderId && idsToDelete.has(n.folderId))));
-      if (activeNoteId && !filtered.some(n => Boolean(n && n.id && n.id === activeNoteId))) {
-        setTimeout(() => {
-          setActiveNoteId(filtered.length > 0 && filtered[0]?.id ? filtered[0].id : null);
-        }, 0);
+    const collectNestedFolderIds = (allFolders: Folder[], rootId: string): Set<string> => {
+      const result = new Set<string>([rootId]);
+      let added = true;
+      while (added) {
+        added = false;
+        for (const f of allFolders) {
+          if (f && f.id && f.parentId && result.has(f.parentId) && !result.has(f.id)) {
+            result.add(f.id);
+            added = true;
+          }
+        }
       }
-      return filtered;
+      return result;
+    };
+
+    const idsToDelete = collectNestedFolderIds(folders, id);
+
+    setFolders(prev => {
+      const fullIds = collectNestedFolderIds(prev, id);
+      return prev.filter(f => Boolean(f && f.id && !fullIds.has(f.id)));
     });
+
+    setNotes(prev => prev.filter(n => Boolean(n && n.id && !(n.folderId && idsToDelete.has(n.folderId)))));
   };
 
   return {

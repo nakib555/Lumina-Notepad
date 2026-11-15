@@ -395,22 +395,19 @@ export const FloatingToolbar = ({
     if (!selection || selection.rangeCount === 0) return;
     const range = selection.getRangeAt(0);
     if (!range || !range.getBoundingClientRect) return;
-    let rect = range.getBoundingClientRect();
+    const clientRects = typeof range.getClientRects === 'function' ? range.getClientRects() : null;
+    let rect = clientRects && clientRects.length > 0 ? clientRects[0] : range.getBoundingClientRect();
     
-    if (rect.width === 0 || rect.height === 0) {
-      const span = document.createElement('span');
-      span.textContent = '\u200b';
-      try {
-        const cloneRange = range.cloneRange();
-        cloneRange.insertNode(span);
-        rect = span.getBoundingClientRect();
-        span.remove();
-      } catch {
-        // Fallback
+    if ((!rect || (rect.width === 0 && rect.height === 0)) && range.startContainer) {
+      const parentEl = range.startContainer.nodeType === Node.TEXT_NODE
+        ? range.startContainer.parentElement
+        : (range.startContainer as Element);
+      if (parentEl && parentEl.getBoundingClientRect) {
+        rect = parentEl.getBoundingClientRect();
       }
     }
     
-    if (rect.top === 0 && rect.bottom === 0) return;
+    if (!rect || (rect.top === 0 && rect.bottom === 0)) return;
     
     const scrollContainer = textareaRef.current?.closest('.overflow-y-auto') as HTMLElement;
     if (scrollContainer) {
@@ -686,7 +683,7 @@ export const FloatingToolbar = ({
           onMouseUp={handleSelectionMouseUp}
           onMouseMove={handleSelectionMouseMove}
           className={cn(
-            "absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-background/90 backdrop-blur-md border border-border rounded-2xl py-1.5 px-2 z-50 animate-in fade-in slide-in-from-bottom-2 zoom-in-95 duration-200 flex items-center gap-1 overflow-x-auto no-scrollbar max-w-[88vw] md:max-w-[700px] flex-nowrap select-none touch-pan-x",
+            "absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-background/90 backdrop-blur-md border border-border rounded-2xl py-1.5 px-2 z-50 animate-in fade-in slide-in-from-bottom-2 zoom-in-95 duration-200 flex items-center gap-1 overflow-x-auto no-scrollbar w-max max-w-full flex-nowrap select-none touch-pan-x",
             isSelectionDragging ? "cursor-grabbing" : "cursor-grab"
           )}
         >
@@ -703,6 +700,7 @@ export const FloatingToolbar = ({
                   : "text-blue-500 hover:text-blue-600 dark:text-blue-400 hover:bg-blue-500/10"
               )}
               title={isSelecting ? "Stop Selecting" : "Start Selecting"}
+              aria-label={isSelecting ? "Stop Selecting" : "Start Selecting"}
             >
               <MousePointer2 className="w-4 h-4" />
             </Button>
@@ -716,6 +714,7 @@ export const FloatingToolbar = ({
           onClick={() => moveCursor('left')}
               className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg shrink-0"
               title="Move Left"
+              aria-label="Move Left"
             >
               <ArrowLeft className="w-4 h-4" />
             </Button>
@@ -726,6 +725,7 @@ export const FloatingToolbar = ({
           onClick={() => moveCursor('word-left')}
               className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg shrink-0"
               title="Move Word Left"
+              aria-label="Move Word Left"
             >
               <div className="flex items-center justify-center">
                 <span className="text-[10px] font-bold mr-[1px]">W</span>
@@ -739,6 +739,7 @@ export const FloatingToolbar = ({
           onClick={() => moveCursor('up')}
               className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg shrink-0"
               title="Move Up"
+              aria-label="Move Up"
             >
               <ArrowUp className="w-4 h-4" />
             </Button>
@@ -749,6 +750,7 @@ export const FloatingToolbar = ({
           onClick={() => moveCursor('down')}
               className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg shrink-0"
               title="Move Down"
+              aria-label="Move Down"
             >
               <ArrowDown className="w-4 h-4" />
             </Button>
@@ -759,6 +761,7 @@ export const FloatingToolbar = ({
           onClick={() => moveCursor('word-right')}
               className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg shrink-0"
               title="Move Word Right"
+              aria-label="Move Word Right"
             >
               <div className="flex items-center justify-center">
                 <ArrowRight className="w-3 h-3" />
@@ -772,6 +775,7 @@ export const FloatingToolbar = ({
           onClick={() => moveCursor('right')}
               className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg shrink-0"
               title="Move Right"
+              aria-label="Move Right"
             >
               <ArrowRight className="w-4 h-4" />
             </Button>
@@ -785,6 +789,7 @@ export const FloatingToolbar = ({
           onClick={handleSelectAll}
               className="h-8 px-2 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg shrink-0"
               title="Select All"
+              aria-label="Select All"
             >
               All
             </Button>
@@ -795,6 +800,7 @@ export const FloatingToolbar = ({
           onClick={handleCut}
               className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg shrink-0"
               title="Cut"
+              aria-label="Cut"
             >
               <Scissors className="w-4 h-4" />
             </Button>
@@ -805,6 +811,7 @@ export const FloatingToolbar = ({
           onClick={handleCopy}
               className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg shrink-0"
               title="Copy"
+              aria-label="Copy"
             >
               <Copy className="w-4 h-4" />
             </Button>
@@ -815,6 +822,7 @@ export const FloatingToolbar = ({
           onClick={handlePaste}
               className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg shrink-0"
               title="Paste"
+              aria-label="Paste"
             >
               <ClipboardPaste className="w-4 h-4" />
             </Button>
@@ -831,6 +839,7 @@ export const FloatingToolbar = ({
               }}
               className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg shrink-0"
               title="Close"
+              aria-label="Close selection toolbar"
             >
               <X className="w-4 h-4" />
             </Button>
@@ -845,7 +854,7 @@ export const FloatingToolbar = ({
         onMouseUp={handleMouseUp}
         onMouseMove={handleMouseMove}
         className={cn(
-          "flex items-center gap-1 bg-background/90 backdrop-blur-md border border-border rounded-2xl py-1.5 px-2 overflow-x-auto no-scrollbar max-w-[88vw] md:max-w-[700px] flex-nowrap select-none touch-pan-x min-h-[44px] transition-[width,height,padding,background-color,max-width,min-width] duration-300 ease-in-out",
+          "flex items-center gap-1 bg-background/90 backdrop-blur-md border border-border rounded-2xl py-1.5 px-2 overflow-x-auto no-scrollbar max-w-full flex-nowrap select-none touch-pan-x min-h-[44px] transition-[width,height,padding,background-color,max-width,min-width] duration-300 ease-in-out",
           isDragging ? "cursor-grabbing" : "cursor-grab"
         )}
       >
@@ -868,6 +877,7 @@ export const FloatingToolbar = ({
                    }
                  }}
                  placeholder="Find text..."
+                 aria-label="Find text in document"
                  autoComplete="off"
                  className="flex-1 bg-transparent border-none outline-none text-sm px-2.5 min-w-[80px] placeholder:text-muted-foreground/60 focus:ring-0 text-foreground"
                  onMouseDown={(e) => e.stopPropagation()}
@@ -876,14 +886,14 @@ export const FloatingToolbar = ({
                  {searchQuery ? `${matchCount} found` : ''}
                </span>
                <div className="flex items-center shrink-0 pr-1">
-                 <button onClick={() => handleSearch(false)} className="p-1 rounded-sm text-muted-foreground hover:bg-muted hover:text-foreground active:scale-95 transition-all duration-200" title="Previous (Shift+Enter)">
+                 <button onClick={() => handleSearch(false)} className="p-1 rounded-sm text-muted-foreground hover:bg-muted hover:text-foreground active:scale-95 transition-all duration-200" title="Previous (Shift+Enter)" aria-label="Previous search match">
                    <ChevronUp className="w-4 h-4" />
                  </button>
-                 <button onClick={() => handleSearch(true)} className="p-1 rounded-sm text-muted-foreground hover:bg-muted hover:text-foreground active:scale-95 transition-all duration-200" title="Next (Enter)">
+                 <button onClick={() => handleSearch(true)} className="p-1 rounded-sm text-muted-foreground hover:bg-muted hover:text-foreground active:scale-95 transition-all duration-200" title="Next (Enter)" aria-label="Next search match">
                    <ChevronDown className="w-4 h-4" />
                  </button>
                  <div className="w-[1px] h-3.5 bg-border/60 mx-1" />
-                 <button onClick={() => setIsSearchOpen(false)} className="p-1 rounded-sm text-muted-foreground hover:text-destructive hover:bg-destructive/10 active:scale-95 transition-all duration-200">
+                 <button onClick={() => setIsSearchOpen(false)} className="p-1 rounded-sm text-muted-foreground hover:text-destructive hover:bg-destructive/10 active:scale-95 transition-all duration-200" title="Close search" aria-label="Close find and replace">
                    <X className="w-4 h-4" />
                  </button>
                </div>
@@ -909,6 +919,7 @@ export const FloatingToolbar = ({
                    }
                  }}
                  placeholder="Replace with..."
+                 aria-label="Replace with"
                  autoComplete="off"
                  className="flex-1 bg-transparent border-none outline-none text-sm px-2.5 min-w-[80px] text-foreground placeholder:text-muted-foreground/60 focus:ring-0"
                  onMouseDown={(e) => e.stopPropagation()}
@@ -953,6 +964,8 @@ export const FloatingToolbar = ({
                     : "text-blue-500 hover:text-blue-600 dark:text-blue-400 hover:bg-blue-500/10"
                 )}
                 title="Selection Mode"
+                aria-label="Toggle Selection Mode"
+                aria-pressed={isSelectionMode}
               >
                 <MousePointer2 className="w-4 h-4" />
               </Button>
@@ -963,6 +976,7 @@ export const FloatingToolbar = ({
                 onClick={() => setIsSearchOpen(true)}
                 className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg shrink-0 transition-colors"
                 title="Find in document"
+                aria-label="Find in document"
               >
                 <Search className="w-4 h-4" />
               </Button>
@@ -1063,6 +1077,7 @@ export const FloatingToolbar = ({
             activeFormats.bold && "bg-blue-500/20 dark:bg-blue-500/30"
           )}
           title="Bold"
+          aria-label="Bold"
         >
           <Bold className="w-4 h-4" />
         </Button>
@@ -1076,6 +1091,7 @@ export const FloatingToolbar = ({
              activeFormats.italic && "bg-amber-500/20 dark:bg-amber-500/30"
           )}
           title="Italic"
+          aria-label="Italic"
         >
           <Italic className="w-4 h-4" />
         </Button>
@@ -1089,6 +1105,7 @@ export const FloatingToolbar = ({
             activeFormats.underline && "bg-emerald-500/20 dark:bg-emerald-500/30"
           )}
           title="Underline"
+          aria-label="Underline"
         >
           <Underline className="w-4 h-4" />
         </Button>
@@ -1102,6 +1119,7 @@ export const FloatingToolbar = ({
             activeFormats.strikethrough && "bg-rose-500/20 dark:bg-rose-500/30"
           )}
           title="Strikethrough"
+          aria-label="Strikethrough"
         >
           <Strikethrough className="w-4 h-4" />
         </Button>
@@ -1115,6 +1133,7 @@ export const FloatingToolbar = ({
             activeFormats.subscript && "bg-muted text-foreground"
           )}
           title="Subscript"
+          aria-label="Subscript"
         >
           <Subscript className="w-4 h-4" />
         </Button>
@@ -1128,6 +1147,7 @@ export const FloatingToolbar = ({
             activeFormats.superscript && "bg-muted text-foreground"
           )}
           title="Superscript"
+          aria-label="Superscript"
         >
           <Superscript className="w-4 h-4" />
         </Button>
@@ -1163,6 +1183,7 @@ export const FloatingToolbar = ({
           onClick={() => jumpToMark('prev')}
           className="h-8 w-8 text-yellow-600 hover:text-yellow-700 dark:text-yellow-400 hover:bg-yellow-500/10 rounded-lg shrink-0"
           title="Previous Bookmark"
+          aria-label="Previous Bookmark"
         >
           <ChevronLeft className="w-4 h-4" />
         </Button>
@@ -1173,6 +1194,7 @@ export const FloatingToolbar = ({
           onClick={handleAddBookmark}
           className="h-8 w-8 text-yellow-600 hover:text-yellow-700 dark:text-yellow-400 hover:bg-yellow-500/10 rounded-lg shrink-0"
           title="Add Bookmark"
+          aria-label="Add Bookmark"
         >
           <Bookmark className="w-4 h-4 text-yellow-500 fill-yellow-500/20" />
         </Button>
@@ -1183,6 +1205,7 @@ export const FloatingToolbar = ({
           onClick={() => jumpToMark('next')}
           className="h-8 w-8 text-yellow-600 hover:text-yellow-700 dark:text-yellow-400 hover:bg-yellow-500/10 rounded-lg shrink-0"
           title="Next Bookmark"
+          aria-label="Next Bookmark"
         >
           <ChevronRight className="w-4 h-4" />
         </Button>
@@ -1197,6 +1220,7 @@ export const FloatingToolbar = ({
           onClick={() => handleApplyFormatting("\n> ", "")}
           className={cn("h-8 w-8 text-indigo-500 hover:text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500/10 rounded-lg shrink-0", activeFormats.quote && "bg-indigo-500/20 dark:bg-indigo-500/30 text-indigo-600 dark:text-indigo-400")}
           title="Quote"
+          aria-label="Blockquote"
         >
           <Quote className="w-4 h-4" />
         </Button>
@@ -1207,6 +1231,7 @@ export const FloatingToolbar = ({
           onClick={() => handleApplyFormatting("`", "`")}
           className="h-8 w-8 text-pink-500 hover:text-pink-600 dark:text-pink-400 hover:bg-pink-500/10 rounded-lg shrink-0"
           title="Inline Code"
+          aria-label="Inline Code"
         >
           <Code className="w-4 h-4" />
         </Button>
@@ -1217,6 +1242,7 @@ export const FloatingToolbar = ({
           onClick={() => handleApplyFormatting("```\n")}
           className="h-8 w-8 text-pink-600 hover:text-pink-700 dark:text-pink-300 hover:bg-pink-500/10 rounded-lg shrink-0"
           title="Code Block"
+          aria-label="Insert Code Block"
         >
           <Terminal className="w-4 h-4" />
         </Button>
@@ -1227,6 +1253,7 @@ export const FloatingToolbar = ({
           onClick={onInsertLinkClick}
           className="h-8 w-8 text-cyan-500 hover:text-cyan-600 dark:text-cyan-400 hover:bg-cyan-500/10 rounded-lg shrink-0"
           title="Link"
+          aria-label="Insert Link"
         >
           <Link className="w-4 h-4" />
         </Button>
@@ -1237,6 +1264,7 @@ export const FloatingToolbar = ({
           onClick={onInsertImageClick}
           className="h-8 w-8 text-teal-500 hover:text-teal-600 dark:text-teal-400 hover:bg-teal-500/10 rounded-lg shrink-0"
           title="Image"
+          aria-label="Insert Image"
         >
           <Image className="w-4 h-4" />
         </Button>
@@ -1247,6 +1275,7 @@ export const FloatingToolbar = ({
           onClick={onInsertSketchClick}
           className="h-8 w-8 text-teal-500 hover:text-teal-600 dark:text-teal-400 hover:bg-teal-500/10 rounded-lg shrink-0"
           title="Sketch"
+          aria-label="Insert Sketch"
         >
           <PenTool className="w-4 h-4" />
         </Button>
@@ -1264,6 +1293,7 @@ export const FloatingToolbar = ({
             activeFormats.bulletList && "bg-orange-500/20 dark:bg-orange-500/30"
           )}
           title="Bullet List"
+          aria-label="Bullet List"
         >
           <List className="w-4 h-4" />
         </Button>
@@ -1277,6 +1307,7 @@ export const FloatingToolbar = ({
             activeFormats.orderedList && "bg-orange-500/20 dark:bg-orange-500/30"
           )}
           title="Numbered List"
+          aria-label="Numbered List"
         >
           <ListOrdered className="w-4 h-4" />
         </Button>
@@ -1287,6 +1318,7 @@ export const FloatingToolbar = ({
           onClick={() => handleApplyFormatting("\n- [ ] ", "")}
           className="h-8 w-8 text-orange-500 hover:text-orange-600 dark:text-orange-400 hover:bg-orange-500/10 rounded-lg shrink-0"
           title="Task List"
+          aria-label="Task List"
         >
           <ListTodo className="w-4 h-4" />
         </Button>
@@ -1297,6 +1329,7 @@ export const FloatingToolbar = ({
           onClick={() => handleApplyFormatting("\n---\n", "")}
           className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg shrink-0"
           title="Divider"
+          aria-label="Insert Divider"
         >
           <Minus className="w-4 h-4" />
         </Button>
@@ -1307,6 +1340,7 @@ export const FloatingToolbar = ({
           onClick={() => handleApplyFormatting("\n| Header | Header |\n|--------|--------|\n|        |        |\n", "")}
           className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg shrink-0"
           title="Table"
+          aria-label="Insert Table"
         >
           <Table className="w-4 h-4" />
         </Button>
@@ -1321,6 +1355,7 @@ export const FloatingToolbar = ({
           onClick={() => handleApplyFormatting("\n# ", "")}
           className={cn("h-8 w-8 text-violet-500 hover:text-violet-600 dark:text-violet-400 hover:bg-violet-500/10 rounded-lg shrink-0", activeFormats.h1 && "bg-violet-500/20 dark:bg-violet-500/30 text-violet-600 dark:text-violet-400")}
           title="Heading 1"
+          aria-label="Heading 1"
         >
           <Heading1 className="w-4 h-4" />
         </Button>
@@ -1331,6 +1366,7 @@ export const FloatingToolbar = ({
           onClick={() => handleApplyFormatting("\n## ", "")}
           className={cn("h-8 w-8 text-violet-500 hover:text-violet-600 dark:text-violet-400 hover:bg-violet-500/10 rounded-lg shrink-0", activeFormats.h2 && "bg-violet-500/20 dark:bg-violet-500/30 text-violet-600 dark:text-violet-400")}
           title="Heading 2"
+          aria-label="Heading 2"
         >
           <Heading2 className="w-4 h-4" />
         </Button>
@@ -1341,6 +1377,7 @@ export const FloatingToolbar = ({
           onClick={() => handleApplyFormatting("\n### ", "")}
           className={cn("h-8 w-8 text-violet-500 hover:text-violet-600 dark:text-violet-400 hover:bg-violet-500/10 rounded-lg shrink-0", activeFormats.h3 && "bg-violet-500/20 dark:bg-violet-500/30 text-violet-600 dark:text-violet-400")}
           title="Heading 3"
+          aria-label="Heading 3"
         >
           <Heading3 className="w-4 h-4" />
         </Button>
@@ -1355,6 +1392,7 @@ export const FloatingToolbar = ({
           onClick={onOpenAiAssistant}
           className="h-8 w-8 text-violet-500 hover:text-violet-600 dark:text-violet-400 hover:bg-violet-500/10 rounded-lg shrink-0"
           title="AI Assistant (Gemini)"
+          aria-label="Open AI Assistant"
         >
           <Sparkles className="w-4 h-4 text-violet-500 dark:text-violet-400 fill-violet-500/20" />
         </Button>
@@ -1370,6 +1408,8 @@ export const FloatingToolbar = ({
               : "text-muted-foreground hover:text-foreground hover:bg-muted"
           )}
           title={isAutoMarkdownEnabled ? "Auto Markdown: ON" : "Auto Markdown: OFF"}
+          aria-label={isAutoMarkdownEnabled ? "Disable Auto Markdown" : "Enable Auto Markdown"}
+          aria-pressed={isAutoMarkdownEnabled}
         >
           <Wand2 className="w-4 h-4" />
         </Button>
@@ -1385,6 +1425,8 @@ export const FloatingToolbar = ({
           }}
           className="h-8 w-8 text-yellow-500 hover:text-yellow-600 dark:text-yellow-400 hover:bg-yellow-500/10 rounded-lg shrink-0"
           title="Symbols"
+          aria-label="Insert Symbol"
+          aria-pressed={showSymbolMenu}
         >
           <Sigma className="w-4 h-4" />
         </Button>

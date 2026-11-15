@@ -29,6 +29,14 @@ export const CodeBlock = ({ inline, className, children, theme, ...props }: Code
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const handleRun = () => {
+    window.dispatchEvent(new CustomEvent('run-code-block', { detail: { code, language } }));
+  };
+
+  const handleOpen = () => {
+    window.dispatchEvent(new CustomEvent('open-code-block', { detail: { code, language } }));
+  };
+
   const isDark = theme === 'dark' || (typeof document !== 'undefined' && document.documentElement.classList.contains('dark'));
 
   if (inline) {
@@ -49,11 +57,11 @@ export const CodeBlock = ({ inline, className, children, theme, ...props }: Code
             </span>
           </div>
           <div className="flex items-center gap-4">
-            <button className="flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[13px] font-medium transition-all text-emerald-600 hover:bg-emerald-500/10 hover:text-emerald-700 dark:hover:text-emerald-400" title="Run Code">
+            <button onClick={handleRun} aria-label="Run code" className="flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[13px] font-medium transition-all text-emerald-600 hover:bg-emerald-500/10 hover:text-emerald-700 dark:hover:text-emerald-400" title="Run Code">
               <Play className="w-3.5 h-3.5 fill-current" />
               Run
             </button>
-            <button className="flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[13px] font-medium text-purple-600 hover:bg-purple-500/10 hover:text-purple-700 dark:hover:text-purple-400 transition-all" title="Open in Side Panel">
+            <button onClick={handleOpen} aria-label="Open code in sandbox" className="flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[13px] font-medium text-purple-600 hover:bg-purple-500/10 hover:text-purple-700 dark:hover:text-purple-400 transition-all" title="Open in Side Panel">
               <ExternalLink className="w-3.5 h-3.5" />
               Open
             </button>

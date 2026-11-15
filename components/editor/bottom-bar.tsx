@@ -77,7 +77,7 @@ export const BottomBar = ({
   return (
     <div className="absolute bottom-4 sm:bottom-8 left-0 right-0 z-20 px-2 sm:px-4 flex justify-center pointer-events-none print:hidden">
       <div 
-        className="relative pointer-events-auto max-w-full flex flex-col items-center" 
+        className="relative pointer-events-auto max-w-[min(100%,700px)] min-w-0 flex flex-col items-center" 
         ref={symbolMenuRef}
         onMouseDown={(e) => {
           if ((e.target as HTMLElement).closest('button')) {
@@ -116,7 +116,7 @@ export const BottomBar = ({
             onMouseUp={handleSymbolMouseUp}
             onMouseMove={handleSymbolMouseMove}
             className={cn(
-              "absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-background/90 backdrop-blur-md border border-border rounded-2xl py-1.5 px-2 z-50 animate-in fade-in slide-in-from-bottom-2 zoom-in-95 duration-200 flex items-center gap-1 overflow-x-auto no-scrollbar max-w-[88vw] md:max-w-[700px] flex-nowrap select-none touch-pan-x",
+              "absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-background/90 backdrop-blur-md border border-border rounded-2xl py-1.5 px-2 z-50 animate-in fade-in slide-in-from-bottom-2 zoom-in-95 duration-200 flex items-center gap-1 overflow-x-auto no-scrollbar w-max max-w-full flex-nowrap select-none touch-pan-x",
               isSymbolDragging ? "cursor-grabbing" : "cursor-grab"
             )}
             role="menu"

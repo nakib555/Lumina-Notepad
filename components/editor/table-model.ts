@@ -3,6 +3,8 @@
  * Operating on a logical table model separated from presentation and DOM.
  */
 
+import { escapeMarkdownTableCell, splitMarkdownTableRow } from '@/lib/editor-helpers';
+
 // --- 1. Selection Model & FSM States ---
 
 export enum SelectionType {
@@ -70,13 +72,77 @@ export enum PatchType {
   DUPLICATE_COL = 'DUPLICATE_COL'
 }
 
-export interface ITablePatch {
-  patchId: string;
-  type: PatchType;
-  timestamp: number;
-  author?: string;
-  payload: Record<string, unknown>;
-}
+export type ITablePatch =
+  | {
+      patchId: string;
+      type: PatchType.SET_CELL;
+      timestamp: number;
+      author?: string;
+      payload: { r: number; c: number; value?: string; style?: Partial<ITableCellStyle> };
+    }
+  | {
+      patchId: string;
+      type: PatchType.INSERT_ROW;
+      timestamp: number;
+      author?: string;
+      payload: { count: number; at: number };
+    }
+  | {
+      patchId: string;
+      type: PatchType.DELETE_ROW;
+      timestamp: number;
+      author?: string;
+      payload: { r: number };
+    }
+  | {
+      patchId: string;
+      type: PatchType.INSERT_COL;
+      timestamp: number;
+      author?: string;
+      payload: { count: number; at: number };
+    }
+  | {
+      patchId: string;
+      type: PatchType.DELETE_COL;
+      timestamp: number;
+      author?: string;
+      payload: { c: number };
+    }
+  | {
+      patchId: string;
+      type: PatchType.FORMAT_COL;
+      timestamp: number;
+      author?: string;
+      payload: { c: number; alignment: 'left' | 'center' | 'right' | null };
+    }
+  | {
+      patchId: string;
+      type: PatchType.CLEAR_ROW;
+      timestamp: number;
+      author?: string;
+      payload: { r: number };
+    }
+  | {
+      patchId: string;
+      type: PatchType.CLEAR_COL;
+      timestamp: number;
+      author?: string;
+      payload: { c: number };
+    }
+  | {
+      patchId: string;
+      type: PatchType.DUPLICATE_ROW;
+      timestamp: number;
+      author?: string;
+      payload: { r: number };
+    }
+  | {
+      patchId: string;
+      type: PatchType.DUPLICATE_COL;
+      timestamp: number;
+      author?: string;
+      payload: { c: number };
+    };
 
 export interface ITableTransaction {
   id: string;
@@ -183,7 +249,7 @@ export class MarkdownTableSerializer implements ITableSerializer {
     
     // Header Row
     const headerRow = model.cells[0];
-    const headerLine = '| ' + headerRow.map(cell => cell.value || ' ').join(' | ') + ' |';
+    const headerLine = '| ' + headerRow.map(cell => escapeMarkdownTableCell(cell.value || '') || ' ').join(' | ') + ' |';
     rows.push(headerLine);
     
     // Delimiter Row based on alignment
@@ -199,7 +265,7 @@ export class MarkdownTableSerializer implements ITableSerializer {
     // Data Rows
     for (let r = 1; r < model.rowCount; r++) {
       const row = model.cells[r];
-      const dataLine = '| ' + row.map(cell => cell.value || ' ').join(' | ') + ' |';
+      const dataLine = '| ' + row.map(cell => escapeMarkdownTableCell(cell.value || '') || ' ').join(' | ') + ' |';
       rows.push(dataLine);
     }
     
@@ -207,21 +273,16 @@ export class MarkdownTableSerializer implements ITableSerializer {
   }
 
   deserialize(raw: string): ITableModel | null {
-    const lines = raw.trim().split('\n').map(l => l.trim()).filter(l => l.startsWith('|'));
+    const lines = raw.trim().split(/\r?\n/).map(l => l.trim()).filter(l => l.startsWith('|'));
     if (lines.length < 2) return null; // Needs at least headers and separator
 
-    const parseRow = (line: string): string[] => {
-      // strip leading and trailing pipes
-      const cleaned = line.replace(/^\|/, '').replace(/\|$/, '');
-      return cleaned.split('|').map(s => s.trim());
-    };
-
-    const headers = parseRow(lines[0]);
-    const delimiterRow = parseRow(lines[1]);
+    const headers = splitMarkdownTableRow(lines[0]);
+    const delimiterRow = splitMarkdownTableRow(lines[1]);
     const colCount = headers.length;
 
     // Parse alignment from delimiter row
-    const alignments = delimiterRow.map(cell => {
+    const alignments = Array.from({ length: colCount }, (_, idx) => {
+      const cell = (delimiterRow[idx] || '').trim();
       const left = cell.startsWith(':');
       const right = cell.endsWith(':');
       if (left && right) return 'center' as const;
@@ -239,7 +300,7 @@ export class MarkdownTableSerializer implements ITableSerializer {
 
     // Data rows
     for (let i = 2; i < lines.length; i++) {
-      const rawCells = parseRow(lines[i]);
+      const rawCells = splitMarkdownTableRow(lines[i]);
       // Pad cells if row was shorter
       while (rawCells.length < colCount) {
         rawCells.push('');
@@ -382,10 +443,7 @@ export class DeterministicTablePasteProvider implements ITablePasteProvider {
       if (delimiterIndex === -1) return null;
 
       const parseRow = (line: string): string[] => {
-        const trimmed = line.trim();
-        // Remove leading and trailing pipes safely even if whitespace precedes/follows
-        const cleaned = trimmed.replace(/^\|\s*/, '').replace(/\s*\|$/, '');
-        const cells = cleaned.split('|').map(s => s.trim());
+        const cells = splitMarkdownTableRow(line);
         // Clean trailing empty cells caused by extra delimiters
         while (cells.length > 0 && !cells[cells.length - 1]) {
           cells.pop();
@@ -528,7 +586,7 @@ export class DeterministicTablePasteProvider implements ITablePasteProvider {
         const c = startCol + dc;
         if (c < currentModel.colCount) {
           // Escape any pipe character to ensure markdown tables never split on cell contents
-          const safeVal = val.replace(/\|/g, '\\|');
+          const safeVal = escapeMarkdownTableCell(val);
           patches.push({
             patchId: 'patch_' + Math.random().toString(36).substring(2, 9),
             type: PatchType.SET_CELL,
@@ -715,6 +773,10 @@ export class TableController {
 
   getFSMState(): FSMState {
     return this.state;
+  }
+
+  getMutationQueue(): TableMutationQueue {
+    return this.mutationQueue;
   }
 
   transitionTo(nextState: FSMState) {

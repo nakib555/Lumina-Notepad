@@ -121,7 +121,7 @@ export function ImageInsertDialog({ isOpen, onClose, onInsertUrl, onInsertFile }
                     value={url}
                     onChange={(e) => setUrl(e.target.value)}
                     autoFocus
-                    className="pr-10 border-r-0"
+                    className="pr-10"
                   />
                   <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center justify-center">
                     {isValidating && <Loader2 className="w-4 h-4 text-muted-foreground animate-spin" />}

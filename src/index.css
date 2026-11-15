@@ -340,6 +340,19 @@
   padding-bottom: 0.05em;
 }
 
+.prose em, .prose i {
+  padding-right: 0.08em;
+}
+
+.prose ul, .prose ol {
+  padding-left: 1.5rem;
+}
+
+.prose blockquote {
+  padding-left: 1rem;
+  padding-right: 0.5rem;
+}
+
 /* Sutonny & Bengali script diacritic and vertical clearance */
 .font-sutonny, [data-font*="sutonny"], [style*="Sutonny"] {
   line-height: 1.8 !important;
@@ -468,8 +481,8 @@ body.search-is-active *::selection {
   margin: 1.5rem 0 !important;
   font-size: 1.25em !important;
   overflow-x: auto;
-  overflow-y: hidden;
-  padding: 0.5rem 0;
+  overflow-y: visible;
+  padding: 0.85rem 0.5rem;
 }
 
 .katex {

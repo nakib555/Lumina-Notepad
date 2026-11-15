@@ -196,6 +196,7 @@ export function EditorSettingsDropdown({
                   }
                 }}
                 placeholder="Search 2,000+ fonts..."
+                aria-label="Search fonts"
                 className="pl-8 pr-7 h-8 w-full rounded-lg bg-background border border-border/80 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 text-xs"
               />
               {search && (
@@ -203,6 +204,7 @@ export function EditorSettingsDropdown({
                   onClick={() => setSearch("")}
                   className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 hover:bg-muted text-muted-foreground rounded-full transition-colors"
                   title="Clear search"
+                  aria-label="Clear font search"
                 >
                   <X className="w-3 h-3" />
                 </button>
@@ -273,12 +275,12 @@ export function EditorSettingsDropdown({
                           : "bg-background border-border/50 hover:bg-muted/50 hover:border-border"
                       )}
                     >
-                      <div className="flex flex-col gap-0.5 min-w-0">
-                        <span className="text-[11px] font-bold text-foreground truncate">{font}</span>
+                      <div className="flex flex-col gap-0.5 min-w-0 flex-1 pr-2">
+                        <span className="text-[11px] font-bold text-foreground truncate leading-snug py-0.5">{font}</span>
                         <span 
                           style={{ fontFamily: font }}
                           className={cn(
-                            "text-sm truncate tracking-tight text-muted-foreground/80 mt-0.5",
+                            "text-sm truncate leading-snug py-0.5 tracking-tight text-muted-foreground/80 mt-0.5",
                             isSelected && "text-indigo-600 dark:text-indigo-400 font-medium"
                           )}
                         >

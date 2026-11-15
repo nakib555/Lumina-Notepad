@@ -66,15 +66,15 @@ export const EditorHeader = ({
   const settingsButtonRef = useRef<HTMLButtonElement>(null);
   return (
     <header className={cn(
-      "h-14 border-b border-border flex items-center justify-between px-2 sm:px-4 shrink-0 bg-background/80 backdrop-blur-md z-10 print:hidden transition-opacity duration-500",
+      "min-h-14 border-b border-border flex items-center justify-between gap-1 sm:gap-2 px-1.5 sm:px-4 shrink-0 bg-background/80 backdrop-blur-md z-10 print:hidden transition-opacity duration-500 min-w-0",
       "opacity-100"
     )}>
-      <div className="flex items-center gap-1 sm:gap-2 py-1 shrink-0">
+      <div className="flex items-center gap-0.5 sm:gap-2 py-1 min-w-0 shrink">
         <Button 
           variant="ghost" 
           size="icon" 
           onClick={onToggleSidebar} 
-          className="text-muted-foreground hover:text-foreground shrink-0"
+          className="h-8 w-8 sm:h-9 sm:w-9 text-muted-foreground hover:text-foreground shrink-0"
           aria-label="Toggle sidebar"
         >
           <Menu className="w-5 h-5" aria-hidden="true" />
@@ -85,8 +85,9 @@ export const EditorHeader = ({
           variant="ghost" 
           size="sm" 
           onClick={() => setIsViewMode(!isViewMode)} 
-          className={`h-9 px-3 gap-2 shrink-0 ${isViewMode ? "bg-primary text-primary-foreground hover:bg-primary/90" : "text-muted-foreground hover:text-foreground"}`}
+          className={`h-8 w-8 px-0 sm:w-auto sm:h-9 sm:px-3 gap-2 shrink-0 justify-center ${isViewMode ? "bg-primary text-primary-foreground hover:bg-primary/90" : "text-muted-foreground hover:text-foreground"}`}
           title={isViewMode ? "Switch to Edit Mode" : "Switch to View Mode"}
+          aria-label={isViewMode ? "Switch to Edit Mode" : "Switch to View Mode"}
         >
           {isViewMode ? <Edit3 className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
           <span className="hidden sm:inline font-medium">{isViewMode ? "Edit Mode" : "View Mode"}</span>
@@ -123,7 +124,7 @@ export const EditorHeader = ({
         </div>
 
         {!isViewMode && (
-          <div className="flex items-center gap-0.5 sm:gap-1 shrink-0 ml-1">
+          <div className="flex items-center gap-0.5 sm:gap-1 shrink-0 sm:ml-1">
             <Button 
               variant="ghost" 
               size="icon" 
@@ -158,7 +159,7 @@ export const EditorHeader = ({
             variant="ghost" 
             size="sm" 
             onClick={() => setShowCopyMenu(!showCopyMenu)}
-            className="h-9 px-2 sm:px-3 gap-2 text-muted-foreground hover:bg-muted rounded-xl shrink-0"
+            className="h-8 w-8 px-0 sm:w-auto sm:h-9 sm:px-3 gap-2 text-muted-foreground hover:bg-muted rounded-xl shrink-0 justify-center"
             aria-label="Copy options"
             aria-haspopup="menu"
             aria-expanded={showCopyMenu}
@@ -169,7 +170,7 @@ export const EditorHeader = ({
           
           {showCopyMenu && (
             <div 
-              className="absolute right-0 mt-2 w-64 bg-background/95 backdrop-blur-xl border border-border/50 rounded-2xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.1)] p-2 z-50 animate-in fade-in slide-in-from-top-2 zoom-in-95 duration-200"
+              className="absolute right-0 mt-2 w-64 max-w-[calc(100vw-1rem)] bg-background/95 backdrop-blur-xl border border-border/50 rounded-2xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.1)] p-2 z-50 animate-in fade-in slide-in-from-top-2 zoom-in-95 duration-200"
               role="menu"
               aria-orientation="vertical"
             >
@@ -213,7 +214,7 @@ export const EditorHeader = ({
             variant="ghost" 
             size="sm" 
             onClick={() => setShowExportMenu(!showExportMenu)}
-            className="h-9 px-2 sm:px-3 gap-2 text-muted-foreground hover:bg-muted rounded-xl shrink-0"
+            className="h-8 w-8 px-0 sm:w-auto sm:h-9 sm:px-3 gap-2 text-muted-foreground hover:bg-muted rounded-xl shrink-0 justify-center"
             aria-label="Export options"
             aria-haspopup="menu"
             aria-expanded={showExportMenu}
@@ -224,7 +225,7 @@ export const EditorHeader = ({
           
           {showExportMenu && (
             <div 
-              className="absolute right-0 mt-2 w-64 bg-background/95 backdrop-blur-xl border border-border/50 rounded-2xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.1)] p-2 z-50 animate-in fade-in slide-in-from-top-2 zoom-in-95 duration-200"
+              className="absolute right-0 mt-2 w-64 max-w-[calc(100vw-1rem)] bg-background/95 backdrop-blur-xl border border-border/50 rounded-2xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.1)] p-2 z-50 animate-in fade-in slide-in-from-top-2 zoom-in-95 duration-200"
               role="menu"
               aria-orientation="vertical"
             >
@@ -292,14 +293,14 @@ export const EditorHeader = ({
           )}
         </div>
 
-        <div className="flex items-center gap-2 sm:gap-3 px-2 sm:px-3 py-1.5 bg-muted/50 rounded-lg text-xs font-medium text-muted-foreground transition-colors hover:text-foreground shrink-0 cursor-default">
-          <span className="flex items-center gap-1.5" title="Word Count">
+        <div className="flex items-center gap-1.5 sm:gap-3 px-2 sm:px-3 py-1 sm:py-1.5 bg-muted/50 rounded-lg text-xs font-medium text-muted-foreground transition-colors hover:text-foreground shrink-0 cursor-default">
+          <span className="flex items-center gap-1 sm:gap-1.5" title="Word Count">
             <span className="opacity-70 font-semibold">{stats.words}</span>
             <span className="hidden sm:inline">words</span>
             <span className="sm:hidden">w</span>
           </span>
           <div className="w-px h-3 bg-border" aria-hidden="true" />
-          <span className="flex items-center gap-1.5" title="Reading Time">
+          <span className="flex items-center gap-1 sm:gap-1.5" title="Reading Time">
             <span className="opacity-70 font-semibold">{stats.readingTime}</span>
             <span className="hidden sm:inline">min read</span>
             <span className="sm:hidden">m</span>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { 
   Sparkles, Loader2, Copy, Check, CornerDownLeft, 
   Globe, Wand2, RefreshCw, FileText
@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { parseMarkdown } from "./editor-area";
+import { cleanAiResponse } from "@/lib/editor-helpers";
 
 interface AiAssistantDialogProps {
   isOpen: boolean;
@@ -31,6 +32,7 @@ export const AiAssistantDialog = ({
   const [result, setResult] = useState("");
   const [copied, setCopied] = useState(false);
   const [targetLanguage, setTargetLanguage] = useState("Spanish");
+  const [lastRequest, setLastRequest] = useState<{ action: string; customPrompt?: string } | null>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -38,6 +40,7 @@ export const AiAssistantDialog = ({
       setCustomPrompt("");
       setResult("");
       setCopied(false);
+      setLastRequest(null);
       // Auto focus custom input
       setTimeout(() => {
         inputRef.current?.focus();
@@ -46,6 +49,8 @@ export const AiAssistantDialog = ({
   }, [isOpen]);
 
   const handleAction = async (action: string, overridePrompt?: string) => {
+    const resolvedCustomPrompt = overridePrompt ?? (action === "translate" ? targetLanguage : (action === "custom" ? customPrompt : undefined));
+    setLastRequest({ action, customPrompt: resolvedCustomPrompt });
     setIsLoading(true);
     setResult("");
     try {
@@ -56,7 +61,7 @@ export const AiAssistantDialog = ({
           action,
           text: selectedText || noteContext || "",
           context: noteContext,
-          customPrompt: overridePrompt || customPrompt || (action === "translate" ? targetLanguage : undefined)
+          customPrompt: resolvedCustomPrompt
         })
       });
 
@@ -109,26 +114,7 @@ export const AiAssistantDialog = ({
 
   const renderResultHtml = () => {
     try {
-      const cleanResponse = (text: string): string => {
-        if (!text) return "";
-        let cleaned = text.trim();
-        
-        // Strip markdown code block wrappers
-        const codeBlockRegex = /^```(?:markdown|html|text)?\s*\n?([\s\S]*?)\n?\s*```$/i;
-        let matches = cleaned.match(codeBlockRegex);
-        if (matches) {
-          cleaned = matches[1].trim();
-        } else {
-          const genericCodeBlockRegex = /^```(?:markdown|html|text)?\s*([\s\S]*?)\s*```$/i;
-          matches = cleaned.match(genericCodeBlockRegex);
-          if (matches) {
-            cleaned = matches[1].trim();
-          }
-        }
-        return cleaned;
-      };
-
-      const cleanedResult = cleanResponse(result);
+      const cleanedResult = cleanAiResponse(result);
       return { __html: parseMarkdown(cleanedResult) };
     } catch {
       return { __html: result };
@@ -196,6 +182,7 @@ export const AiAssistantDialog = ({
                 <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Translate Selection</span>
                 <div className="flex items-center gap-2">
                   <select
+                    aria-label="Target language"
                     value={targetLanguage}
                     onChange={(e) => setTargetLanguage(e.target.value)}
                     className="h-9 rounded-xl border border-border/40 bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-primary focus:border-primary max-w-[150px] cursor-pointer"
@@ -224,7 +211,7 @@ export const AiAssistantDialog = ({
               <Loader2 className="w-8 h-8 text-violet-500 animate-spin" />
               <div className="text-center space-y-1">
                 <p className="text-sm font-semibold text-foreground">Lumina is thinking...</p>
-                <p className="text-xs text-muted-foreground animate-pulse">Polishing your sentences with Gemini 3.5 Flash</p>
+                <p className="text-xs text-muted-foreground animate-pulse">Polishing your sentences with Gemini</p>
               </div>
             </div>
           )}
@@ -237,7 +224,13 @@ export const AiAssistantDialog = ({
                 <Button 
                   variant="ghost" 
                   size="sm" 
-                  onClick={() => handleAction("custom")}
+                  onClick={() => {
+                    if (lastRequest) {
+                      handleAction(lastRequest.action, lastRequest.customPrompt);
+                    } else if (customPrompt.trim()) {
+                      handleAction("custom", customPrompt);
+                    }
+                  }}
                   className="h-7 text-xs rounded-lg gap-1.5 text-violet-500 hover:text-violet-600 hover:bg-violet-500/10"
                 >
                   <RefreshCw className="w-3 h-3" />
@@ -273,6 +266,7 @@ export const AiAssistantDialog = ({
                 />
                 <Button
                   size="icon"
+                  aria-label="Send custom instruction"
                   onClick={() => customPrompt.trim() && handleAction("custom")}
                   disabled={!customPrompt.trim()}
                   className="absolute right-3 bottom-3 h-7 w-7 rounded-xl bg-violet-500 hover:bg-violet-600 text-white shadow-sm transition-transform active:scale-95 disabled:opacity-30 disabled:pointer-events-none"

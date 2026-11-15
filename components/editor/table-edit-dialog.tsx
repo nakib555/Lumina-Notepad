@@ -390,6 +390,7 @@ export const TableEditDialog = ({ isOpen, onClose, table, onConfirm }: TableEdit
                     <Button 
                       variant="ghost" 
                       size="icon" 
+                      aria-label={activeTab === 'rows' ? "Decrease row count" : "Decrease column count"}
                       className="h-8 w-8 sm:h-9 sm:w-9 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground" 
                       onClick={() => updateActive(-1)}
                     >
@@ -401,6 +402,7 @@ export const TableEditDialog = ({ isOpen, onClose, table, onConfirm }: TableEdit
                       max={20}
                       readOnly={isKeyboardLocked}
                       inputMode={isKeyboardLocked ? "none" : "numeric"}
+                      aria-label={activeTab === 'rows' ? "Row count" : "Column count"}
                       onFocus={(e) => isKeyboardLocked && e.target.blur()}
                       className={`h-8 w-16 border-0 bg-transparent text-center text-sm sm:text-base font-medium focus-visible:ring-0 focus-visible:ring-offset-0 px-0 ${isKeyboardLocked ? 'pointer-events-none' : ''}`} 
                       value={activeTab === 'rows' ? rows : cols} 
@@ -418,6 +420,7 @@ export const TableEditDialog = ({ isOpen, onClose, table, onConfirm }: TableEdit
                     <Button 
                       variant="ghost" 
                       size="icon" 
+                      aria-label={activeTab === 'rows' ? "Increase row count" : "Increase column count"}
                       className="h-8 w-8 sm:h-9 sm:w-9 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground" 
                       onClick={() => updateActive(1)}
                     >
@@ -444,6 +447,7 @@ export const TableEditDialog = ({ isOpen, onClose, table, onConfirm }: TableEdit
                     min="0" 
                     max="6" 
                     step="1" 
+                    aria-label="Corner radius"
                     value={curveLevel} 
                     onChange={(e) => setCurveLevel(parseInt(e.target.value))}
                     className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
@@ -481,6 +485,7 @@ export const TableEditDialog = ({ isOpen, onClose, table, onConfirm }: TableEdit
                     className={`h-6 w-6 rounded-md ${isDndLocked ? 'text-amber-500 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/30' : 'text-muted-foreground hover:text-foreground hover:bg-muted'}`}
                     onClick={() => setIsDndLocked(!isDndLocked)}
                     title={isDndLocked ? "Unlock drag AND drop" : "Lock drag AND drop (prevents accidental dragging)"}
+                    aria-label={isDndLocked ? "Unlock table drag and drop" : "Lock table drag and drop"}
                   >
                     {isDndLocked ? <Lock className="w-3 h-3" /> : <Unlock className="w-3 h-3" />}
                   </Button>
@@ -490,6 +495,7 @@ export const TableEditDialog = ({ isOpen, onClose, table, onConfirm }: TableEdit
                     className={`h-6 w-6 rounded-md ${isKeyboardLocked ? 'text-amber-500 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/30' : 'text-muted-foreground hover:text-foreground hover:bg-muted'}`}
                     onClick={() => setIsKeyboardLocked(!isKeyboardLocked)}
                     title={isKeyboardLocked ? "Unlock text editing" : "Lock text editing (prevents virtual keyboard)"}
+                    aria-label={isKeyboardLocked ? "Unlock table text editing" : "Lock table text editing"}
                   >
                     {isKeyboardLocked ? <Lock className="w-3 h-3" /> : <Unlock className="w-3 h-3" />}
                   </Button>
@@ -499,28 +505,28 @@ export const TableEditDialog = ({ isOpen, onClose, table, onConfirm }: TableEdit
                       {/* Column Actions */}
                       <div className="flex items-center gap-0.5 bg-background border border-border/50 p-0.5 rounded-md shadow-sm">
                         <span className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold px-1.5 select-none">Col</span>
-                        <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-primary hover:bg-muted" onClick={() => insertCol(selectedCell.c)} title="Insert Column Left"><ArrowLeftToLine className="w-3 h-3" /></Button>
-                        <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-primary hover:bg-muted" onClick={() => insertCol(selectedCell.c + 1)} title="Insert Column Right"><ArrowRightToLine className="w-3 h-3" /></Button>
-                        <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-red-500 hover:bg-red-500/10" onClick={() => deleteCol(selectedCell.c)} title="Delete Column" disabled={Number(cols) <= 1}><Trash2 className="w-3 h-3" /></Button>
+                        <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-primary hover:bg-muted" onClick={() => insertCol(selectedCell.c)} title="Insert Column Left" aria-label="Insert Column Left"><ArrowLeftToLine className="w-3 h-3" /></Button>
+                        <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-primary hover:bg-muted" onClick={() => insertCol(selectedCell.c + 1)} title="Insert Column Right" aria-label="Insert Column Right"><ArrowRightToLine className="w-3 h-3" /></Button>
+                        <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-red-500 hover:bg-red-500/10" onClick={() => deleteCol(selectedCell.c)} title="Delete Column" aria-label="Delete Column" disabled={Number(cols) <= 1}><Trash2 className="w-3 h-3" /></Button>
                       </div>
 
                       {/* Formatting Actions */}
                       <div className="flex items-center gap-0.5 bg-background border border-border/50 p-0.5 rounded-md shadow-sm">
                         <span className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold px-1.5 select-none">Align</span>
-                        <Button variant="ghost" size="icon" className={`h-6 w-6 ${tableData.alignments[selectedCell.c] === 'left' ? 'text-primary bg-primary/10' : 'text-muted-foreground hover:text-primary hover:bg-muted'}`} onClick={() => setColAlign(selectedCell.c, 'left')} title="Align Left"><AlignLeft className="w-3 h-3" /></Button>
-                        <Button variant="ghost" size="icon" className={`h-6 w-6 ${tableData.alignments[selectedCell.c] === 'center' ? 'text-primary bg-primary/10' : 'text-muted-foreground hover:text-primary hover:bg-muted'}`} onClick={() => setColAlign(selectedCell.c, 'center')} title="Align Center"><AlignCenter className="w-3 h-3" /></Button>
-                        <Button variant="ghost" size="icon" className={`h-6 w-6 ${tableData.alignments[selectedCell.c] === 'right' ? 'text-primary bg-primary/10' : 'text-muted-foreground hover:text-primary hover:bg-muted'}`} onClick={() => setColAlign(selectedCell.c, 'right')} title="Align Right"><AlignRight className="w-3 h-3" /></Button>
+                        <Button variant="ghost" size="icon" className={`h-6 w-6 ${tableData.alignments[selectedCell.c] === 'left' ? 'text-primary bg-primary/10' : 'text-muted-foreground hover:text-primary hover:bg-muted'}`} onClick={() => setColAlign(selectedCell.c, 'left')} title="Align Left" aria-label="Align Column Left"><AlignLeft className="w-3 h-3" /></Button>
+                        <Button variant="ghost" size="icon" className={`h-6 w-6 ${tableData.alignments[selectedCell.c] === 'center' ? 'text-primary bg-primary/10' : 'text-muted-foreground hover:text-primary hover:bg-muted'}`} onClick={() => setColAlign(selectedCell.c, 'center')} title="Align Center" aria-label="Align Column Center"><AlignCenter className="w-3 h-3" /></Button>
+                        <Button variant="ghost" size="icon" className={`h-6 w-6 ${tableData.alignments[selectedCell.c] === 'right' ? 'text-primary bg-primary/10' : 'text-muted-foreground hover:text-primary hover:bg-muted'}`} onClick={() => setColAlign(selectedCell.c, 'right')} title="Align Right" aria-label="Align Column Right"><AlignRight className="w-3 h-3" /></Button>
                       </div>
 
                       {/* Row Actions */}
                       <div className="flex items-center gap-0.5 bg-background border border-border/50 p-0.5 rounded-md shadow-sm">
                         <span className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold px-1.5 select-none">Row</span>
                         {selectedCell.r > -1 && (
-                          <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-primary hover:bg-muted" onClick={() => insertRow(selectedCell.r)} title="Insert Row Above"><ArrowUpToLine className="w-3 h-3" /></Button>
+                          <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-primary hover:bg-muted" onClick={() => insertRow(selectedCell.r)} title="Insert Row Above" aria-label="Insert Row Above"><ArrowUpToLine className="w-3 h-3" /></Button>
                         )}
-                        <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-primary hover:bg-muted" onClick={() => insertRow(selectedCell.r > -1 ? selectedCell.r + 1 : 0)} title="Insert Row Below"><ArrowDownToLine className="w-3 h-3" /></Button>
+                        <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-primary hover:bg-muted" onClick={() => insertRow(selectedCell.r > -1 ? selectedCell.r + 1 : 0)} title="Insert Row Below" aria-label="Insert Row Below"><ArrowDownToLine className="w-3 h-3" /></Button>
                         {selectedCell.r > -1 && (
-                          <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-red-500 hover:bg-red-500/10" onClick={() => deleteRow(selectedCell.r)} title="Delete Row" disabled={Number(rows) <= 2}><Trash2 className="w-3 h-3" /></Button>
+                          <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-red-500 hover:bg-red-500/10" onClick={() => deleteRow(selectedCell.r)} title="Delete Row" aria-label="Delete Row" disabled={Number(rows) <= 2}><Trash2 className="w-3 h-3" /></Button>
                         )}
                       </div>
                    </div>

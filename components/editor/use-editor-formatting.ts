@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 import { Note } from '@/hooks/use-notes';
+import { escapeHtml, sanitizeCodeLang } from '@/lib/editor-helpers';
 
 export const useEditorFormatting = (
   _note: Note | null,
@@ -42,15 +43,6 @@ export const useEditorFormatting = (
     } else if (prefix.startsWith("\n#")) {
       const level = prefix.trim().length;
       document.execCommand('formatBlock', false, `H${level}`);
-    } else if (prefix === "[") {
-      const url = prompt("Enter link URL:");
-      if (url) document.execCommand('createLink', false, url);
-    } else if (prefix === "![alt](") {
-      const url = prompt("Enter image URL:");
-      if (url) {
-        const imgHTML = `<span class="image-wrapper block relative max-w-full my-4"><img src="${url}" alt="image" class="rounded-lg max-w-full h-auto cursor-pointer border border-transparent hover:border-indigo-500 transition-colors" /></span><p>&#8203;</p>`;
-        document.execCommand('insertHTML', false, imgHTML);
-      }
     } else if (prefix === "\n---\n") {
       document.execCommand('insertHorizontalRule', false, '');
       document.execCommand('insertHTML', false, '<p>&#8203;</p>');
@@ -73,8 +65,8 @@ export const useEditorFormatting = (
       document.execCommand('insertHTML', false, tableHTML);
     } else if (prefix.match(/^```[a-zA-Z0-9-]*\n$/)) {
       const match = prefix.match(/^```([a-zA-Z0-9-]*)\n$/);
-      const langRaw = match ? match[1] : '';
-      const displayLang = langRaw ? langRaw.charAt(0).toUpperCase() + langRaw.slice(1) : 'Code';
+      const langRaw = sanitizeCodeLang(match ? match[1] : '');
+      const displayLang = escapeHtml(langRaw ? langRaw.charAt(0).toUpperCase() + langRaw.slice(1) : 'Code');
       
       const codeHTML = `
 <div class="code-block-wrapper border border-[#e5e7eb] dark:border-[#374151] rounded-md my-4 overflow-hidden not-prose shadow-sm" contenteditable="false">
@@ -83,14 +75,17 @@ export const useEditorFormatting = (
       ${displayLang}
     </div>
     <div class="flex items-center gap-4">
-      <button class="flex items-center gap-1 text-[#6366f1] dark:text-[#818cf8] hover:opacity-80 transition-opacity bg-transparent border-none cursor-pointer">
+      <button class="flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[13px] font-medium transition-all text-emerald-600 hover:bg-emerald-500/10 hover:text-emerald-700 dark:hover:text-emerald-400 bg-transparent border-none cursor-pointer run-code-btn" title="Run Code" aria-label="Run code" onclick="window.dispatchEvent(new CustomEvent('run-code-block', { detail: { code: this.closest('.code-block-wrapper').querySelector('.code-element').textContent, language: '${langRaw}' } }));">
+        ▶ Run
+      </button>
+      <button class="flex items-center gap-1 text-[#6366f1] dark:text-[#818cf8] hover:opacity-80 transition-opacity bg-transparent border-none cursor-pointer open-panel-btn" title="Open in Side Panel" aria-label="Open code in sandbox" onclick="window.dispatchEvent(new CustomEvent('open-code-block', { detail: { code: this.closest('.code-block-wrapper').querySelector('.code-element').textContent, language: '${langRaw}' } }));">
         <span class="text-xs">»</span> Open
       </button>
-      <button class="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-opacity bg-transparent border-none cursor-pointer copy-btn" onclick="navigator.clipboard.writeText(this.closest('.code-block-wrapper').querySelector('.code-element').textContent); const span = this.querySelector('.copy-text'); span.textContent='Copied'; setTimeout(() => span.textContent='Copy', 2000);">
+      <button class="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-opacity bg-transparent border-none cursor-pointer copy-btn" aria-label="Copy code" onclick="navigator.clipboard.writeText(this.closest('.code-block-wrapper').querySelector('.code-element').textContent); const span = this.querySelector('.copy-text'); span.textContent='Copied'; setTimeout(() => span.textContent='Copy', 2000);">
         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
         <span class="copy-text">Copy</span>
       </button>
-      <button class="flex items-center gap-1.5 text-slate-400 hover:text-red-500 transition-opacity bg-transparent border-none cursor-pointer delete-btn" onclick="const wrapper = this.closest('.code-block-wrapper'); const next = wrapper.nextElementSibling; if(next && next.tagName === 'P' && next.innerHTML.includes('&#8203;')) next.remove(); wrapper.remove();" title="Delete code block">
+      <button class="flex items-center gap-1.5 text-slate-400 hover:text-red-500 transition-opacity bg-transparent border-none cursor-pointer delete-btn" aria-label="Delete code block" onclick="const wrapper = this.closest('.code-block-wrapper'); const next = wrapper.nextElementSibling; if(next && next.tagName === 'P' && next.innerHTML.includes('&#8203;')) next.remove(); wrapper.remove();" title="Delete code block">
         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
       </button>
     </div>

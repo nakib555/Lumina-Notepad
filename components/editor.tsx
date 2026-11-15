@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect, useCallback, Suspense, lazy } from "react";
 import TextareaAutosize from 'react-textarea-autosize';
 import { AiAssistantDialog } from "./editor/ai-assistant-dialog";
-import { Note } from "@/hooks/use-notes";
+import { Note, Folder } from "@/hooks/use-notes";
+import { cleanAiResponse, escapeHtml } from "@/lib/editor-helpers";
 import { EditorHeader } from "./editor/editor-header";
 import { BottomBar } from "./editor/bottom-bar";
 import { MetadataBar } from "./editor/metadata-bar";
@@ -16,7 +17,6 @@ import { Button } from "./ui/button";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
-import { EditorAreaSkeleton } from "@/components/ui/skeleton-loaders";
 import { FontPickerDialog } from "./editor/font-picker-dialog";
 import { CodeSandbox } from "./editor/code-sandbox";
 
@@ -27,6 +27,7 @@ const LinkEditDialog = lazy(() => import('./editor/link-edit-dialog').then(modul
 interface EditorProps {
   note: Note | null;
   notes?: Note[];
+  folders?: Folder[];
   onSelectNote?: (id: string) => void;
   onCreateNote?: (title?: string, content?: string) => void;
   onDeleteNote?: (id: string) => void;
@@ -44,6 +45,7 @@ interface EditorProps {
 
 export function Editor({ 
   note,
+  folders = [],
   onCreateNote,
   onUpdateNote, 
   onToggleSidebar,
@@ -106,27 +108,19 @@ export function Editor({
   }, []);
 
   const [isNoteTransitioning, setIsNoteTransitioning] = useState(false);
-  const [displayNoteId, setDisplayNoteId] = useState(note?.id);
-  const [showLoading, setShowLoading] = useState(false);
+  const prevNoteIdRef = useRef(note?.id);
 
   useEffect(() => {
-    if (note?.id !== displayNoteId) {
-      const transitionTimer = setTimeout(() => setIsNoteTransitioning(true), 0);
-      const fadeOutTimer = setTimeout(() => {
-        setShowLoading(true);
-        setDisplayNoteId(note?.id);
-        setTimeout(() => {
-          setShowLoading(false);
-          setIsNoteTransitioning(false);
-        }, 150); // Show loading skeleton for a short moment
-      }, 200); // Wait for fade out
-      
+    if (note?.id !== prevNoteIdRef.current) {
+      prevNoteIdRef.current = note?.id;
+      const startTimer = setTimeout(() => setIsNoteTransitioning(true), 0);
+      const endTimer = setTimeout(() => setIsNoteTransitioning(false), 120);
       return () => {
-        clearTimeout(transitionTimer);
-        clearTimeout(fadeOutTimer);
+        clearTimeout(startTimer);
+        clearTimeout(endTimer);
       };
     }
-  }, [note?.id, displayNoteId]);
+  }, [note?.id]);
 
   const {
     history,
@@ -163,7 +157,7 @@ export function Editor({
     exportNote,
     handleCopyNote,
     downloadLogs
-  } = useEditorExport(note);
+  } = useEditorExport(note, folders);
 
   const { applyFormatting, applyFontSize } = useEditorFormatting(
     note,
@@ -203,7 +197,7 @@ export function Editor({
         selection?.addRange(savedRangeRef.current);
       }
       
-      const linkHTML = `<a href="${url}" target="_blank" rel="noopener noreferrer">${text}</a>`;
+      const linkHTML = `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(text || url)}</a>`;
       document.execCommand('insertHTML', false, linkHTML);
       
       if (editorAreaRef.current) {
@@ -220,7 +214,7 @@ export function Editor({
         selection?.removeAllRanges();
         selection?.addRange(savedRangeRef.current);
       }
-      document.execCommand('insertHTML', false, `<img src="${url}" alt="${alt}" style="max-width: 100%;" /><p>&#8203;</p>`);
+      document.execCommand('insertHTML', false, `<img src="${escapeHtml(url)}" alt="${escapeHtml(alt)}" style="max-width: 100%;" /><p>&#8203;</p>`);
       if (editorAreaRef.current) {
         editorAreaRef.current.flushPreviewEdit();
       }
@@ -267,25 +261,6 @@ export function Editor({
     }
     setSelectedAiText(text);
     setShowAiDialog(true);
-  };
-
-  const cleanAiResponse = (text: string): string => {
-    if (!text) return "";
-    let cleaned = text.trim();
-    
-    // Strip markdown code block wrappers
-    const codeBlockRegex = /^```(?:markdown|html|text)?\s*\n?([\s\S]*?)\n?\s*```$/i;
-    let matches = cleaned.match(codeBlockRegex);
-    if (matches) {
-      cleaned = matches[1].trim();
-    } else {
-      const genericCodeBlockRegex = /^```(?:markdown|html|text)?\s*([\s\S]*?)\s*```$/i;
-      matches = cleaned.match(genericCodeBlockRegex);
-      if (matches) {
-        cleaned = matches[1].trim();
-      }
-    }
-    return cleaned;
   };
 
   const handleAiInsertText = (newText: string) => {
@@ -413,7 +388,7 @@ export function Editor({
     return (
       <div className="flex-1 flex flex-col h-screen overflow-hidden bg-background relative items-center justify-center">
         <div className="absolute top-0 left-0 w-full p-4 flex items-center">
-          <Button variant="ghost" size="icon" onClick={onToggleSidebar} className="text-muted-foreground md:hidden">
+          <Button variant="ghost" size="icon" onClick={onToggleSidebar} aria-label="Open sidebar" className="text-muted-foreground md:hidden">
             <Menu className="w-5 h-5" />
           </Button>
         </div>
@@ -440,7 +415,7 @@ export function Editor({
   const stats = getStats();
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-hidden bg-background relative print:block print:h-auto print:overflow-visible print:bg-white">
+    <div className="flex-1 flex flex-col h-full min-w-0 overflow-hidden bg-background relative print:block print:h-auto print:overflow-visible print:bg-white">
       {/* Toolbar */}
       <EditorHeader 
         onToggleSidebar={onToggleSidebar}
@@ -470,34 +445,36 @@ export function Editor({
       />
 
       {/* Editor Content & Sandbox Container */}
-      <div className="flex-1 flex overflow-hidden relative print:block print:h-auto">
-        {/* Editor Area */}
-        <div className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar print:overflow-visible print:bg-white print:text-black flex print:block justify-center">
-          <div 
-            className={cn(
-              "flex-1 w-full max-w-4xl px-5 sm:px-8 pt-6 sm:pt-10 pb-24 md:px-12 md:pt-16 md:pb-32 print:p-0 print:m-0 print:max-w-none print:w-full print:gap-0 flex print:block flex-col gap-4 md:gap-5 min-h-full",
-              fontFamily === "poppins" ? "font-poppins" :
-              fontFamily === "inter" ? "font-inter" :
-              fontFamily === "lora" ? "font-lora" :
-              fontFamily === "jetbrains" ? "font-jetbrains" :
-              fontFamily.toLowerCase().includes("sutonny") ? "font-sutonny" :
-              fontFamily === "serif" ? "font-serif" :
-              fontFamily === "mono" ? "font-mono" : "font-sans"
-            )}
-            style={{
-              fontFamily: !['poppins', 'inter', 'lora', 'jetbrains', 'sans', 'serif', 'mono'].includes(fontFamily.toLowerCase())
-                ? `"${fontFamily}", "Sutonny OMJ", "Sutonny MJ", "SutonnyMJ", sans-serif`
-                : undefined
-            }}
-          >
-            <TextareaAutosize
-              value={note.title}
-              onChange={handleTitleChange}
-              placeholder="Note Title"
-              autoComplete="off"
-              readOnly={isViewMode}
-              className={cn("w-full text-4xl md:text-5xl font-bold text-foreground placeholder:text-muted-foreground/30 border-none outline-none bg-transparent tracking-tight print:hidden resize-none px-1.5 pt-2 pb-2 leading-normal md:leading-[1.3] shrink-0 whitespace-pre-wrap break-words overflow-visible", isViewMode && "cursor-default")}
-            />
+      <div className="flex-1 min-w-0 flex overflow-hidden relative print:block print:h-auto">
+        {/* Editor Column (Scroll Area + Bottom Floating Bar scoped inside editor pane) */}
+        <div className="flex-1 min-w-0 h-full relative flex flex-col overflow-hidden print:block print:h-auto print:overflow-visible">
+          <div className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden custom-scrollbar print:overflow-visible print:bg-white print:text-black">
+            <div 
+              className={cn(
+                "mx-auto w-full max-w-4xl min-w-0 px-5 sm:px-8 pt-6 sm:pt-10 pb-28 md:px-12 md:pt-16 md:pb-36 print:p-0 print:m-0 print:max-w-none print:w-full print:gap-0 flex print:block flex-col gap-4 md:gap-5 min-h-full",
+                fontFamily === "poppins" ? "font-poppins" :
+                fontFamily === "inter" ? "font-inter" :
+                fontFamily === "lora" ? "font-lora" :
+                fontFamily === "jetbrains" ? "font-jetbrains" :
+                fontFamily.toLowerCase().includes("sutonny") ? "font-sutonny" :
+                fontFamily === "serif" ? "font-serif" :
+                fontFamily === "mono" ? "font-mono" : "font-sans"
+              )}
+              style={{
+                fontFamily: !['poppins', 'inter', 'lora', 'jetbrains', 'sans', 'serif', 'mono'].includes(fontFamily.toLowerCase())
+                  ? `"${fontFamily}", "Sutonny OMJ", "Sutonny MJ", "SutonnyMJ", sans-serif`
+                  : undefined
+              }}
+            >
+              <TextareaAutosize
+                value={note.title}
+                onChange={handleTitleChange}
+                placeholder="Note Title"
+                aria-label="Note Title"
+                autoComplete="off"
+                readOnly={isViewMode}
+                className={cn("w-full text-4xl md:text-5xl font-bold text-foreground placeholder:text-muted-foreground/30 border-none outline-none bg-transparent tracking-tight print:hidden resize-none px-2.5 sm:px-3 py-2.5 leading-[1.35] md:leading-[1.35] shrink-0 whitespace-pre-wrap break-words overflow-visible", isViewMode && "cursor-default")}
+              />
 
             {/* Print-only professional document header */}
             <div className="hidden print:block print:mb-6 print:pb-3 print:border-b print:border-slate-300">
@@ -506,18 +483,21 @@ export function Editor({
               </h1>
               <div className="mt-2 text-xs text-slate-500 font-medium flex items-center gap-2">
                 <span>
-                  {new Date(note.updatedAt || note.createdAt || Date.now()).toLocaleDateString(undefined, {
+                  {new Date(note.updatedAt || Date.now()).toLocaleDateString(undefined, {
                     year: 'numeric',
                     month: 'short',
                     day: 'numeric'
                   })}
                 </span>
-                {note.folder && (
-                  <>
-                    <span>•</span>
-                    <span className="font-semibold text-slate-700">{note.folder}</span>
-                  </>
-                )}
+                {(() => {
+                  const folderName = note.folderId ? folders.find(f => f.id === note.folderId)?.name : undefined;
+                  return folderName ? (
+                    <>
+                      <span>•</span>
+                      <span className="font-semibold text-slate-700">{folderName}</span>
+                    </>
+                  ) : null;
+                })()}
                 {note.tags && note.tags.length > 0 && (
                   <>
                     <span>•</span>
@@ -566,35 +546,99 @@ export function Editor({
             )}
             
             <div 
-              className={cn("flex-1 mt-2 transition-all duration-200 print:mt-0 print:m-0 print:p-0", 
-                isNoteTransitioning ? "opacity-0 scale-[0.98]" : "opacity-100 scale-100",
+              className={cn("flex-1 min-w-0 mt-2 transition-opacity duration-150 print:mt-0 print:m-0 print:p-0", 
+                isNoteTransitioning ? "opacity-60" : "opacity-100",
                 pendingSketchSvg && !showSketchConfirm && "cursor-crosshair ring-2 ring-primary/50 ring-offset-2 rounded-xl border border-primary border-dashed p-2 bg-primary/5")}
               onMouseUp={pendingSketchSvg && !showSketchConfirm ? handleEditorClickForSketch : undefined}
             >
-              {showLoading ? (
-                <div className="w-full h-full min-h-[500px] flex flex-col items-center justify-center animate-in fade-in zoom-in-95 duration-200">
-                  <EditorAreaSkeleton />
-                </div>
-              ) : (
-                <EditorArea 
-                  editorAreaRef={editorAreaRef}
-                  content={note.content}
-                  theme={theme}
-                  handleContentChange={handleContentChange}
-                  handleDrop={handleDrop}
-                  handleDragOver={handleDragOver}
-                  noteId={note.id}
-                  textareaRef={textareaRef}
-                  isAutoMarkdownEnabled={isAutoMarkdownEnabled}
-                  isViewMode={isViewMode}
-                  isEraserMode={isEraserMode}
-                  powerSaver={powerSaver}
-                  baseFontSize={baseFontSize}
-                  defaultZebraTables={zebraTables}
-                />
-              )}
+              <EditorArea 
+                editorAreaRef={editorAreaRef}
+                content={note.content}
+                theme={theme}
+                handleContentChange={handleContentChange}
+                handleDrop={handleDrop}
+                handleDragOver={handleDragOver}
+                noteId={note.id}
+                textareaRef={textareaRef}
+                isAutoMarkdownEnabled={isAutoMarkdownEnabled}
+                isViewMode={isViewMode}
+                isEraserMode={isEraserMode}
+                powerSaver={powerSaver}
+                baseFontSize={baseFontSize}
+                defaultZebraTables={zebraTables}
+              />
             </div>
           </div>
+          </div>
+
+          {/* Bottom Formatting Bar scoped to Editor Column */}
+          {!isViewMode && (
+            <div className="print:hidden">
+              <BottomBar 
+                symbolMenuRef={symbolMenuRef}
+                showSymbolMenu={showSymbolMenu}
+                setShowSymbolMenu={setShowSymbolMenu}
+                symbolScrollRef={symbolScrollRef}
+                handleSymbolMouseDown={handleSymbolMouseDown}
+                handleSymbolMouseLeave={handleSymbolMouseLeave}
+                handleSymbolMouseUp={handleSymbolMouseUp}
+                handleSymbolMouseMove={handleSymbolMouseMove}
+                isSymbolDragging={isSymbolDragging}
+                applyFormatting={applyFormatting}
+                toolbarRef={toolbarRef}
+                isDragging={isDragging}
+                handleMouseDown={handleMouseDown}
+                handleMouseLeave={handleMouseLeave}
+                handleMouseUp={handleMouseUp}
+                handleMouseMove={handleMouseMove}
+                fontFamily={fontFamily}
+                onFontFamilyChange={(font) => {
+                  if (font === "custom_picker") {
+                    setShowFontPicker(true);
+                  } else {
+                    onFontFamilyChange(font);
+                  }
+                }}
+                applyFontSize={applyFontSize}
+                isEraserMode={isEraserMode}
+                setIsEraserMode={setIsEraserMode}
+                textareaRef={textareaRef}
+                isAutoMarkdownEnabled={isAutoMarkdownEnabled}
+                setIsAutoMarkdownEnabled={setIsAutoMarkdownEnabled}
+                onOpenAiAssistant={handleOpenAiAssistant}
+                onInsertImageClick={() => {
+                  const selection = window.getSelection();
+                  if (selection && selection.rangeCount > 0) {
+                    savedRangeRef.current = selection.getRangeAt(0).cloneRange();
+                  } else {
+                    savedRangeRef.current = null;
+                  }
+                  setShowImageDialog(true);
+                }}
+                onInsertLinkClick={() => {
+                  const selection = window.getSelection();
+                  if (selection && selection.rangeCount > 0) {
+                    savedRangeRef.current = selection.getRangeAt(0).cloneRange();
+                    setInitialLinkText(selection.toString());
+                  } else {
+                    savedRangeRef.current = null;
+                    setInitialLinkText('');
+                  }
+                  setShowLinkDialog(true);
+                }}
+                onInsertSketchClick={() => {
+                  const selection = window.getSelection();
+                  if (selection && selection.rangeCount > 0) {
+                    savedRangeRef.current = selection.getRangeAt(0).cloneRange();
+                  } else {
+                    savedRangeRef.current = null;
+                  }
+                  setHasLoadedSketch(true);
+                  setShowSketchDialog(true);
+                }}
+              />
+            </div>
+          )}
         </div>
 
         {/* Code Sandbox Side Panel */}
@@ -608,75 +652,6 @@ export function Editor({
           />
         </div>
       </div>
-
-      {/* Bottom Formatting Bar */}
-      {!isViewMode && (
-        <div className="print:hidden">
-          <BottomBar 
-            symbolMenuRef={symbolMenuRef}
-            showSymbolMenu={showSymbolMenu}
-            setShowSymbolMenu={setShowSymbolMenu}
-            symbolScrollRef={symbolScrollRef}
-            handleSymbolMouseDown={handleSymbolMouseDown}
-            handleSymbolMouseLeave={handleSymbolMouseLeave}
-            handleSymbolMouseUp={handleSymbolMouseUp}
-            handleSymbolMouseMove={handleSymbolMouseMove}
-            isSymbolDragging={isSymbolDragging}
-            applyFormatting={applyFormatting}
-            toolbarRef={toolbarRef}
-            isDragging={isDragging}
-            handleMouseDown={handleMouseDown}
-            handleMouseLeave={handleMouseLeave}
-            handleMouseUp={handleMouseUp}
-            handleMouseMove={handleMouseMove}
-            fontFamily={fontFamily}
-            onFontFamilyChange={(font) => {
-              if (font === "custom_picker") {
-                setShowFontPicker(true);
-              } else {
-                onFontFamilyChange(font);
-              }
-            }}
-            applyFontSize={applyFontSize}
-            isEraserMode={isEraserMode}
-            setIsEraserMode={setIsEraserMode}
-            textareaRef={textareaRef}
-            isAutoMarkdownEnabled={isAutoMarkdownEnabled}
-            setIsAutoMarkdownEnabled={setIsAutoMarkdownEnabled}
-            onOpenAiAssistant={handleOpenAiAssistant}
-            onInsertImageClick={() => {
-              const selection = window.getSelection();
-              if (selection && selection.rangeCount > 0) {
-                savedRangeRef.current = selection.getRangeAt(0).cloneRange();
-              } else {
-                savedRangeRef.current = null;
-              }
-              setShowImageDialog(true);
-            }}
-            onInsertLinkClick={() => {
-              const selection = window.getSelection();
-              if (selection && selection.rangeCount > 0) {
-                savedRangeRef.current = selection.getRangeAt(0).cloneRange();
-                setInitialLinkText(selection.toString());
-              } else {
-                savedRangeRef.current = null;
-                setInitialLinkText('');
-              }
-              setShowLinkDialog(true);
-            }}
-            onInsertSketchClick={() => {
-              const selection = window.getSelection();
-              if (selection && selection.rangeCount > 0) {
-                savedRangeRef.current = selection.getRangeAt(0).cloneRange();
-              } else {
-                savedRangeRef.current = null;
-              }
-              setHasLoadedSketch(true);
-              setShowSketchDialog(true);
-            }}
-          />
-        </div>
-      )}
 
       <Suspense fallback={null}>
         <ImageInsertDialog 
