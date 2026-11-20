@@ -1,9 +1,5 @@
 /* eslint-disable react-compiler/react-compiler, react-refresh/only-export-components */
 import React, { useRef, useCallback, useEffect, useState, Suspense, lazy } from 'react';
-import TurndownService from 'turndown';
-import { gfm } from 'turndown-plugin-gfm';
-import { marked } from 'marked';
-import hljs from 'highlight.js';
 import { 
   Trash2,
   Settings2, 
@@ -17,11 +13,29 @@ import {
   DialogTitle,
   DialogFooter} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import markedKatex from 'marked-katex-extension';
 import 'katex/dist/katex.min.css';
 import { cn } from "@/lib/utils";
 import { PenTool, Loader2 } from 'lucide-react';
-import { escapeHtml, sanitizeCodeLang, isValidImageUrl } from '@/lib/editor-helpers';
+import {
+  CARET_MARKER,
+  escapeHtml,
+  isValidImageUrl,
+} from '@/lib/editor-helpers';
+import {
+  parseMarkdown,
+  applyParsedHtmlWithCaretMarker,
+  createTurndownService,
+  globalDefaultZebra,
+  setGlobalDefaultZebra,
+} from './markdown-pipeline';
+
+export {
+  parseMarkdown,
+  applyParsedHtmlWithCaretMarker,
+  createTurndownService,
+  globalDefaultZebra,
+  setGlobalDefaultZebra,
+};
 import {
   ITableCell,
   ITableModel,
@@ -37,8 +51,6 @@ import {
 const SketchDialog = lazy(() => import('./sketch-dialog').then(module => ({ default: module.SketchDialog })));
 const TableEditDialog = lazy(() => import('./table-edit-dialog').then(module => ({ default: module.TableEditDialog })));
 const ImageEditDialog = lazy(() => import('./image-edit-dialog').then(module => ({ default: module.ImageEditDialog })));
-
-const CARET_MARKER = '%%%%CARETMARKER%%%%';
 
 const getCaretCharacterOffsetWithin = (element: HTMLElement) => {
     let caretOffset = 0;
@@ -93,134 +105,6 @@ const setCaretPosition = (element: HTMLElement, offset: number) => {
             sel.addRange(range);
         }
     }
-};
-
-// We use standard selection finding without custom recursive text marker finders
-
-marked.use(markedKatex({ throwOnError: false, nonStandard: true }));
-
-const renderer = new marked.Renderer();
-
-renderer.code = function(token) {
-  const code = token.text.replace(/^[\r\n]+/, '').replace(/[\r\n]+$/, '');
-  const rawLang = sanitizeCodeLang(token.lang || '');
-  
-  let lang = rawLang;
-  let isAutoDetected = false;
-  
-  if (!lang || lang === 'text' || lang === 'auto') {
-    try {
-      const result = hljs.highlightAuto(code);
-      if (result.language && result.relevance > 0) {
-        lang = sanitizeCodeLang(result.language);
-        isAutoDetected = true;
-      }
-    } catch (e) {
-      console.warn("Auto language detection failed:", e);
-    }
-  }
-  
-  const langAliases: Record<string, string> = { text: 'text', plaintext: 'text', txt: 'text', raw: 'text' };
-  const finalLang = sanitizeCodeLang(langAliases[lang] || lang) || 'text';
-  
-  const displayLangName = !finalLang || finalLang === 'text' ? 'Code' : finalLang.charAt(0).toUpperCase() + finalLang.slice(1);
-  const displayLang = escapeHtml(isAutoDetected ? `${displayLangName} (Auto)` : displayLangName);
-
-  let highlightedValue = '';
-  if (!finalLang || finalLang === 'text') {
-    highlightedValue = escapeHtml(code);
-  } else {
-    try {
-      if (hljs.getLanguage(finalLang)) {
-        highlightedValue = hljs.highlight(code, { language: finalLang }).value;
-      } else {
-        const autoResult = hljs.highlightAuto(code);
-        highlightedValue = autoResult.value;
-      }
-    } catch {
-      highlightedValue = escapeHtml(code);
-    }
-  }
-
-  const inlineStyle = "margin:0;padding:1rem 1.25rem;font-size: 14px;line-height:1.5;font-family:'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;background:transparent;";
-  const highlightedContent = `<pre style="${inlineStyle}"><code class="code-element outline-none block min-h-[20px] whitespace-pre print:whitespace-pre-wrap [font-variant-ligatures:none] font-mono" contenteditable="plaintext-only">${highlightedValue}</code></pre>`;
-
-  return `<div class="code-block-wrapper not-prose my-6 print:my-2" contenteditable="false"><div class="rounded-xl font-sans group transition-colors duration-300 border border-border relative overflow-hidden bg-muted/10"><div class="sticky top-0 z-10 flex flex-wrap justify-between items-center gap-2 px-3 sm:px-5 py-2 sm:py-2.5 border-b border-border select-none bg-muted/30"><div class="flex items-center gap-2 sm:gap-3 min-w-0"><span class="text-[13px] font-semibold text-muted-foreground font-mono capitalize language-label truncate">${displayLang}</span></div><div class="flex items-center gap-1 sm:gap-2 flex-wrap"><button type="button" aria-label="Run code" class="flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[13px] font-medium transition-all text-emerald-600 hover:bg-emerald-500/10 hover:text-emerald-700 dark:hover:text-emerald-400 run-code-btn whitespace-nowrap" title="Run Code" onclick="window.dispatchEvent(new CustomEvent('run-code-block', { detail: { code: this.closest('.code-block-wrapper').querySelector('.code-element').textContent, language: '${finalLang}' } }));"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>Run</button><button type="button" aria-label="Open code in sandbox" class="flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[13px] font-medium text-purple-600 hover:bg-purple-500/10 hover:text-purple-700 dark:hover:text-purple-400 transition-all open-panel-btn whitespace-nowrap" title="Open in Side Panel" onclick="window.dispatchEvent(new CustomEvent('open-code-block', { detail: { code: this.closest('.code-block-wrapper').querySelector('.code-element').textContent, language: '${finalLang}' } }));"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>Open</button><button type="button" aria-label="Copy code" class="flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[13px] font-medium text-muted-foreground hover:bg-muted/80 hover:text-foreground transition-all active:scale-95 copy-btn whitespace-nowrap" onclick="navigator.clipboard?.writeText(this.closest('.code-block-wrapper').querySelector('.code-element').textContent || ''); const span = this.querySelector('.copy-text'); span.textContent='Copied'; setTimeout(() => span.textContent='', 2000);" title="Copy code"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg><span class="copy-text"></span></button><button type="button" aria-label="Delete code block" class="flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[13px] font-medium text-muted-foreground hover:bg-red-500/10 hover:text-red-500 transition-all active:scale-95 delete-btn whitespace-nowrap" onclick="const wrapper = this.closest('.code-block-wrapper'); const next = wrapper.nextElementSibling; if(next && next.tagName === 'P' && next.innerHTML.includes('&#8203;')) next.remove(); wrapper.remove();" title="Delete code block"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg></button></div></div><div class="relative overflow-x-auto text-[14px] leading-relaxed custom-scrollbar bg-transparent code-container whitespace-pre print:whitespace-pre-wrap font-mono m-0 text-slate-800 dark:text-slate-200">${highlightedContent}</div></div></div>`;
-};
-export let globalDefaultZebra = false;
-export const setGlobalDefaultZebra = (val: boolean) => {
-  globalDefaultZebra = val;
-};
-
-renderer.table = function(token: import('marked').Tokens.Table) {
-  let html = marked.Renderer.prototype.table.call(this, token);
-  html = html.replace('<table>', '<table class="w-full m-0 table-auto border-separate border-spacing-0">');
-  const zebraClass = globalDefaultZebra ? ' table-zebra' : '';
-  return `\n<div class="overflow-x-auto w-full table-wrapper my-8 print:my-2 rounded-xl rounded-table border border-[var(--border)] p-[1px] bg-background shadow-xs print:border-none print:shadow-none${zebraClass}">\n${html}\n</div>\n`;
-};
-
-renderer.listitem = function(token: import('marked').Tokens.ListItem) {
-  let html = marked.Renderer.prototype.listitem.call(this, token);
-  if (token.task) {
-    html = html.replace(/^<li>/, '<li class="task-list-item" style="list-style-type: none;">');
-    html = html.replace(/<input([^>]*?)type="checkbox"([^>]*?)>/, '<input$1type="checkbox"$2 style="margin-right: 0.5rem; margin-top: 0.25rem;">');
-  }
-  return html;
-};
-
-renderer.list = function(token: import('marked').Tokens.List) {
-  let html = marked.Renderer.prototype.list.call(this, token);
-  if (token.items.some(item => item.task)) {
-    html = html.replace(/^<ul([^>]*)>/, '<ul$1 class="contains-task-list" style="list-style-type: none; padding-left: 0;">');
-  }
-  return html;
-};
-
-renderer.image = function(token: import('marked').Tokens.Image) {
-  let html = marked.Renderer.prototype.image.call(this, token);
-  html = html.replace(/^<img /, '<img draggable="false" ');
-  return html;
-};
-
-export const parseMarkdown = (text: string) => {
-  // Strip zero-width characters that cause KaTeX console warnings
-  // \u200B: Zero-width space, \u2061: Function application
-  // Also convert non-breaking spaces to standard spaces or marked won't parse headings/lists correctly
-  const cleanText = text.replace(/[\u200B\u2061]/g, '').replace(/\xA0/g, ' ');
-  
-  // Count trailing newlines
-  const trailingNewlinesMatch = cleanText.match(/\n*$/);
-  const trailingNewlinesCount = trailingNewlinesMatch ? trailingNewlinesMatch[0].length : 0;
-  
-  // Trim trailing newlines before parsing so marked doesn't do weird things
-  const textToParse = cleanText.replace(/\n+$/, '');
-  
-  const html = marked.parse(textToParse, { renderer, breaks: true, gfm: true }) as string;
-  let finalHtml = html;
-  
-  // Natively in Chromium/Firefox empty <p></p> collapses to 0 height, making trailing newlines disappear visually.
-  // We insert a <br> inside empty paragraphs so they render visually exactly as a newline.
-  finalHtml = finalHtml.replace(/<p><\/p>/g, '<p><br></p>');
-
-  // Ensure empty table cells have a <br> inside so they do not collapse in height and are clickable/editable
-  finalHtml = finalHtml.replace(/<td([^>]*)>\s*<\/td>/gi, '<td$1><br></td>');
-  finalHtml = finalHtml.replace(/<th([^>]*)>\s*<\/th>/gi, '<th$1><br></th>');
-  
-  // Append trailing newlines as empty paragraphs to preserve spacing at the end of the document.
-  // A single trailing newline (\n) does not create an empty line. Two trailing newlines (\n\n) create one empty line, and so on.
-  const countToAppend = Math.max(0, trailingNewlinesCount - 1);
-  for (let i = 0; i < countToAppend; i++) {
-      finalHtml += '<p><br></p>';
-  }
-  
-  // To ensure the cursor can always explicitly leave a completely trailing contenteditable="false" block (like CodeBlock or Table)
-  // We forcibly append an editable empty paragraph at the very end only if the HTML ends with a block wrapper and we haven't already added one.
-  const trimmed = finalHtml.trim();
-  if (countToAppend === 0 && trimmed.endsWith('</div>')) {
-      finalHtml += '<p><br></p>';
-  }
-  
-  return finalHtml;
 };
 
 const focusCell = (cell: HTMLElement, atEnd: boolean = true) => {
@@ -879,377 +763,7 @@ export const EditorArea = ({
   }, [hoveredSketch, updateSketchRect, powerSaver]);
 
   // Initialize turndown service once
-  const turndownService = React.useMemo(() => {
-    const service = new TurndownService({
-      headingStyle: 'atx',
-      codeBlockStyle: 'fenced',
-      emDelimiter: '*'});
-    
-    service.escape = (string) => {
-      // Avoid escaping most markdown characters to allow live markdown typing.
-      // We don't escape pipes so users can type markdown tables natively.
-      return string;
-    };
-
-    service.use(gfm as import('turndown').Plugin);
-
-    // Override tableCell rule to guarantee all pipe characters inside cells are escaped
-    service.addRule('tableCellEscapePipes', {
-      filter: ['th', 'td'],
-      replacement: function (content, node) {
-        // Escape pipes inside table cells so they never produce sudden extra columns when parsed as markdown
-        const escaped = content.replace(/\|/g, '\\|').replace(/[\r\n]+/g, ' ');
-        const parentTr = node.parentNode;
-        const index = parentTr ? Array.prototype.indexOf.call(parentTr.childNodes, node) : 0;
-        const prefix = index === 0 ? '| ' : ' ';
-        return prefix + (escaped.trim() || ' ') + ' |';
-      }
-    });
-
-    service.addRule('caretMarker', {
-      filter: function (node) {
-        return node.nodeType === 1 && node.nodeName === 'SPAN' && (node as HTMLElement).id === 'caret-marker';
-      },
-      replacement: function () {
-        return CARET_MARKER;
-      }
-    });
-
-    service.addRule('emptyTableFix', {
-      filter: function (node) {
-        return node.nodeName === 'TABLE' && (node as HTMLTableElement).rows.length === 0;
-      },
-      replacement: function () {
-        return '';
-      }
-    });
-
-    service.addRule('emptyParagraph', {
-      filter: function (node) {
-        return (node.nodeName === 'DIV' || node.nodeName === 'P') && 
-               node.innerHTML.trim() === '<br>';
-      },
-      replacement: function () {
-        return '<br>';
-      }
-    });
-
-    service.addRule('tableRows', {
-      filter: function (node) {
-        return (node.nodeName === 'P' || node.nodeName === 'DIV') && 
-               /^\s*\|([\s\S]*)\|\s*$/.test(node.textContent || '');
-      },
-      replacement: function (content) {
-        return content + '\n';
-      }
-    });
-
-    service.addRule('customCodeBlock', {
-      filter: function (node) {
-        return node.nodeType === 1 && node.nodeName === 'DIV' && (node as HTMLElement).classList.contains('code-block-wrapper');
-      },
-      replacement: function (_content, node) {
-        const languageSpan = (node as HTMLElement).querySelector('.language-label');
-        const language = languageSpan ? languageSpan.textContent?.trim().toLowerCase() : '';
-        let codeContainer = (node as HTMLElement).querySelector('code');
-        
-        // Firefox/Chrome can strip the <code> tag during complex selections inside contenteditable.
-        if (!codeContainer) {
-          codeContainer = (node as HTMLElement).querySelector('.code-container') || node;
-        }
-        
-        const extractTextWithNewlines = (el: Node): string => {
-          let text = '';
-          for (let i = 0; i < el.childNodes.length; i++) {
-            const child = el.childNodes[i];
-            if (child.nodeType === Node.TEXT_NODE) {
-              // Ignore \u200B if it's placed by our marker inside the text node
-              text += (child.textContent || '').replace(/\u200B/g, '');
-            } else if (child.nodeType === Node.ELEMENT_NODE) {
-              const elName = child.nodeName.toUpperCase();
-              if (elName === 'SPAN' && (child as HTMLElement).id === 'caret-marker') {
-                text += CARET_MARKER;
-              } else if (elName === 'BR') {
-                text += '\n';
-              } else if (elName === 'DIV' || elName === 'P') {
-                if (text && !text.endsWith('\n')) {
-                  text += '\n';
-                }
-                text += extractTextWithNewlines(child);
-                if (!text.endsWith('\n')) {
-                  text += '\n';
-                }
-              } else {
-                text += extractTextWithNewlines(child);
-              }
-            }
-          }
-          return text;
-        };
-
-        const codeTextRaw = codeContainer ? extractTextWithNewlines(codeContainer) : '';
-        // Remove leading and trailing newlines completely to avoid huge gaps
-        const code = codeTextRaw.replace(/^[\r\n]+/, '').replace(/[\r\n]+$/, '');
-        const lang = language === 'code' ? '' : language;
-        return `\n\n\`\`\`${lang}\n${code}\n\`\`\`\n\n`;
-      }
-    });
-
-    service.addRule('bookmarkMarker', {
-      filter: function (node) {
-        return node.nodeType === 1 && node.nodeName === 'SPAN' && (node as HTMLElement).classList.contains('bookmark-marker');
-      },
-      replacement: function (_content, node) {
-        const id = (node as HTMLElement).getAttribute('data-bookmark-id') || '';
-        return `<span class="bookmark-marker" data-bookmark-id="${id}" style="display:inline-block; border-radius:4px; margin:0 2px; cursor:pointer;" title="Bookmark" contenteditable="false">&#128278;</span>`;
-      }
-    });
-
-    service.addRule('sketchContainer', {
-      filter: function (node) {
-        return node.nodeType === 1 && node.nodeName === 'DIV' && (node as HTMLElement).classList.contains('sketch-container');
-      },
-      replacement: function (_content, node) {
-        const safeHtml = (node as HTMLElement).outerHTML.replace(/\n *\n/g, '\n').replace(/\n/g, ' ');
-        return '\n\n' + safeHtml + '\n\n';
-      }
-    });
-
-    service.addRule('emptyBlocks', {
-      filter: function (node) {
-        if (node.nodeName !== 'P' && node.nodeName !== 'DIV') return false;
-        const html = (node as HTMLElement).innerHTML.trim().toLowerCase();
-        if (html === '<br>' || html === '') return true;
-        if (html.includes('id="caret-marker"')) {
-            const stripped = html.replace(/<span id="caret-marker">.*?<\/span>/ig, '').trim();
-            if (stripped === '' || stripped === '<br>') return true;
-        }
-        return false;
-      },
-      replacement: function (content) {
-        const marker = content.replace(/\n|<br>/g, '').trim();
-        return '\n\n<br>' + marker + '\n\n';
-      }
-    });
-
-    service.addRule('preserveBr', {
-      filter: 'br',
-      replacement: function (_content, node) {
-        let parent = node.parentNode;
-        while (parent) {
-          if (parent.nodeName === 'TD' || parent.nodeName === 'TH') {
-            return '<br>';
-          }
-          if (parent.nodeName === 'PRE') {
-            return '\n';
-          }
-          parent = parent.parentNode;
-        }
-
-        if (node.parentNode && node.parentNode.nodeName === 'X-TURNDOWN') {
-          return '<br>';
-        }
-
-        return '\n';
-      }
-    });
-
-    service.addRule('tableBlocks', {
-      filter: function (node) {
-        if (!['P', 'DIV', 'UL', 'OL', 'LI', 'BLOCKQUOTE'].includes(node.nodeName)) return false;
-        let parent = node.parentNode;
-        while (parent) {
-          if (parent.nodeName === 'TD' || parent.nodeName === 'TH') {
-            return true;
-          }
-          parent = parent.parentNode;
-        }
-        return false;
-      },
-      replacement: function (content, node) {
-        if (!content.trim()) return '';
-        // If it's a list item, add a bullet
-        let prefix = '';
-        if (node.nodeName === 'LI') {
-          prefix = '• ';
-        }
-        
-        // Return content with a <br> if it's not the last child
-        return prefix + content + (node.nextSibling ? '<br>' : '');
-      }
-    });
-
-    service.addRule('preserveHtmlTags', {
-      filter: ['u', 'sub', 'sup'],
-      replacement: function (content, node) {
-        const tag = node.nodeName.toLowerCase();
-        return `<${tag}>${content}</${tag}>`;
-      }
-    });
-
-    service.addRule('roundedTable', {
-      filter: function (node) {
-        return node.nodeName === 'DIV' && (node.classList.contains('table-wrapper') || node.classList.contains('overflow-x-auto')) && node.querySelector('table') !== null;
-      },
-      replacement: function (content, node) {
-        const table = node.querySelector('table');
-        if (table) {
-          const classes = Array.from(node.classList);
-          const hasRoundedTable = node.classList.contains('rounded-table');
-          const curveClass = classes.find((c: string) => c.startsWith('rounded-') && c !== 'rounded-table') || '';
-          const isZebra = node.classList.contains('table-zebra');
-          
-          const cleanTable = table.cloneNode(true) as HTMLTableElement;
-          const cells = Array.from(cleanTable.querySelectorAll('td, th'));
-          cells.forEach(cell => {
-            cell.classList.remove(
-              'bg-slate-100/50', 'dark:bg-slate-800/30',
-              'bg-blue-50/10', 'dark:bg-blue-950/10',
-              'bg-slate-200/50', 'dark:bg-slate-700/50',
-              'bg-blue-100/20', 'dark:bg-blue-900/20',
-              'ring-2', 'ring-blue-500', 'z-10', 'relative', 'active-cell'
-            );
-            if (!cell.getAttribute('class')) {
-              cell.removeAttribute('class');
-            }
-          });
-
-          // Ensure standard classes on the table element
-          cleanTable.className = 'border-hidden m-0 w-full';
-
-          // Construct the classes for the wrapper div
-          const wrapperClasses = ['overflow-x-auto', 'overflow-hidden', 'w-full', 'table-wrapper', 'my-8'];
-          if (hasRoundedTable) {
-            wrapperClasses.push('rounded-table');
-          }
-          if (curveClass) {
-            wrapperClasses.push(curveClass);
-          }
-          if (hasRoundedTable || curveClass) {
-            wrapperClasses.push('border', 'border-border');
-          }
-          if (isZebra) {
-            wrapperClasses.push('table-zebra');
-          }
-          
-          return '\n\n<div class="' + wrapperClasses.join(' ') + '">\n' + cleanTable.outerHTML + '\n</div>\n\n';
-        }
-        return content;
-      }
-    });
-
-    service.addRule('alignTag', {
-      filter: function (node) {
-        if (node.nodeType !== 1) return false;
-        const isBlock = ['P', 'DIV', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6'].includes(node.nodeName);
-        return isBlock && ((node as HTMLElement).getAttribute('align') !== null || !!(node as HTMLElement).style.textAlign);
-      },
-      replacement: function (content, node) {
-        const align = (node as HTMLElement).getAttribute('align') || (node as HTMLElement).style.textAlign;
-        return `\n<div align="${align}">\n\n${content}\n\n</div>\n`;
-      }
-    });
-
-    service.addRule('fontSizeSpan', {
-      filter: function (node) {
-        return (
-          node.nodeType === 1 &&
-          node.nodeName === 'SPAN' &&
-          (node as HTMLElement).getAttribute('style') !== null &&
-          (node as HTMLElement).getAttribute('style')?.includes('font-size') === true
-        );
-      },
-      replacement: function (content, node) {
-        const style = (node as HTMLElement).getAttribute('style') || '';
-        const match = style.match(/font-size:\s*([^;]+)/);
-        if (match && match[1]) {
-          return `<span style="font-size: ${match[1].trim()}">${content}</span>`;
-        }
-        return content;
-      }
-    });
-
-    service.addRule('image', {
-      filter: 'img',
-      replacement: function (_content, node) {
-        const alt = (node as HTMLElement).getAttribute('alt') || '';
-        const src = (node as HTMLElement).getAttribute('src') || '';
-        const title = (node as HTMLElement).getAttribute('title') || '';
-        const styleRaw = (node as HTMLElement).getAttribute('style') || '';
-        const width = (node as HTMLElement).getAttribute('width');
-        const height = (node as HTMLElement).getAttribute('height');
-        
-        let style = styleRaw;
-        if (width && !style.includes('width')) style += `width: ${width}; `;
-        if (height && !style.includes('height')) style += `height: ${height};`;
-        
-        const titleAttr = title ? ` title="${title}"` : '';
-        
-        if (style.trim()) {
-          const styleAttr = ` style="${style.trim()}"`;
-          return `<img src="${src}" alt="${alt}"${titleAttr}${styleAttr} />`;
-        }
-        
-        return title ? `![${alt}](${src}${titleAttr})` : `![${alt}](${src})`;
-      }
-    });
-
-    service.addRule('math', {
-      filter: function (node) {
-        return node.nodeName === 'SPAN' && 
-               (node as HTMLElement).classList.contains('katex') && 
-               !(node.parentElement && node.parentElement.classList.contains('katex-display'));
-      },
-      replacement: function (content, node) {
-        const annotation = (node as HTMLElement).querySelector('annotation[encoding="application/x-tex"]');
-        if (annotation && annotation.textContent) {
-          return '$' + annotation.textContent + '$';
-        }
-        return content;
-      }
-    });
-
-    service.addRule('mathDisplay', {
-      filter: function (node) {
-        return node.nodeName === 'SPAN' && (node as HTMLElement).classList.contains('katex-display');
-      },
-      replacement: function (content, node) {
-        const annotation = (node as HTMLElement).querySelector('annotation[encoding="application/x-tex"]');
-        if (annotation && annotation.textContent) {
-          return '\n\n$$' + annotation.textContent + '$$\n\n';
-        }
-        return content;
-      }
-    });
-
-    service.addRule('hr', {
-      filter: 'hr',
-      replacement: function () {
-        return '\n\n---\n\n';
-      }
-    });
-
-    service.addRule('mathError', {
-      filter: function (node) {
-        return node.nodeName === 'SPAN' && (node as HTMLElement).classList.contains('katex-error');
-      },
-      replacement: function (_content, node) {
-        return (node as HTMLElement).textContent || '';
-      }
-    });
-
-    return {
-      turndown: (html: string) => {
-        let md = service.turndown(html);
-        let prev;
-        do {
-          prev = md;
-          md = md.replace(/(^[ \t]*\|[^\n]+\|[ \t]*)\n[ \t]*\n(?=[ \t]*\|[^\n]+\|[ \t]*$)/gm, '$1\n');
-        } while (prev !== md);
-        return md;
-      }
-    };
-  }, []);
+  const turndownService = React.useMemo(() => createTurndownService(), []);
 
   const lastProcessedContent = useRef(content);
 
@@ -1563,14 +1077,20 @@ export const EditorArea = ({
     if (!hoveredTable) return;
     const wrapper = hoveredTable.closest('.table-wrapper') || hoveredTable.closest('.overflow-x-auto');
     if (wrapper) {
-      const isZebra = wrapper.classList.contains('table-zebra');
-      if (isZebra) {
-        wrapper.classList.remove('table-zebra');
-      } else {
+      const nextZebra = !wrapper.classList.contains('table-zebra');
+      if (nextZebra) {
         wrapper.classList.add('table-zebra');
+      } else {
+        wrapper.classList.remove('table-zebra');
       }
       if (!wrapper.classList.contains('table-wrapper')) {
         wrapper.classList.add('table-wrapper');
+      }
+      const hasCustomRadius = wrapper.getAttribute('data-custom-radius') === 'true';
+      if (nextZebra !== globalDefaultZebra || hasCustomRadius) {
+        wrapper.setAttribute('data-custom-style', 'true');
+      } else {
+        wrapper.removeAttribute('data-custom-style');
       }
       flushPreviewEdit(true);
       setZebraToggleTick(t => t + 1);
@@ -1590,6 +1110,18 @@ export const EditorArea = ({
       }
       if (isZebra) {
         wrapper.classList.add('table-zebra');
+      }
+
+      const hasCustomRadius = curveClass !== 'rounded-xl';
+      if (hasCustomRadius) {
+        wrapper.setAttribute('data-custom-radius', 'true');
+      } else {
+        wrapper.removeAttribute('data-custom-radius');
+      }
+      if (hasCustomRadius || Boolean(isZebra) !== globalDefaultZebra) {
+        wrapper.setAttribute('data-custom-style', 'true');
+      } else {
+        wrapper.removeAttribute('data-custom-style');
       }
     };
 
@@ -1775,6 +1307,13 @@ export const EditorArea = ({
     if (e && e.type === 'click') {
       const mouseEvent = e as React.MouseEvent<HTMLDivElement>;
       const target = mouseEvent.target as HTMLElement;
+
+      if (target instanceof HTMLInputElement && target.type === 'checkbox') {
+        if (isViewMode) {
+          mouseEvent.preventDefault();
+        }
+        return;
+      }
       
       // Handle Eraser Mode
       if (isEraserActive) {
@@ -1898,7 +1437,7 @@ export const EditorArea = ({
         return;
       }
     }
-  }, [isEraserActive, flushPreviewEdit]);
+  }, [isEraserActive, isViewMode, flushPreviewEdit]);
 
   // Sync content when it changes externally (e.g. Undo/Redo)
   useEffect(() => {
@@ -2234,10 +1773,8 @@ export const EditorArea = ({
         const htmlWithMarker = previewRef.current.innerHTML;
         const mdWithMarker = turndownService.turndown(htmlWithMarker);
              
-        let html = parseMarkdown(mdWithMarker);
-        html = html.replace(CARET_MARKER, '<span id="caret-marker"></span>');
-        html = html.replace(/<([a-z0-9]+)(?: [^>]*)?>\s*<span id="caret-marker"><\/span>\s*<\/\1>/gi, (match) => match.replace('<span id="caret-marker"></span>', '<br><span id="caret-marker"></span>'));
-        previewRef.current.innerHTML = html;
+        const html = parseMarkdown(mdWithMarker);
+        applyParsedHtmlWithCaretMarker(previewRef.current, html);
         
         if (markerInserted) {
             const markerEl = previewRef.current.querySelector('#caret-marker');
@@ -2834,6 +2371,18 @@ export const EditorArea = ({
         onKeyDown={handleKeyDown}
         onKeyUp={handleCursorMove}
         onClick={handleCursorMove}
+        onChange={(e) => {
+          const target = e.target;
+          if (target instanceof HTMLInputElement && target.type === 'checkbox') {
+            if (isViewMode) return;
+            if (target.checked) {
+              target.setAttribute('checked', '');
+            } else {
+              target.removeAttribute('checked');
+            }
+            flushPreviewEdit(true);
+          }
+        }}
         onCopy={handleCopy}
         onCut={handleCut}
         onPaste={handlePaste}

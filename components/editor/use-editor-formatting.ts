@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { Note } from '@/hooks/use-notes';
-import { escapeHtml, sanitizeCodeLang } from '@/lib/editor-helpers';
+import { escapeHtml, sanitizeCodeLang, sanitizeFontSizeValue } from '@/lib/editor-helpers';
 
 export const useEditorFormatting = (
   _note: Note | null,
@@ -31,45 +31,118 @@ export const useEditorFormatting = (
       document.execCommand('justifyRight', false, '');
     } else if (prefix === "\n> ") {
       const selection = window.getSelection();
-      if (selection && !selection.isCollapsed) {
+      const anchor = selection?.anchorNode instanceof Element ? selection.anchorNode : selection?.anchorNode?.parentElement;
+      const existingQuote = anchor?.closest('blockquote');
+      if (existingQuote && textareaRef.current?.contains(existingQuote)) {
+        document.execCommand('formatBlock', false, 'P');
+      } else if (selection && !selection.isCollapsed) {
         document.execCommand('formatBlock', false, 'BLOCKQUOTE');
       } else {
-        document.execCommand('insertHTML', false, `<blockquote class="border-l-4 border-primary/40 bg-muted/20 px-6 py-3 italic text-muted-foreground rounded-r-lg"><p>&#8203;</p></blockquote><p>&#8203;</p>`);
+        const cursorId = `__bq_cursor_${Date.now()}`;
+        document.execCommand('insertHTML', false, `<blockquote class="border-l-4 border-primary/40 bg-muted/20 px-6 py-3 italic text-muted-foreground rounded-r-lg"><p><span id="${cursorId}">&#8203;</span></p></blockquote><p>&#8203;</p>`);
+        const marker = textareaRef.current?.querySelector(`#${cursorId}`);
+        if (marker && selection) {
+          const range = document.createRange();
+          range.selectNodeContents(marker);
+          range.collapse(false);
+          selection.removeAllRanges();
+          selection.addRange(range);
+          const parent = marker.parentNode;
+          if (parent) {
+            while (marker.firstChild) parent.insertBefore(marker.firstChild, marker);
+            parent.removeChild(marker);
+          }
+        }
       }
     } else if (prefix === "\n- ") {
       document.execCommand('insertUnorderedList', false, '');
     } else if (prefix === "\n1. ") {
       document.execCommand('insertOrderedList', false, '');
     } else if (prefix.startsWith("\n#")) {
-      const level = prefix.trim().length;
-      document.execCommand('formatBlock', false, `H${level}`);
+      const level = Math.min(6, Math.max(1, prefix.trim().length));
+      const targetTag = `H${level}`;
+      const currentBlock = (document.queryCommandValue('formatBlock') || '').toUpperCase();
+      document.execCommand('formatBlock', false, currentBlock === targetTag ? 'P' : targetTag);
     } else if (prefix === "\n---\n") {
       document.execCommand('insertHorizontalRule', false, '');
       document.execCommand('insertHTML', false, '<p>&#8203;</p>');
     } else if (prefix === "`") {
       const selection = window.getSelection();
-      if (selection && selection.rangeCount > 0 && !selection.isCollapsed) {
-        const text = selection.toString();
-        if (!text.trim()) return;
-        
+      if (selection && selection.rangeCount > 0) {
         const range = selection.getRangeAt(0);
-        const code = document.createElement('code');
-        code.appendChild(range.extractContents());
-        range.insertNode(code);
+        const startEl = range.startContainer instanceof Element ? range.startContainer : range.startContainer.parentElement;
+        if (startEl?.closest('.code-block-wrapper')) return;
+
+        const existingCode = startEl?.closest('code');
+        if (existingCode && textareaRef.current?.contains(existingCode)) {
+          const parent = existingCode.parentNode;
+          if (parent) {
+            const firstChild = existingCode.firstChild;
+            const lastChild = existingCode.lastChild;
+            while (existingCode.firstChild) {
+              parent.insertBefore(existingCode.firstChild, existingCode);
+            }
+            parent.removeChild(existingCode);
+            if (firstChild && lastChild) {
+              const newRange = document.createRange();
+              newRange.setStartBefore(firstChild);
+              newRange.setEndAfter(lastChild);
+              if (selection.isCollapsed) newRange.collapse(false);
+              selection.removeAllRanges();
+              selection.addRange(newRange);
+            }
+          }
+        } else if (!selection.isCollapsed) {
+          const text = selection.toString();
+          if (!text.trim()) return;
+          const code = document.createElement('code');
+          code.textContent = text;
+          range.deleteContents();
+          range.insertNode(code);
+          const newRange = document.createRange();
+          newRange.selectNodeContents(code);
+          selection.removeAllRanges();
+          selection.addRange(newRange);
+        } else {
+          const code = document.createElement('code');
+          code.textContent = '\u200B';
+          range.insertNode(code);
+          const newRange = document.createRange();
+          newRange.setStart(code.firstChild!, 1);
+          newRange.collapse(true);
+          selection.removeAllRanges();
+          selection.addRange(newRange);
+        }
       }
     } else if (prefix === "\n- [ ] ") {
-      const taskHTML = `<ul class="contains-task-list"><li class="task-list-item"><input type="checkbox" disabled /> </li></ul>`;
+      const cursorId = `__task_cursor_${Date.now()}`;
+      const taskHTML = `<ul class="contains-task-list" style="list-style-type: none; padding-left: 0;"><li class="task-list-item" style="list-style-type: none;"><input type="checkbox" style="margin-right: 0.5rem; margin-top: 0.25rem;" /><span id="${cursorId}">&#8203;</span></li></ul>`;
       document.execCommand('insertHTML', false, taskHTML);
+      const selection = window.getSelection();
+      const marker = textareaRef.current?.querySelector(`#${cursorId}`);
+      if (marker && selection) {
+        const range = document.createRange();
+        range.selectNodeContents(marker);
+        range.collapse(false);
+        selection.removeAllRanges();
+        selection.addRange(range);
+        const parent = marker.parentNode;
+        if (parent) {
+          while (marker.firstChild) parent.insertBefore(marker.firstChild, marker);
+          parent.removeChild(marker);
+        }
+      }
     } else if (prefix.includes("| Header |")) {
-      const tableHTML = `<div class="overflow-x-auto w-full table-wrapper my-8 rounded-xl border border-[var(--border)]"><table class="border-hidden m-0 w-full"><thead><tr><th>Header</th><th>Header</th></tr></thead><tbody><tr><td><br></td><td><br></td></tr></tbody></table></div><p>&#8203;</p>`;
+      const tableHTML = `<div data-md-table="true" class="overflow-x-auto w-full table-wrapper my-8 rounded-xl border border-[var(--border)]"><table class="border-hidden m-0 w-full"><thead><tr><th>Header</th><th>Header</th></tr></thead><tbody><tr><td><br></td><td><br></td></tr></tbody></table></div><p>&#8203;</p>`;
       document.execCommand('insertHTML', false, tableHTML);
     } else if (prefix.match(/^```[a-zA-Z0-9-]*\n$/)) {
       const match = prefix.match(/^```([a-zA-Z0-9-]*)\n$/);
       const langRaw = sanitizeCodeLang(match ? match[1] : '');
+      const persistedLang = langRaw === 'text' || langRaw === 'auto' ? '' : langRaw;
       const displayLang = escapeHtml(langRaw ? langRaw.charAt(0).toUpperCase() + langRaw.slice(1) : 'Code');
       
       const codeHTML = `
-<div class="code-block-wrapper border border-[#e5e7eb] dark:border-[#374151] rounded-md my-4 overflow-hidden not-prose shadow-sm" contenteditable="false">
+<div class="code-block-wrapper border border-[#e5e7eb] dark:border-[#374151] rounded-md my-4 overflow-hidden not-prose shadow-sm" contenteditable="false" data-lang="${escapeHtml(persistedLang)}">
   <div class="bg-[#f8f9fa] dark:bg-[#1f2937] border-b border-[#e5e7eb] dark:border-[#374151] px-4 py-2 flex justify-between items-center text-[13px]">
     <div class="font-semibold text-[#6366f1] dark:text-[#818cf8] language-label flex items-center">
       ${displayLang}
@@ -81,7 +154,7 @@ export const useEditorFormatting = (
       <button class="flex items-center gap-1 text-[#6366f1] dark:text-[#818cf8] hover:opacity-80 transition-opacity bg-transparent border-none cursor-pointer open-panel-btn" title="Open in Side Panel" aria-label="Open code in sandbox" onclick="window.dispatchEvent(new CustomEvent('open-code-block', { detail: { code: this.closest('.code-block-wrapper').querySelector('.code-element').textContent, language: '${langRaw}' } }));">
         <span class="text-xs">»</span> Open
       </button>
-      <button class="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-opacity bg-transparent border-none cursor-pointer copy-btn" aria-label="Copy code" onclick="navigator.clipboard.writeText(this.closest('.code-block-wrapper').querySelector('.code-element').textContent); const span = this.querySelector('.copy-text'); span.textContent='Copied'; setTimeout(() => span.textContent='Copy', 2000);">
+      <button class="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-opacity bg-transparent border-none cursor-pointer copy-btn" aria-label="Copy code" onclick="navigator.clipboard?.writeText(this.closest('.code-block-wrapper').querySelector('.code-element').textContent || ''); const span = this.querySelector('.copy-text'); span.textContent='Copied'; setTimeout(() => span.textContent='Copy', 2000);">
         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
         <span class="copy-text">Copy</span>
       </button>
@@ -103,6 +176,9 @@ export const useEditorFormatting = (
   }, [textareaRef]);
 
   const applyFontSize = useCallback((size: string) => {
+    const safeSize = sanitizeFontSizeValue(size);
+    if (!safeSize) return;
+
     const selection = window.getSelection();
     if (!selection || selection.rangeCount === 0) return;
     
@@ -115,22 +191,35 @@ export const useEditorFormatting = (
     // Find all elements with this temporary font family
     const elements = document.querySelectorAll(`[style*="${tempFontName}"], font[face="${tempFontName}"]`);
     
-    if (elements.length === 0 && !isCollapsed) {
-       // fallback if execCommand failed
-       document.execCommand('fontSize', false, '7');
-       const fontElements = document.getElementsByTagName('font');
-       for (let i = fontElements.length - 1; i >= 0; i--) {
-         if (fontElements[i].getAttribute('size') === '7') {
-             const span = document.createElement('span');
-             span.style.fontSize = `${size}pt`;
-             span.innerHTML = fontElements[i].innerHTML;
-             fontElements[i].parentNode?.replaceChild(span, fontElements[i]);
-         }
-       }
+    if (elements.length === 0) {
+      if (isCollapsed) {
+        const range = selection.getRangeAt(0);
+        const span = document.createElement('span');
+        span.style.fontSize = safeSize;
+        span.textContent = '\u200B';
+        range.insertNode(span);
+        const newRange = document.createRange();
+        newRange.setStart(span.firstChild!, 1);
+        newRange.collapse(true);
+        selection.removeAllRanges();
+        selection.addRange(newRange);
+      } else {
+        // fallback if execCommand failed on range
+        document.execCommand('fontSize', false, '7');
+        const fontElements = document.getElementsByTagName('font');
+        for (let i = fontElements.length - 1; i >= 0; i--) {
+          if (fontElements[i].getAttribute('size') === '7') {
+              const span = document.createElement('span');
+              span.style.fontSize = safeSize;
+              span.innerHTML = fontElements[i].innerHTML;
+              fontElements[i].parentNode?.replaceChild(span, fontElements[i]);
+          }
+        }
+      }
     } else {
       elements.forEach((el) => {
         const span = document.createElement('span');
-        span.style.fontSize = `${size}pt`;
+        span.style.fontSize = safeSize;
         
         if (isCollapsed && !el.innerHTML) {
           span.innerHTML = '&#8203;'; // Zero-width space to allow typing inside

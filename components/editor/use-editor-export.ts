@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Note, Folder } from '@/hooks/use-notes';
-import { escapeHtml, sanitizeCodeLang } from '@/lib/editor-helpers';
+import { escapeHtml, sanitizeCodeLang, markdownToPlainText, sanitizeUrl } from '@/lib/editor-helpers';
 import { toast } from 'sonner';
 import { Capacitor, registerPlugin } from '@capacitor/core';
 import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
@@ -27,7 +27,22 @@ export const useEditorExport = (note: Note | null, folders: Folder[] = []) => {
             const langClass = rawLang ? ` class="language-${escapeHtml(rawLang)}"` : '';
             return `<pre><code${langClass}>${escapeHtml(code)}</code></pre>\n`;
           };
-          const contentHTML = await marked.parse(note.content, { renderer: exportRenderer, async: true });
+          exportRenderer.link = function(token) {
+            const safeHref = sanitizeUrl(token.href || '');
+            if (!safeHref) {
+              return this.parser.parseInline(token.tokens);
+            }
+            return marked.Renderer.prototype.link.call(this, { ...token, href: safeHref });
+          };
+          exportRenderer.image = function(token) {
+            const safeSrc = sanitizeUrl(token.href || '', { allowDataImage: true });
+            if (!safeSrc) {
+              return escapeHtml(token.text || '');
+            }
+            return marked.Renderer.prototype.image.call(this, { ...token, href: safeSrc });
+          };
+          const cleanMarkdown = (note.content || '').replace(/[\u200B\u2061]/g, '').replace(/\xA0/g, ' ');
+          const contentHTML = await marked.parse(cleanMarkdown, { renderer: exportRenderer, async: true, gfm: true, breaks: true });
           
           const folderName = note.folderId ? folders.find(f => f.id === note.folderId)?.name : undefined;
           const formattedDate = new Date(note.updatedAt || Date.now()).toLocaleDateString(undefined, {
@@ -229,9 +244,10 @@ export const useEditorExport = (note: Note | null, folders: Folder[] = []) => {
       return;
     }
 
+    const cleanMd = (note.content || '').replace(/[\u200B\u2061]/g, '');
     const content = format === 'md' 
-      ? `# ${note.title}\n\n${note.content}`
-      : `${note.title}\n\n${note.content}`;
+      ? `# ${note.title}\n\n${cleanMd}`
+      : `${note.title}\n\n${markdownToPlainText(cleanMd)}`;
       
     if (Capacitor.isNativePlatform()) {
       try {
@@ -326,22 +342,11 @@ export const useEditorExport = (note: Note | null, folders: Folder[] = []) => {
 
   const handleCopyNote = (format: 'normal' | 'markdown') => {
     if (!note) return;
-    let text = note.content;
+    let text = (note.content || '').replace(/[\u200B\u2061]/g, '');
     if (format === 'normal') {
-      text = text
-        .replace(/\[(.*?)\]\{\d+(?:px|pt)\}/g, '$1')
-        .replace(/\[(.*?)\]\(.*?\)/g, '$1')
-        .replace(/#{1,6}\s?/g, '')
-        .replace(/(\*\*|__)(.*?)\1/g, '$2')
-        .replace(/(\*|_)(.*?)\1/g, '$2')
-        .replace(/~~(.*?)~~/g, '$1')
-        .replace(/`{1,3}([\s\S]*?)`{1,3}/g, '$1')
-        .replace(/>\s?/g, '')
-        .replace(/!\[(.*?)\]\(.*?\)/g, '')
-        .replace(/^\s*[-*+]\s/gm, '')
-        .replace(/^\s*\d+\.\s/gm, '');
+      text = markdownToPlainText(text);
     }
-    navigator.clipboard.writeText(text);
+    navigator.clipboard?.writeText(text);
     toast.success(`Copied ${format === 'markdown' ? 'as Markdown' : 'to clipboard'}`);
     setShowCopyMenu(false);
   };

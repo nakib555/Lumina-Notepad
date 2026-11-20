@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
 import { Note } from '@/hooks/use-notes';
+import { escapeHtml, markdownToPlainText, sanitizeUrl } from '@/lib/editor-helpers';
 import { toast } from 'sonner';
 
 export const useEditorLogic = (
@@ -30,8 +31,9 @@ export const useEditorLogic = (
       const reader = new FileReader();
       
       reader.onload = (event) => {
-        const base64String = event.target?.result as string;
-        document.execCommand('insertHTML', false, `<img src="${base64String}" alt="Dropped Image" style="max-width: 100%;" /><p>&#8203;</p>`);
+        const base64String = sanitizeUrl((event.target?.result as string) || '', { allowDataImage: true });
+        if (!base64String) return;
+        document.execCommand('insertHTML', false, `<img src="${escapeHtml(base64String)}" alt="Dropped Image" style="max-width: 100%;" /><p>&#8203;</p>`);
         toast.success("Image added successfully");
       };
       
@@ -86,10 +88,10 @@ export const useEditorLogic = (
 
   const getStats = () => {
     if (!note) return { words: 0, chars: 0, readingTime: 0 };
-    const text = note.content;
+    const text = markdownToPlainText(note.content);
     const chars = text.length;
     const words = text.trim() === '' ? 0 : text.trim().split(/\s+/).length;
-    const readingTime = Math.ceil(words / 200);
+    const readingTime = words === 0 ? 0 : Math.ceil(words / 200);
     return { words, chars, readingTime };
   };
 

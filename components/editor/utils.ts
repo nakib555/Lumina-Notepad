@@ -1,3 +1,5 @@
+import { escapeHtml, sanitizeFontSizeValue } from '@/lib/editor-helpers';
+
 export interface HistoryItem {
   title: string;
   content: string;
@@ -11,10 +13,10 @@ export const processCustomMarkdown = (content: string) => {
     if (i % 2 === 1) return part; // It's a code block
     // Replace [text]{size} with <span style="font-size: size;">text</span>
     // Using non-greedy match for the text part to allow multiple on same line
-    return part.replace(/\[(.*?)\]\{([^}]+)\}/g, (_match, text, size) => {
-      // If size is just a number, append 'pt'
-      const formattedSize = /^\d+$/.test(size.trim()) ? `${size.trim()}pt` : size.trim();
-      return `<span style="font-size: ${formattedSize};">${text}</span>`;
+    return part.replace(/\[(.*?)\]\{([^}]+)\}/g, (match, text, size) => {
+      const safeSize = sanitizeFontSizeValue(size);
+      if (!safeSize) return match;
+      return `<span style="font-size: ${safeSize};">${escapeHtml(text)}</span>`;
     });
   }).join('');
 };

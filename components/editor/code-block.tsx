@@ -12,7 +12,7 @@ interface CodeBlockProps {
 }
 
 export const CodeBlock = ({ inline, className, children, theme, ...props }: CodeBlockProps) => {
-  const match = /language-(\w+)/.exec(className || '');
+  const match = /language-([^\s]+)/.exec(className || '');
   const language = match ? match[1] : '';
   
   // Ensure children is a string and handle potential undefined/null
@@ -23,7 +23,7 @@ export const CodeBlock = ({ inline, className, children, theme, ...props }: Code
   const [copied, setCopied] = useState(false);
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(code);
+    navigator.clipboard?.writeText(code);
     setCopied(true);
     toast.success("Code copied to clipboard");
     setTimeout(() => setCopied(false), 2000);

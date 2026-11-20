@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback, Suspense, lazy } from "react"
 import TextareaAutosize from 'react-textarea-autosize';
 import { AiAssistantDialog } from "./editor/ai-assistant-dialog";
 import { Note, Folder } from "@/hooks/use-notes";
-import { cleanAiResponse, escapeHtml } from "@/lib/editor-helpers";
+import { cleanAiResponse, escapeHtml, sanitizeUrl } from "@/lib/editor-helpers";
 import { EditorHeader } from "./editor/editor-header";
 import { BottomBar } from "./editor/bottom-bar";
 import { MetadataBar } from "./editor/metadata-bar";
@@ -189,6 +189,11 @@ export function Editor({
   };
 
   const handleInsertLink = (url: string, text: string) => {
+    const safeUrl = sanitizeUrl(url);
+    if (!safeUrl) {
+      toast.error("Invalid or unsafe link URL");
+      return;
+    }
     if (textareaRef.current) {
       textareaRef.current.focus();
       if (savedRangeRef.current) {
@@ -197,7 +202,7 @@ export function Editor({
         selection?.addRange(savedRangeRef.current);
       }
       
-      const linkHTML = `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(text || url)}</a>`;
+      const linkHTML = `<a href="${escapeHtml(safeUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(text || safeUrl)}</a>`;
       document.execCommand('insertHTML', false, linkHTML);
       
       if (editorAreaRef.current) {
@@ -207,6 +212,11 @@ export function Editor({
   };
 
   const handleInsertImageUrl = (url: string, alt: string) => {
+    const safeUrl = sanitizeUrl(url, { allowDataImage: true });
+    if (!safeUrl) {
+      toast.error("Invalid or unsafe image URL");
+      return;
+    }
     if (textareaRef.current) {
       textareaRef.current.focus();
       if (savedRangeRef.current) {
@@ -214,7 +224,7 @@ export function Editor({
         selection?.removeAllRanges();
         selection?.addRange(savedRangeRef.current);
       }
-      document.execCommand('insertHTML', false, `<img src="${escapeHtml(url)}" alt="${escapeHtml(alt)}" style="max-width: 100%;" /><p>&#8203;</p>`);
+      document.execCommand('insertHTML', false, `<img src="${escapeHtml(safeUrl)}" alt="${escapeHtml(alt)}" style="max-width: 100%;" /><p>&#8203;</p>`);
       if (editorAreaRef.current) {
         editorAreaRef.current.flushPreviewEdit();
       }
@@ -225,7 +235,11 @@ export function Editor({
   const handleInsertImageFile = (file: File) => {
     const reader = new FileReader();
     reader.onload = (event) => {
-      const base64String = event.target?.result as string;
+      const base64String = sanitizeUrl((event.target?.result as string) || '', { allowDataImage: true });
+      if (!base64String) {
+        toast.error("Unsupported image format");
+        return;
+      }
       if (textareaRef.current) {
         textareaRef.current.focus();
         if (savedRangeRef.current) {
@@ -233,7 +247,7 @@ export function Editor({
           selection?.removeAllRanges();
           selection?.addRange(savedRangeRef.current);
         }
-        document.execCommand('insertHTML', false, `<img src="${base64String}" alt="Uploaded Image" style="max-width: 100%;" /><p>&#8203;</p>`);
+        document.execCommand('insertHTML', false, `<img src="${escapeHtml(base64String)}" alt="Uploaded Image" style="max-width: 100%;" /><p>&#8203;</p>`);
         if (editorAreaRef.current) {
           editorAreaRef.current.flushPreviewEdit();
         }
